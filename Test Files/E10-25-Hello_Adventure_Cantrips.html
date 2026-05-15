@@ -1,0 +1,169 @@
+<!DOCTYPE html><html><head><title>E10-25-Hello_Adventure_Cantrips</title>
+                <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+                    
+                    body {
+                        color: #1f2937;
+                        background-color: #ffffff; /* Very light blue/gray background */
+                        font-family: 'Inter', sans-serif;
+                        padding: 20px;
+                        line-height: 1.4;
+                    }
+                    
+                    /* The Cantrip Card Styling */
+                    .export-cell {
+                        height: 12cm;
+                        width: 50%; 
+                        padding: 1.25rem; /* More padding for card look */
+                        box-sizing: border-box;
+                        font-size: 0.8rem; /* Slightly larger font */
+                        vertical-align: top;
+                        page-break-inside: avoid;
+                        background-image: url('SmallLogo_Black_NoBG.png');
+                        background-size: 75%;
+                        background-repeat: no-repeat;
+                        background-position: top right;
+                        
+                        /* Differentiation Styling */
+                        border: 1px solid #e2e8f0; /* Subtle border */
+                        border-radius: 12px;
+                        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+                        background-color: white; /* White card background */
+                    }
+                    
+                    /* Table Structure for Layout */
+                    #exportTable {
+                        border-collapse: separate;
+                        border-spacing: 10px 10px; /* Space between cards */
+                        border: none; /* Remove table border */
+                    }
+                    
+                    /* Remove cell default borders in HTML export */
+                    #exportTable td, #exportTable th {
+                        border: none !important;
+                        vertical-align: top;
+                    }
+
+                    /* Header Styling */
+                    #exportTable thead th {
+                        background-color: #4f46e5;
+                        color: white;
+                        font-family: 'Inter', sans-serif;
+                        font-size: 1.0rem;
+                        font-weight: 500;
+                        padding: 15px;
+                        border-radius: 10px;
+                    }
+
+                    /* Individual Cantrip Content Styling */
+                    .text-gray-900 { color: #1f2937 !important; }
+                    .font-extrabold { font-weight: 800; }
+                    .font-verbal {font-weight: 200; font-style: italic;}
+                    .font-description { font-weight: 100; font-size: 90%; font-family: 'Tahoma', sans-serif; text-align: justify; }
+                    .font-normal { font-weight: 400; }
+                    .text-gray-700 { color: #4a5568; }
+                    .text-gray-600 { color: #718096; }
+                    .border-t { border-top: 1px solid #e2e8f0; }
+
+                </style>
+            </head><body>
+            <!-- Header for Export -->
+            <div class="mb-4">
+                <h3 class="text-indigo-200 font-bold mb-1" style="font-size: 0.75rem;">Adventure: <span id="exportTitle">E10-25-Hello Adventure</span></h3>
+            </div>
+            <!-- Table for Export: Used for the 12cm x 5cm fixed cells -->
+            <table id="exportTable" class="w-full border-collapse border border-gray-400">
+                <thead>
+                    <!-- Header will be dynamically inserted by JS to span columns -->
+                </thead>
+                <tbody id="exportTableBody"><tr><td class="export-cell border border-gray-400 align-top">
+                    
+                     
+                        <p class="font-extrabold text-sm" style="line-height: 1.2; margin-bottom: 8px; margin-top: 0;">Eldritch Bless <span class="font-normal text-xs">  </span></p>
+                        <p class="font-verbal text-xs mt-1 text-gray-600" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;">0 Components</p>
+                        <p class="text-xs mt-1 font-semibold text-gray-700" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;">Earth</p>
+                        
+                        <!-- Line 2: Tag, Duration -->
+                        <p class="text-xs mt-1" style="line-height: 1.0; margin-bottom: 0; margin-top: 0;">Var’s Superior Protection</p>
+                        <p class="text-xs" style="line-height: 1.0; margin-bottom: 0; margin-top: 0;"><b>Duration:</b> Day</p>
+
+                        <!-- Line 3: Type -->
+                        <p class="text-xs mt-1" style="line-height: 1.0; margin-bottom: 6px; margin-top: 0;"><b>Type:</b> Personal</p>
+
+                        <!-- Line 4: Verbal -->
+                        <p class="font-verbal text-xs mt-2 text-gray-600" style="line-height: 1.5; margin-bottom: 8px; margin-top: 0;">“I grant myself the power of an Eldritch Bless 10."</p>
+
+                        <!-- Line 5: Description -->
+                        <div class="mt-2 pt-2 border-t border-gray-200">
+                            <p class="font-description" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;"><b>Description:</b> This protection cantrip grants the caster ten temporary Body Points. The additional Body Points are applied beyond the normal Body Points of the recipient, and are expended before normal Body Points when damage is taken. <br><br> This cantrip does not restore lost Body Points. An Eldritch Bless does not protect the recipient from Spell Disruption.</p>
+                        </div>
+             
+                </td><td class="export-cell border border-gray-400 align-top">
+                    
+                     
+                        <p class="font-extrabold text-sm" style="line-height: 1.2; margin-bottom: 8px; margin-top: 0;">Eldritch Shield <span class="font-normal text-xs">  </span></p>
+                        <p class="font-verbal text-xs mt-1 text-gray-600" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;">0 Components</p>
+                        <p class="text-xs mt-1 font-semibold text-gray-700" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;">Celestial</p>
+                        
+                        <!-- Line 2: Tag, Duration -->
+                        <p class="text-xs mt-1" style="line-height: 1.0; margin-bottom: 0; margin-top: 0;">PanTarsa’s Superior Protective Field</p>
+                        <p class="text-xs" style="line-height: 1.0; margin-bottom: 0; margin-top: 0;"><b>Duration:</b> Day</p>
+
+                        <!-- Line 3: Type -->
+                        <p class="text-xs mt-1" style="line-height: 1.0; margin-bottom: 6px; margin-top: 0;"><b>Type:</b> Personal</p>
+
+                        <!-- Line 4: Verbal -->
+                        <p class="font-verbal text-xs mt-2 text-gray-600" style="line-height: 1.5; margin-bottom: 8px; margin-top: 0;">“I grant myself an Eldritch Shield 10."</p>
+
+                        <!-- Line 5: Description -->
+                        <div class="mt-2 pt-2 border-t border-gray-200">
+                            <p class="font-description" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;"><b>Description:</b> This protection cantrip grants the caster ten temporary Armor Points. The additional Armor Points are applied beyond the normal Armor Wear Points of the recipient, and are expended before normal Armor Points when  damage is taken. This spell does not restore lost Armor Points. An Eldritch Shield spell will protect the recipient from Spell Disruption if the damage dealt does not exceed the current Armor Points the recipient has.</p>
+                        </div>
+             
+                </td></tr><tr class="page-break"><td class="export-cell border border-gray-400 align-top">
+                    
+                     
+                        <p class="font-extrabold text-sm" style="line-height: 1.2; margin-bottom: 8px; margin-top: 0;">Fury's Strength <span class="font-normal text-xs">  </span></p>
+                        <p class="font-verbal text-xs mt-1 text-gray-600" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;">0 Components</p>
+                        <p class="text-xs mt-1 font-semibold text-gray-700" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;">Celestial</p>
+                        
+                        <!-- Line 2: Tag, Duration -->
+                        <p class="text-xs mt-1" style="line-height: 1.0; margin-bottom: 0; margin-top: 0;">Kodos’ Strength of the Bear</p>
+                        <p class="text-xs" style="line-height: 1.0; margin-bottom: 0; margin-top: 0;"><b>Duration:</b> Invoked</p>
+
+                        <!-- Line 3: Type -->
+                        <p class="text-xs mt-1" style="line-height: 1.0; margin-bottom: 6px; margin-top: 0;"><b>Type:</b> Personal</p>
+
+                        <!-- Line 4: Verbal -->
+                        <p class="font-verbal text-xs mt-2 text-gray-600" style="line-height: 1.5; margin-bottom: 8px; margin-top: 0;">“I grant myself Fury’s Strength."</p>
+
+                        <!-- Line 5: Description -->
+                        <div class="mt-2 pt-2 border-t border-gray-200">
+                            <p class="font-description" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;"><b>Description:</b> This cantrip grants the caster Superhuman Strength +2 (+1 in each hand) against a single opponent when Invoked (see Superhuman Strength on page 84 of the NERO World Classic Rulebook for how this ability works). The caster may also Invoke the cantrip to Rip from a Pin or Bind effect (see the Racial Ability Rip from Binding on page 24 of the NERO World Classic Rulebook).</p>
+                        </div>
+             
+                </td><td class="export-cell border border-gray-400 align-top">
+                    
+                     
+                        <p class="font-extrabold text-sm" style="line-height: 1.2; margin-bottom: 8px; margin-top: 0;">Magic Deliverance <span class="font-normal text-xs">  </span></p>
+                        <p class="font-verbal text-xs mt-1 text-gray-600" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;">0 Components</p>
+                        <p class="text-xs mt-1 font-semibold text-gray-700" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;">Celestial, Earth, Nature</p>
+                        
+                        <!-- Line 2: Tag, Duration -->
+                        <p class="text-xs mt-1" style="line-height: 1.0; margin-bottom: 0; margin-top: 0;">Erol’s Innate Aura</p>
+                        <p class="text-xs" style="line-height: 1.0; margin-bottom: 0; margin-top: 0;"><b>Duration:</b> Day</p>
+
+                        <!-- Line 3: Type -->
+                        <p class="text-xs mt-1" style="line-height: 1.0; margin-bottom: 6px; margin-top: 0;"><b>Type:</b> Personal</p>
+
+                        <!-- Line 4: Verbal -->
+                        <p class="font-verbal text-xs mt-2 text-gray-600" style="line-height: 1.5; margin-bottom: 8px; margin-top: 0;">“I grant myself the ability of Magic Deliverance."</p>
+
+                        <!-- Line 5: Description -->
+                        <div class="mt-2 pt-2 border-t border-gray-200">
+                            <p class="font-description" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;"><b>Description:</b> This cantrip allows the caster to deliver one spell from their memory as a Magical Ability instead of by full spell incant. The spell to be cast is chosen at the time it is used (Cast-on-the-Fly), must be the same school of magic as this cantrip, and must be less than the total Formal Magic levels (again, of the same school)  possessed by the caster. The use of the Magical Ability is delivered by the character speaking the verbal phrase “Magic &lt;spell name or effect&gt; &lt;option or number&gt;”, even if the character is bound (such as in a Bind or Web), but the character must be able to speak (cannot be used when Silenced). All other standard rules for casting spells must be followed (see Magical Ability on page 22 of the NERO World Classic Rulebook).</p>
+                        </div>
+             
+                </td></tr></tbody>
+            </table>
+        </body></html>

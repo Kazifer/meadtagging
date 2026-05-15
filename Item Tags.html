@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Item Tag Generator</title>
+    <link rel="stylesheet" href="theme.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chosen Palette: Modern Slate Dark Mode & Indigo Accents -->
+    <!-- Application Structure Plan: A two-column, task-oriented layout is used. The left column contains all user inputs and global actions (title, manual add, CSV import, export). The right column provides immediate visual feedback by displaying the current list of event items. This separation of concerns creates an intuitive user flow: input on the left, review on the right. A modal is used for editing to keep the main interface clean and focused. This structure was chosen because it's highly efficient for a data entry and review application, minimizing user movement and providing constant context. -->
+    <!-- Visualization & Content Choices: Report Info: Item List -> Goal: Organize/Manage -> Presentation: Dynamic HTML Table -> Interaction: Add, Edit (Modal), Delete -> Justification: A table offers a clear, structured view of item properties, which is ideal for review and management. Direct manipulation via buttons is intuitive. Report Info: Export Format -> Goal: Output -> Presentation: CSS-styled HTML divs -> Interaction: None (static file) -> Justification: Divs styled with flexbox provide the necessary layout control to replicate the card-like format from the source image, ensuring the exported file is visually accurate and self-contained. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;700&display=swap');
+
+        .custom-shadow {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
+        }
+        .modal-backdrop {
+            background-color: rgba(0,0,0,0.8);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-gray-100">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-extrabold font-lora text-indigo-400">Event Item Tag Generator</h1>
+            <p class="text-gray-400 mt-2">Create and manage your event items, then export them as printable tags.</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:col-cols-5 gap-8">
+
+            <aside class="lg:col-span-2 bg-slate-800 p-6 rounded-xl custom-shadow">
+                <h2 class="text-2xl font-bold font-lora mb-6 border-b border-slate-700 pb-3 text-white">Controls & Inputs</h2>
+                
+                <div class="space-y-6">
+                    <div>
+                        <label for="adventureTitle" class="block text-sm font-medium text-gray-300 mb-1">Event Title</label>
+                        <input type="text" id="adventureTitle" class="w-full bg-slate-700 border border-slate-600 rounded-lg shadow-inner py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g., Spring Festival Scavenger Hunt">
+                    </div>
+
+                    <div class="border-t border-slate-700 pt-6">
+                         <h3 class="text-lg font-bold font-lora mb-4 text-white">Add Item Manually</h3>
+                         <form id="manualItemForm" class="space-y-4">
+                            <input type="text" id="itemName" placeholder="Item Name*" required class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <input type="text" id="itemCode" placeholder="Event Code*" required class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <textarea id="itemDesc" placeholder="Description*" required rows="3" class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                            <input type="number" id="itemValue" min="0" max="9999" step="1" placeholder="Item Value (0-9999)" class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <input type="text" id="itemEncodedValue" placeholder="EncodedValue" readonly class="w-full bg-slate-800 border border-slate-600 rounded-lg py-2 px-3 text-sky-300 placeholder-gray-500 focus:outline-none">
+                            <label for="itemPersistantProp" class="block text-sm font-medium text-gray-300 mb-1">Persistant Prop</label>
+                            <select id="itemPersistantProp" class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="false" selected>False</option>
+                                <option value="true">True</option>
+                            </select>
+                            <textarea id="itemEnchant" placeholder="Enchantment/Comments" rows="2" class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                            <input type="text" id="itemExpiry" placeholder="Expiry Date (e.g., 3 days)" class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors duration-300 transform hover:scale-[1.01]">Add Item</button>
+                         </form>
+                    </div>
+
+                    <div class="border-t border-slate-700 pt-6">
+                         <h3 class="text-lg font-bold font-lora mb-4 text-white">Import from CSV</h3>
+                         <label for="csvUpload" class="w-full text-center cursor-pointer bg-slate-700 text-indigo-400 font-bold py-2 px-4 rounded-lg border border-slate-600 hover:bg-slate-600 transition-colors duration-300 block">
+                            Upload .csv File
+                         </label>
+                         <input type="file" id="csvUpload" class="hidden" accept=".csv">
+                         <p class="text-xs text-gray-500 mt-2">CSV must have headers: Name, Adventure Code, Description (optional: Item Value as integer 0-9999, EncodedValue, Persistant Prop, Enchantment/Comments, Expiry Date)</p>
+                    </div>
+
+                    <div class="border-t border-slate-700 pt-6 space-y-3">
+                         <h3 class="text-lg font-bold font-lora mb-4 text-white">Export & Actions</h3>
+                    <button id="bindJsonBtn" class="w-full bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-500 transition-colors duration-300 transform hover:scale-[1.01]">Bind JSON File (Optional)</button>
+                    <button id="saveJsonBtn" class="w-full bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-cyan-600 transition-colors duration-300 transform hover:scale-[1.01]">Save Items JSON</button>
+                    <label for="jsonUpload" class="w-full text-center cursor-pointer bg-slate-700 text-cyan-300 font-bold py-2 px-4 rounded-lg border border-slate-600 hover:bg-slate-600 transition-colors duration-300 block">
+                       Load Items JSON
+                    </label>
+                    <input type="file" id="jsonUpload" class="hidden" accept=".json,application/json">
+                         <button id="exportBtn" class="w-full bg-amber-500 text-gray-900 font-bold py-2 px-4 rounded-lg hover:bg-amber-400 transition-colors duration-300 transform hover:scale-[1.01]">Generate & Export HTML</button>
+                    <button id="clearBtn" class="w-full bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors duration-300 transform hover:scale-[1.01]">Clear All Items</button>
+                    </div>
+                </div>
+            </aside>
+
+            <main class="lg:col-span-3 bg-slate-800 p-6 rounded-xl custom-shadow">
+                <h2 class="text-2xl font-bold font-lora mb-6 border-b border-slate-700 pb-3 text-white">Event Item List (<span id="itemCount">0</span>)</h2>
+                <div id="itemList" class="overflow-x-auto">
+                    <p class="text-gray-500 text-center py-8" id="empty-message">Your item list is empty. Add items manually or upload a CSV file to get started.</p>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <div id="editModal" class="fixed inset-0 z-50 items-center justify-center hidden">
+        <div class="modal-backdrop fixed inset-0"></div>
+        <div class="bg-slate-800 rounded-xl shadow-2xl p-6 m-4 max-w-lg w-full relative border border-slate-700">
+            <h3 class="text-xl font-bold font-lora mb-4 text-indigo-400">Edit Item</h3>
+            <form id="editItemForm" class="space-y-3">
+                <input type="hidden" id="editItemId">
+                <input type="text" id="editItemName" placeholder="Item Name*" required class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <input type="text" id="editItemCode" placeholder="Event Code*" required class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <textarea id="editItemDesc" placeholder="Description*" required rows="3" class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                <input type="number" id="editItemValue" min="0" max="9999" step="1" placeholder="Item Value (0-9999)" class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <input type="text" id="editItemEncodedValue" placeholder="EncodedValue" readonly class="w-full bg-slate-800 border border-slate-600 rounded-lg py-2 px-3 text-sky-300 placeholder-gray-500 focus:outline-none">
+                <label for="editItemPersistantProp" class="block text-sm font-medium text-gray-300 mb-1">Persistant Prop</label>
+                <select id="editItemPersistantProp" class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="false">False</option>
+                    <option value="true">True</option>
+                </select>
+                <textarea id="editItemEnchant" placeholder="Enchantment/Comments" rows="2" class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                <input type="text" id="editItemExpiry" placeholder="Expiry Date" class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" id="cancelEditBtn" class="bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-700">Cancel</button>
+                    <button type="submit" class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="notification" class="fixed top-5 right-5 bg-red-600 text-white py-2 px-4 rounded-lg shadow-lg opacity-0 transition-opacity duration-300">
+        <p id="notification-message"></p>
+    </div>
+
+<script src="event-variables.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const itemsStorageKey = 'itemTags.items.v2';
+        const defaultItemsJsonPath = 'item-tags-items.json';
+        let adventureItems = [];
+        let boundJsonFileHandle = null;
+        const manualForm = document.getElementById('manualItemForm');
+        const itemList = document.getElementById('itemList');
+        const itemCount = document.getElementById('itemCount');
+        const emptyMessage = document.getElementById('empty-message');
+        const csvUpload = document.getElementById('csvUpload');
+        const jsonUpload = document.getElementById('jsonUpload');
+        const exportBtn = document.getElementById('exportBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const saveJsonBtn = document.getElementById('saveJsonBtn');
+        const bindJsonBtn = document.getElementById('bindJsonBtn');
+        const adventureTitleInput = document.getElementById('adventureTitle');
+        const itemValueInput = document.getElementById('itemValue');
+        const itemEncodedValueInput = document.getElementById('itemEncodedValue');
+
+        const eventVars = window.EventVariables?.get?.();
+        const eventTitle = window.EventVariables?.buildTitle?.(eventVars);
+        if (adventureTitleInput && !adventureTitleInput.value.trim() && eventTitle) {
+            adventureTitleInput.value = eventTitle;
+        }
+        
+        const editModal = document.getElementById('editModal');
+        const editForm = document.getElementById('editItemForm');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+        const editItemValueInput = document.getElementById('editItemValue');
+        const editItemEncodedValueInput = document.getElementById('editItemEncodedValue');
+
+        const notification = document.getElementById('notification');
+        const notificationMessage = document.getElementById('notification-message');
+
+        const showNotification = (message, isError = true) => {
+            notificationMessage.textContent = message;
+            // Updated success notification color to Sky for contrast
+            const bgColor = isError ? 'bg-red-600' : 'bg-sky-600';
+            notification.className = `fixed top-5 right-5 text-white py-2 px-4 rounded-lg shadow-lg opacity-100 transition-opacity duration-300 ${bgColor}`;
+            setTimeout(() => {
+                notification.classList.replace('opacity-100', 'opacity-0');
+            }, 3000);
+        };
+
+        const toPersistantProp = (value) => {
+            if (typeof value === 'boolean') return value;
+            const normalized = String(value || '').trim().toLowerCase();
+            return normalized === 'true' || normalized === 'yes' || normalized === '1';
+        };
+
+        const valueCodeMap = ['Z', 'O', 'T', 'H', 'F', 'I', 'S', 'E', 'G', 'N'];
+
+        const normalizeItemValue = (value) => {
+            const normalized = String(value ?? '').trim();
+            if (!normalized) return '';
+            if (!/^\d+$/.test(normalized)) return null;
+
+            const parsed = Number(normalized);
+            if (!Number.isInteger(parsed) || parsed < 0 || parsed > 9999) return null;
+            return String(parsed);
+        };
+
+        const randomValueCode = () => valueCodeMap[Math.floor(Math.random() * valueCodeMap.length)];
+
+        const encodeItemValue = (value) => {
+            const normalizedValue = normalizeItemValue(value);
+            if (!normalizedValue) return '';
+
+            const fourDigit = normalizedValue.padStart(4, '0');
+            const encodedDigits = fourDigit
+                .split('')
+                .map(digit => valueCodeMap[Number(digit)])
+                .join('');
+
+            return `${randomValueCode()}${encodedDigits}${randomValueCode()}`;
+        };
+
+        const computeEncodedValue = (item) => {
+            const normalizedValue = normalizeItemValue(item?.itemValue);
+            if (!normalizedValue) return '';
+
+            const existingEncoded = String(item?.encodedValue || '').trim();
+            if (existingEncoded.length === 6) {
+                return existingEncoded;
+            }
+
+            return encodeItemValue(normalizedValue);
+        };
+
+        const createItemsPayload = () => ({
+            title: adventureTitleInput.value || '',
+            updatedAt: new Date().toISOString(),
+            items: adventureItems
+        });
+
+        const normalizeLoadedItemsPayload = (data) => {
+            if (Array.isArray(data)) {
+                return { title: '', items: data };
+            }
+
+            return {
+                title: typeof data?.title === 'string' ? data.title : '',
+                items: Array.isArray(data?.items) ? data.items : []
+            };
+        };
+
+        const sanitizeItem = (item) => ({
+            name: String(item?.name || '').trim(),
+            code: String(item?.code || '').trim(),
+            description: String(item?.description || '').trim(),
+            itemValue: normalizeItemValue(item?.itemValue) || '',
+            encodedValue: computeEncodedValue(item),
+            persistantProp: toPersistantProp(item?.persistantProp),
+            enchantment: String(item?.enchantment || ''),
+            expiry: String(item?.expiry || '')
+        });
+
+        const sanitizeItems = (items) => items
+            .map(sanitizeItem)
+            .filter(item => item.name && item.code && item.description);
+
+        const applyLoadedItemsPayload = (payload) => {
+            const normalized = normalizeLoadedItemsPayload(payload);
+            adventureItems = sanitizeItems(normalized.items);
+
+            if (!adventureTitleInput.value && normalized.title) {
+                adventureTitleInput.value = normalized.title;
+            }
+
+            renderItems();
+        };
+
+        const saveItemsToLocalCache = () => {
+            try {
+                localStorage.setItem(itemsStorageKey, JSON.stringify(createItemsPayload()));
+            } catch (error) {
+                console.error('Failed to save items to local cache:', error);
+            }
+        };
+
+        const loadItemsFromLocalCache = () => {
+            try {
+                const raw = localStorage.getItem(itemsStorageKey);
+                if (!raw) return false;
+
+                const parsed = JSON.parse(raw);
+                applyLoadedItemsPayload(parsed);
+                return true;
+            } catch (error) {
+                console.error('Failed to load items from local cache:', error);
+                return false;
+            }
+        };
+
+        const writeItemsToBoundFile = async () => {
+            if (!boundJsonFileHandle) return;
+
+            try {
+                const writable = await boundJsonFileHandle.createWritable();
+                await writable.write(JSON.stringify(createItemsPayload(), null, 2));
+                await writable.close();
+            } catch (error) {
+                console.error('Failed to write to bound JSON file:', error);
+                showNotification('Could not auto-save to the bound JSON file.');
+            }
+        };
+
+        const persistItems = () => {
+            saveItemsToLocalCache();
+            writeItemsToBoundFile();
+        };
+
+        const downloadItemsJson = () => {
+            const payload = JSON.stringify(createItemsPayload(), null, 2);
+            const blob = new Blob([payload], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'item-tags-items.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
+
+        const loadDefaultItemsJson = async () => {
+            try {
+                const response = await fetch(defaultItemsJsonPath, { cache: 'no-store' });
+                if (!response.ok) return false;
+
+                const payload = await response.json();
+                applyLoadedItemsPayload(payload);
+                saveItemsToLocalCache();
+                return true;
+            } catch (error) {
+                console.warn('Default items JSON not loaded:', error);
+                return false;
+            }
+        };
+
+        const renderItems = () => {
+            itemList.innerHTML = '';
+            itemCount.textContent = adventureItems.length;
+
+            if (adventureItems.length === 0) {
+                itemList.appendChild(emptyMessage);
+                emptyMessage.style.display = 'block';
+                return;
+            }
+            
+            emptyMessage.style.display = 'none';
+            const table = document.createElement('table');
+            table.className = 'w-full text-left border-collapse';
+            table.innerHTML = `
+                <thead>
+                    <tr class="border-b border-slate-700">
+                        <th class="py-2 px-3 font-bold uppercase text-sm text-gray-400">Name</th>
+                        <th class="py-2 px-3 font-bold uppercase text-sm text-gray-400">Code</th>
+                        <th class="py-2 px-3 font-bold uppercase text-sm text-gray-400">Persistant Prop</th>
+                        <th class="py-2 px-3 font-bold uppercase text-sm text-gray-400 text-right">Actions</th>
+                    </tr>
+                </thead>
+            `;
+            const tbody = document.createElement('tbody');
+            adventureItems.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-slate-700 hover:bg-slate-700 transition-colors duration-150';
+                tr.innerHTML = `
+                    <td class="py-3 px-3">${item.name}</td>
+                    <td class="py-3 px-3 text-gray-400">${item.code}</td>
+                    <td class="py-3 px-3 text-gray-300">${item.persistantProp ? 'True' : 'False'}</td>
+                    <td class="py-3 px-3 text-right">
+                        <button class="edit-btn text-indigo-400 hover:text-indigo-300 mr-2 p-1" data-index="${index}" title="Edit">&#9998;</button>
+                        <button class="delete-btn text-red-500 hover:text-red-400 p-1" data-index="${index}" title="Delete">&#10006;</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            itemList.appendChild(table);
+        };
+        
+        const addItem = (item) => {
+            if (!item.name || !item.code || !item.description) {
+                showNotification('Name, Event Code, and Description are required.');
+                return false;
+            }
+
+            const normalizedValue = normalizeItemValue(item.itemValue);
+            if (String(item.itemValue ?? '').trim() && normalizedValue === null) {
+                showNotification('Item Value must be an integer from 0 to 9999.');
+                return false;
+            }
+
+            adventureItems.push({
+                name: item.name,
+                code: item.code,
+                description: item.description,
+                itemValue: normalizedValue || '',
+                encodedValue: computeEncodedValue({ itemValue: normalizedValue || '', encodedValue: item.encodedValue || '' }),
+                persistantProp: toPersistantProp(item.persistantProp),
+                enchantment: item.enchantment || '',
+                expiry: item.expiry || ''
+            });
+            renderItems();
+            persistItems();
+            return true;
+        };
+
+        manualForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newItem = {
+                name: document.getElementById('itemName').value,
+                code: document.getElementById('itemCode').value,
+                description: document.getElementById('itemDesc').value,
+                itemValue: document.getElementById('itemValue').value,
+                encodedValue: document.getElementById('itemEncodedValue').value,
+                persistantProp: document.getElementById('itemPersistantProp').value,
+                enchantment: document.getElementById('itemEnchant').value,
+                expiry: document.getElementById('itemExpiry').value
+            };
+            const wasAdded = addItem(newItem);
+            if (wasAdded) {
+                manualForm.reset();
+                itemEncodedValueInput.value = '';
+            }
+        });
+
+        itemValueInput.addEventListener('input', () => {
+            const normalizedValue = normalizeItemValue(itemValueInput.value);
+            itemEncodedValueInput.value = normalizedValue ? encodeItemValue(normalizedValue) : '';
+        });
+
+        csvUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const text = event.target.result;
+                const rows = text.split('\n').filter(row => row.trim() !== '');
+                if (rows.length < 2) {
+                    showNotification('CSV file is empty or has no data rows.');
+                    return;
+                }
+                
+                const header = rows[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                const requiredHeaders = ['Name', 'Adventure Code', 'Description'];
+                const hasRequiredHeaders = requiredHeaders.every(rh => header.includes(rh));
+
+                if (!hasRequiredHeaders) {
+                    showNotification(`CSV must include headers: ${requiredHeaders.join(', ')}`);
+                    return;
+                }
+                
+                const nameIndex = header.indexOf('Name');
+                // The CSV file uses "Adventure Code" but we map it to "Event Code" internally
+                const codeIndex = header.indexOf('Adventure Code'); 
+                const descIndex = header.indexOf('Description');
+                const valueIndex = header.indexOf('Item Value');
+                const persistantPropIndex = header.indexOf('Persistant Prop');
+                const enchantIndex = header.indexOf('Enchantment/Comments');
+                const expiryIndex = header.indexOf('Expiry Date');
+                
+                const encodedValueIndex = header.indexOf('EncodedValue');
+                let importedCount = 0;
+
+                for (let i = 1; i < rows.length; i++) {
+                    const values = rows[i].split(',').map(v => v.trim().replace(/"/g, ''));
+                    const item = {
+                        name: values[nameIndex],
+                        code: values[codeIndex],
+                        description: values[descIndex],
+                        itemValue: valueIndex > -1 ? values[valueIndex] : '',
+                        encodedValue: encodedValueIndex > -1 ? values[encodedValueIndex] : '',
+                        persistantProp: persistantPropIndex > -1 ? values[persistantPropIndex] : false,
+                        enchantment: enchantIndex > -1 ? values[enchantIndex] : '',
+                        expiry: expiryIndex > -1 ? values[expiryIndex] : ''
+                    };
+
+                    if (addItem(item)) {
+                        importedCount += 1;
+                    }
+                }
+                showNotification(`${importedCount} items imported successfully.`, false);
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        });
+
+        itemList.addEventListener('click', (e) => {
+            const target = e.target;
+            if (target.classList.contains('delete-btn')) {
+                const index = target.dataset.index;
+                adventureItems.splice(index, 1);
+                renderItems();
+                persistItems();
+            } else if (target.classList.contains('edit-btn')) {
+                const index = target.dataset.index;
+                const item = adventureItems[index];
+                document.getElementById('editItemId').value = index;
+                document.getElementById('editItemName').value = item.name;
+                document.getElementById('editItemCode').value = item.code;
+                document.getElementById('editItemDesc').value = item.description;
+                document.getElementById('editItemValue').value = item.itemValue || '';
+                document.getElementById('editItemEncodedValue').value = item.encodedValue || computeEncodedValue(item);
+                document.getElementById('editItemPersistantProp').value = item.persistantProp ? 'true' : 'false';
+                document.getElementById('editItemEnchant').value = item.enchantment;
+                document.getElementById('editItemExpiry').value = item.expiry;
+                editModal.classList.remove('hidden');
+                editModal.classList.add('flex');
+            }
+        });
+
+        editItemValueInput.addEventListener('input', () => {
+            const normalizedValue = normalizeItemValue(editItemValueInput.value);
+            editItemEncodedValueInput.value = normalizedValue ? encodeItemValue(normalizedValue) : '';
+        });
+
+        const closeEditModal = () => {
+            editModal.classList.add('hidden');
+            editModal.classList.remove('flex');
+        };
+
+        cancelEditBtn.addEventListener('click', closeEditModal);
+        editModal.querySelector('.modal-backdrop').addEventListener('click', closeEditModal);
+
+        editForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const index = document.getElementById('editItemId').value;
+            if (index === '') return;
+
+            const updatedItem = {
+                name: document.getElementById('editItemName').value,
+                code: document.getElementById('editItemCode').value,
+                description: document.getElementById('editItemDesc').value,
+                itemValue: document.getElementById('editItemValue').value,
+                encodedValue: document.getElementById('editItemEncodedValue').value,
+                persistantProp: toPersistantProp(document.getElementById('editItemPersistantProp').value),
+                enchantment: document.getElementById('editItemEnchant').value,
+                expiry: document.getElementById('editItemExpiry').value,
+            };
+            
+            if (!updatedItem.name || !updatedItem.code || !updatedItem.description) {
+                showNotification('Name, Event Code, and Description are required.');
+                return;
+            }
+
+            const normalizedValue = normalizeItemValue(updatedItem.itemValue);
+            if (String(updatedItem.itemValue ?? '').trim() && normalizedValue === null) {
+                showNotification('Item Value must be an integer from 0 to 9999.');
+                return;
+            }
+
+            updatedItem.itemValue = normalizedValue || '';
+            updatedItem.encodedValue = computeEncodedValue(updatedItem);
+
+            adventureItems[index] = updatedItem;
+            renderItems();
+            persistItems();
+            closeEditModal();
+        });
+
+        clearBtn.addEventListener('click', () => {
+            if (!window.confirm('Clear all items from the list?')) {
+                return;
+            }
+
+            adventureItems = [];
+            renderItems();
+            persistItems();
+            showNotification('All items cleared.', false);
+        });
+
+        jsonUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const parsed = JSON.parse(event.target.result);
+                    applyLoadedItemsPayload(parsed);
+                    persistItems();
+                    showNotification('Items loaded from JSON file.', false);
+                } catch (error) {
+                    console.error('Invalid JSON file:', error);
+                    showNotification('Invalid JSON file format.');
+                }
+            };
+
+            reader.readAsText(file);
+            e.target.value = '';
+        });
+
+        saveJsonBtn.addEventListener('click', async () => {
+            if (boundJsonFileHandle) {
+                await writeItemsToBoundFile();
+                showNotification('Items saved to bound JSON file.', false);
+                return;
+            }
+
+            downloadItemsJson();
+            showNotification('Items JSON downloaded.', false);
+        });
+
+        bindJsonBtn.addEventListener('click', async () => {
+            if (!window.showOpenFilePicker) {
+                showNotification('This browser does not support direct file binding. Use Save Items JSON instead.');
+                return;
+            }
+
+            try {
+                const [fileHandle] = await window.showOpenFilePicker({
+                    multiple: false,
+                    types: [{
+                        description: 'JSON Files',
+                        accept: { 'application/json': ['.json'] }
+                    }]
+                });
+
+                boundJsonFileHandle = fileHandle;
+                bindJsonBtn.textContent = `Bound: ${fileHandle.name}`;
+                await writeItemsToBoundFile();
+                showNotification('JSON file bound for auto-save.', false);
+            } catch (error) {
+                if (error?.name !== 'AbortError') {
+                    console.error('Failed to bind JSON file:', error);
+                    showNotification('Could not bind JSON file.');
+                }
+            }
+        });
+        
+        const LOGO_PATH = 'SmallLogo_Black_NoBG.png';
+        let embeddedLogoDataUrl = null;
+
+        const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(reader.error || new Error('Failed to read logo file.'));
+            reader.readAsDataURL(blob);
+        });
+
+        const resolveLogoSource = async () => {
+            if (embeddedLogoDataUrl) return embeddedLogoDataUrl;
+
+            try {
+                const response = await fetch(LOGO_PATH, { cache: 'no-store' });
+                if (!response.ok) {
+                    throw new Error(`Logo fetch failed with status ${response.status}`);
+                }
+
+                const logoBlob = await response.blob();
+                embeddedLogoDataUrl = await blobToDataUrl(logoBlob);
+                return embeddedLogoDataUrl;
+            } catch (error) {
+                console.warn('Using fallback logo path in export:', error);
+                return LOGO_PATH;
+            }
+        };
+
+        const generateTagHTML = async () => {
+            const adventureTitle = document.getElementById('adventureTitle').value || 'Event Items';
+            const logoSrc = await resolveLogoSource();
+            
+            const itemTags = adventureItems.map(item => `
+                <div class="item-tag">
+                    <img class="tag-logo" src="${logoSrc}" alt="Logo">
+                    <div class="tag-header">${item.name}</div>
+                    <div class="tag-line tag-code">${item.code}</div>
+                    <div class="tag-line tag-desc">${item.description}</div>
+                    ${(item.encodedValue || computeEncodedValue(item)) ? `<div class="tag-line tag-value">Value: ${item.encodedValue || computeEncodedValue(item)}</div>` : ''}
+                    ${item.persistantProp ? '<div class="tag-line tag-prop">Persistant Prop</div>' : ''}
+                    <div class="tag-enchant">${item.enchantment}</div>
+                    <div class="tag-footer">${item.expiry}</div>
+                </div>
+            `).join('');
+
+            // Updated exported HTML styling for white background, reduced font size, and print margins
+            return `
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <title>${adventureTitle} - Item Tags</title>
+                <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;700&family=Roboto:wght@400;700&display=swap');
+                    /* Screen View Styles */
+                    body { 
+                        font-family: 'Roboto', sans-serif; 
+                        background-color: #1e293b; /* Slate-800 equivalent */
+                        color: #e2e8f0; /* Slate-200 equivalent */
+                        margin: 0; 
+                        padding: 20px;
+                    }
+                    .page-header { 
+                        text-align: center; 
+                        margin-bottom: 20px; 
+                        font-family: 'Lora', serif; 
+                        color: #818cf8; /* Indigo-400 */
+                    }
+                    .tag-container {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                        gap: 20px;
+                        page-break-inside: avoid;
+                    }
+                    .item-tag {
+                        position: relative;
+                        background-color: #0f172a; /* Slate-900 equivalent */
+                        color: #e2e8f0;
+                        border: 2px solid #334155; /* Slate-700 equivalent */
+                        border-radius: 8px;
+                        padding: 15px;
+                        display: flex;
+                        flex-direction: column;
+                        min-height: 300px;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+                        box-sizing: border-box;
+                        font-size: 0.9em; /* Reduced base font size for screen preview */
+                    }
+                    .tag-logo {
+                        position: absolute;
+                        top: 8px;
+                        right: 8px;
+                        width: 40px;
+                        height: auto;
+                        opacity: 0.9;
+                    }
+                    .tag-header {
+                        font-family: 'Lora', serif;
+                        font-size: 1.3em; /* Reduced header font size */
+                        font-weight: 700;
+                        text-align: center;
+                        border-bottom: 1px solid #475569; 
+                        padding-bottom: 8px;
+                        margin-bottom: 8px;
+                        color: #818cf8;
+                    }
+                    .tag-line { padding: 3px 0; }
+                    .tag-code { color: #94a3b8; font-size: 0.8em; } /* Further reduced code font size */
+                    .tag-desc { flex-grow: 1; }
+                    .tag-value { color: #e2e8f0; }
+                    .tag-prop { color: #cbd5e1; }
+                    .tag-enchant {
+                        font-style: italic;
+                        color: #a5b4fc; 
+                        border-top: 1px dashed #475569;
+                        border-bottom: 1px dashed #475569;
+                        padding: 6px 0;
+                        margin: 8px 0;
+                        text-align: center;
+                        min-height: 1.2em;
+                        font-size: 0.9em;
+                    }
+                    .tag-footer {
+                        font-size: 0.7em; /* Reduced footer font size */
+                        text-align: right;
+                        color: #94a3b8;
+                        margin-top: auto;
+                    }
+
+                    /* Print View: Enforce 4x10 Grid, White Background, and Margins */
+                    @media print {
+                        @page {
+                            margin: 0;
+                        }
+                        html,
+                        body { 
+                            background-color: #ffffff !important; /* White background for print */
+                            color: #000000; /* Black text for print */
+                            margin: 0; 
+                            padding: 0;
+                        }
+                        .page-header { 
+                            display: none; 
+                        }
+                        .tag-container { 
+                            -webkit-print-color-adjust: exact; 
+                            color-adjust: exact;
+                            /* Setting up the 4x10 grid layout for print on a standard letter/A4 page */
+                            display: grid;
+                            grid-template-columns: repeat(3, 1fr); /* 3 Columns */
+                            grid-template-rows: repeat(7, 1fr); /* 8 Rows */
+                            width: 8in;
+                            height: 10.5in;
+                            gap: 2px; /* Reduced spacing between printed tags */
+                            padding: 0.12in;
+                            margin: 0 auto;
+                            background-color: #ffffff !important;
+                        }
+                        .item-tag { 
+                            position: relative;
+                            background-color: #ffffff !important; 
+                            color: #000000; 
+                            border: 1px solid #1a1a1a; 
+                            border-radius: 0;
+                            padding: 8px;
+                            box-shadow: none; 
+                            height: 100%;
+                            min-height: unset;
+                            font-size: 0.75em;
+                            break-inside: avoid;
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
+                        }
+                        .tag-logo {
+                            position: absolute;
+                            top: 6px;
+                            right: 6px;
+                            width: 59px;
+                            height: auto;
+                            display: block !important;
+                            visibility: visible !important;
+                            opacity: 1 !important;
+                            filter: none;
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
+                        }
+                        .tag-header {
+                            color: #1a1a1a; 
+                            border-bottom: 1px solid #cccccc; 
+                            font-size: 1em; /* Increased ~25% */
+                            padding-bottom: 5px;
+                            margin-bottom: 5px;
+                        }
+                        .tag-code {
+                            color: #333333;
+                            font-size: 0.7em; /* Increased ~28% */
+                        }
+                        .tag-value {
+                            color: #000000;
+                            font-size: 0.7em;
+                            font-style: italic;
+                            text-align: right;
+                        }
+                        .tag-prop {
+                            color: #000000;
+                            font-size: 0.65em;
+                            text-align: right;
+                        }
+                        .tag-enchant {
+                            color: #333333;
+                            border-top: 1px dashed #cccccc;
+                            border-bottom: 1px dashed #cccccc;
+                            padding: 6px 0;
+                            margin: 8px 0;
+                            font-size: 0.7em; 
+                        }
+                        .tag-footer {
+                             color: #333333;
+                             font-size: 0.7em;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                <h1 class="page-header">${adventureTitle}</h1>
+                <div class="tag-container">
+                    ${itemTags}
+                </div>
+            </body>
+            </html>
+            `;
+        };
+
+        exportBtn.addEventListener('click', async () => {
+            if (adventureItems.length === 0) {
+                showNotification('Cannot export an empty list.');
+                return;
+            }
+            const htmlContent = await generateTagHTML();
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'event-item-tags.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+
+        const loadedFromCache = loadItemsFromLocalCache();
+        if (!loadedFromCache) {
+            loadDefaultItemsJson().finally(() => renderItems());
+        } else {
+            renderItems();
+        }
+    });
+</script>
+</body>
+</html>

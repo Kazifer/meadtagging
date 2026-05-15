@@ -1,0 +1,169 @@
+<!DOCTYPE html><html><head><title>E10_-_A47_-_Hoping_for_Summer_Cantrips</title>
+                <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+                    
+                    body {
+                        color: #1f2937;
+                        background-color: #ffffff; /* Very light blue/gray background */
+                        font-family: 'Inter', sans-serif;
+                        padding: 20px;
+                        line-height: 1.4;
+                    }
+                    
+                    /* The Cantrip Card Styling */
+                    .export-cell {
+                        height: 12cm;
+                        width: 50%; 
+                        padding: 1.25rem; /* More padding for card look */
+                        box-sizing: border-box;
+                        font-size: 0.8rem; /* Slightly larger font */
+                        vertical-align: top;
+                        page-break-inside: avoid;
+                        background-image: url('SmallLogo_Black_NoBG.png');
+                        background-size: 75%;
+                        background-repeat: no-repeat;
+                        background-position: top right;
+                        
+                        /* Differentiation Styling */
+                        border: 1px solid #e2e8f0; /* Subtle border */
+                        border-radius: 12px;
+                        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+                        background-color: white; /* White card background */
+                    }
+                    
+                    /* Table Structure for Layout */
+                    #exportTable {
+                        border-collapse: separate;
+                        border-spacing: 10px 10px; /* Space between cards */
+                        border: none; /* Remove table border */
+                    }
+                    
+                    /* Remove cell default borders in HTML export */
+                    #exportTable td, #exportTable th {
+                        border: none !important;
+                        vertical-align: top;
+                    }
+
+                    /* Header Styling */
+                    #exportTable thead th {
+                        background-color: #4f46e5;
+                        color: white;
+                        font-family: 'Inter', sans-serif;
+                        font-size: 1.0rem;
+                        font-weight: 500;
+                        padding: 15px;
+                        border-radius: 10px;
+                    }
+
+                    /* Individual Cantrip Content Styling */
+                    .text-gray-900 { color: #1f2937 !important; }
+                    .font-extrabold { font-weight: 800; }
+                    .font-verbal {font-weight: 200; font-style: italic;}
+                    .font-description { font-weight: 100; font-size: 90%; font-family: 'Tahoma', sans-serif; text-align: justify; }
+                    .font-normal { font-weight: 400; }
+                    .text-gray-700 { color: #4a5568; }
+                    .text-gray-600 { color: #718096; }
+                    .border-t { border-top: 1px solid #e2e8f0; }
+
+                </style>
+            </head><body>
+            <!-- Header for Export -->
+            <div class="mb-4">
+                <h3 class="text-indigo-200 font-bold mb-1" style="font-size: 0.75rem;">Adventure: <span id="exportTitle">E10 - A47 - Hoping for Summer</span></h3>
+            </div>
+            <!-- Table for Export: Used for the 12cm x 5cm fixed cells -->
+            <table id="exportTable" class="w-full border-collapse border border-gray-400">
+                <thead>
+                    <!-- Header will be dynamically inserted by JS to span columns -->
+                </thead>
+                <tbody id="exportTableBody"><tr><td class="export-cell border border-gray-400 align-top">
+                    
+                     
+                        <p class="font-extrabold text-sm" style="line-height: 1.2; margin-bottom: 8px; margin-top: 0;">Acidic Weapon <span class="font-normal text-xs">  </span></p>
+                        <p class="font-verbal text-xs mt-1 text-gray-600" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;">1 Components</p>
+                        <p class="text-xs mt-1 font-semibold text-gray-700" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;">Nature</p>
+                        
+                        <!-- Line 2: Tag, Duration -->
+                        <p class="text-xs mt-1" style="line-height: 1.0; margin-bottom: 0; margin-top: 0;">Ryanar’s Acidic Aura</p>
+                        <p class="text-xs" style="line-height: 1.0; margin-bottom: 0; margin-top: 0;"><b>Duration:</b> Invoked</p>
+
+                        <!-- Line 3: Type -->
+                        <p class="text-xs mt-1" style="line-height: 1.0; margin-bottom: 6px; margin-top: 0;"><b>Type:</b> Personal</p>
+
+                        <!-- Line 4: Verbal -->
+                        <p class="font-verbal text-xs mt-2 text-gray-600" style="line-height: 1.5; margin-bottom: 8px; margin-top: 0;">"By Nature I gain an acid aura."</p>
+
+                        <!-- Line 5: Description -->
+                        <div class="mt-2 pt-2 border-t border-gray-200">
+                            <p class="font-description" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;"><b>Description:</b> The caster of this Cantrip gains the damage type Acid against one opponent when invoked. Acid as a carrier has no special properties except that it is not Normal. This works on melee but not ranged attacks. If the caster dies and requires a Life spell the Acid Aura is lost. </p>
+                        </div>
+             
+                </td><td class="export-cell border border-gray-400 align-top">
+                    
+                     
+                        <p class="font-extrabold text-sm" style="line-height: 1.2; margin-bottom: 8px; margin-top: 0;">Carrier Immunity <span class="font-normal text-xs">  </span></p>
+                        <p class="font-verbal text-xs mt-1 text-gray-600" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;">1 Components</p>
+                        <p class="text-xs mt-1 font-semibold text-gray-700" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;">Celestial, Earth, Nature</p>
+                        
+                        <!-- Line 2: Tag, Duration -->
+                        <p class="text-xs mt-1" style="line-height: 1.0; margin-bottom: 0; margin-top: 0;">Karvecki’s Protection from Dweomered Claws</p>
+                        <p class="text-xs" style="line-height: 1.0; margin-bottom: 0; margin-top: 0;"><b>Duration:</b> Invoked</p>
+
+                        <!-- Line 3: Type -->
+                        <p class="text-xs mt-1" style="line-height: 1.0; margin-bottom: 6px; margin-top: 0;"><b>Type:</b> Personal</p>
+
+                        <!-- Line 4: Verbal -->
+                        <p class="font-verbal text-xs mt-2 text-gray-600" style="line-height: 1.5; margin-bottom: 8px; margin-top: 0;">“I grant myself Carrier Immunity to :&lt;effect&gt;."</p>
+
+                        <!-- Line 5: Description -->
+                        <div class="mt-2 pt-2 border-t border-gray-200">
+                            <p class="font-description" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;"><b>Description:</b> This protection bestows upon the caster a temporary Immunity to a specific effect type designated by the caster which may be invoked against a single chosen target. <br> Carrier Immunity does not prevent the damage portion of the attack and will not protect against weapon damage types, spells, or Spellstrikes. The caster designates one option at the time of the casting by designating it in the verbal spell incant. Once chosen, the option may not be changed and may only have a single Carrier Immunity Cantrip active regardless of school (see Stacked Effects on page 40 of the NERO World Classic Rulebook). To specify a target, the character must state the verbal phrase 'I invoke Carrier Immunity &lt;option&gt; against you.' expending one use of the invoked cantrip. Additional targets may be designated, one at a time by expending additional Invoked uses of this Cantrip (up to a maximum of five targets). See Damage Types (and also Effects) on page 82 of the NERO World Classic Rulebook for more information about 'Carrier Attacks'.</p>
+                        </div>
+             
+                </td></tr><tr class="page-break"><td class="export-cell border border-gray-400 align-top">
+                    
+                     
+                        <p class="font-extrabold text-sm" style="line-height: 1.2; margin-bottom: 8px; margin-top: 0;">Claws of the Beast <span class="font-normal text-xs">  </span></p>
+                        <p class="font-verbal text-xs mt-1 text-gray-600" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;">2 Components</p>
+                        <p class="text-xs mt-1 font-semibold text-gray-700" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;">Nature</p>
+                        
+                        <!-- Line 2: Tag, Duration -->
+                        <p class="text-xs mt-1" style="line-height: 1.0; margin-bottom: 0; margin-top: 0;">Annik’s Animalistic Offense</p>
+                        <p class="text-xs" style="line-height: 1.0; margin-bottom: 0; margin-top: 0;"><b>Duration:</b> Hour</p>
+
+                        <!-- Line 3: Type -->
+                        <p class="text-xs mt-1" style="line-height: 1.0; margin-bottom: 6px; margin-top: 0;"><b>Type:</b> Personal</p>
+
+                        <!-- Line 4: Verbal -->
+                        <p class="font-verbal text-xs mt-2 text-gray-600" style="line-height: 1.5; margin-bottom: 8px; margin-top: 0;">"By Nature I Grow Claws of the Beast."</p>
+
+                        <!-- Line 5: Description -->
+                        <div class="mt-2 pt-2 border-t border-gray-200">
+                            <p class="font-description" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;"><b>Description:</b> By casting this spell the caster can grow a pair of claws. These are standard short sword sized Body Weaponry that deliver 5 points of normal damage with each strike. These claws cannot be cast upon anyone but the caster. While using these claws the caster may retract them so that other actions can be performed, and each claw may be retracted independent of the other. While the claws are active (not retracted), no game skill other than touch-casting may be performed with that hand. In order to extend or retract the claw or claws, the wielder must perform a three-counted action. The caster must provide his or her own standard red claw phys. reps. The caster can  end this spell at any time, but once ended the claws are gone and cannot be regained except by a new casting of this spell. These claws are always visible to any that take the time to notice for the spell’s entire duration. The  damage dealt by Claws cannot be improved through the purchase of weapon proficiencies, but extraordinary strength and Blade spells/poisons will function as normal. </p>
+                        </div>
+             
+                </td><td class="export-cell border border-gray-400 align-top">
+                    
+                     
+                        <p class="font-extrabold text-sm" style="line-height: 1.2; margin-bottom: 8px; margin-top: 0;">Contingency <span class="font-normal text-xs">  </span></p>
+                        <p class="font-verbal text-xs mt-1 text-gray-600" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;">1 Components</p>
+                        <p class="text-xs mt-1 font-semibold text-gray-700" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;">Celestial, Earth, Nature</p>
+                        
+                        <!-- Line 2: Tag, Duration -->
+                        <p class="text-xs mt-1" style="line-height: 1.0; margin-bottom: 0; margin-top: 0;">Karvecki’s Grant of Hope</p>
+                        <p class="text-xs" style="line-height: 1.0; margin-bottom: 0; margin-top: 0;"><b>Duration:</b> Day</p>
+
+                        <!-- Line 3: Type -->
+                        <p class="text-xs mt-1" style="line-height: 1.0; margin-bottom: 6px; margin-top: 0;"><b>Type:</b> Personal</p>
+
+                        <!-- Line 4: Verbal -->
+                        <p class="font-verbal text-xs mt-2 text-gray-600" style="line-height: 1.5; margin-bottom: 8px; margin-top: 0;">“I grant myself <spell name=""> spell Contingent upon my (being) <trigger condition="">."</trigger></spell></p>
+
+                        <!-- Line 5: Description -->
+                        <div class="mt-2 pt-2 border-t border-gray-200">
+                            <p class="font-description" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;"><b>Description:</b> This Cantrip places any one spell from the memory of the caster into a delayed state which will automatically be triggered when the trigger condition is met, at any time before the next Standard Reset; nothing can prevent the spell being delivered once the trigger condition is met and is not subject by Spell Disruption. The Contingent spell must be of the same school of magic at this Cantrip. The caster may only have a single Contingency Cantrip active regardless of school (see Stacked Effects on page 40 of the NERO World Classic Rulebook). <br>Contingency is limited to one of the following conditions:<br>Bound (Pin/Bind/Web/Confine), Charmed, Cursed, Death, Dying, Paralyzed, Poisoned, Imprisoned, Silenced, Sleeping, or Unconsciousness. <br><br>When the trigger condition is met, the player must state the out-of-game verbal phrase 'Contingency &lt;spell name&gt;&lt;option or number&gt;'.</p>
+                        </div>
+             
+                </td></tr></tbody>
+            </table>
+        </body></html>

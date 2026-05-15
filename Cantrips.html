@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cantrip Production Calculator</title>
+    <link rel="stylesheet" href="theme.css">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- html2pdf.js CDN for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        /* Custom styles for the required cell dimensions in the EXPORT view (PDF relies on this) */
+        .export-cell {
+            height: 12cm;
+            /* CRITICAL FIX: Changed from fixed 5cm to 50% to ensure columns fill the landscape page */
+            width: 50%; 
+            padding: 0.5rem; /* Reduced padding slightly to fit more content */
+            border: 1px solid #ccc;
+            box-sizing: border-box; /* Include padding and border in the element's total width and height */
+            font-size: 0.7rem; /* Base font size for the card */
+            vertical-align: top; /* Ensure content starts at the top of the cell */
+            /* CRITICAL: Prevents page breaks from occurring inside the cantrip card element */
+            page-break-inside: avoid;
+        }
+            /* Ensure two rows per printed page in export table */
+            @media print {
+                tr.page-break {
+                    page-break-after: always;
+                }
+            }
+    </style>
+</head>
+<body class="bg-gray-900 min-h-screen p-4 md:p-8 font-sans text-gray-100">
+
+    <div id="app" class="max-w-6xl mx-auto bg-gray-800 rounded-xl shadow-2xl p-6 md:p-10">
+
+        <!-- Header and Cost Summary -->
+        <header class="mb-8 border-b-4 border-indigo-500 pb-4">
+            <h1 class="text-4xl font-extrabold text-indigo-400 mb-4">Cantrip Production Tool</h1>
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div class="w-full md:w-1/2">
+                    <label for="adventureTitle" class="block text-sm font-normal text-gray-200 mb-1">Adventure </label>
+                    <input type="text" id="adventureTitle" value=""
+                           class="w-full px-4 py-2 border border-gray-600 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-lg bg-gray-700 text-gray-100"
+                           oninput="updateExportData()">
+                </div>
+                <div class="w-full md:w-1/4">
+                    <div class="bg-indigo-900/50 p-4 rounded-lg text-center shadow-inner">
+                        <p class="text-sm font-medium text-indigo-200">Total Production Cost</p>
+                        <p id="totalCost" class="text-3xl font-bold text-indigo-400 mt-1">0</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content: Selection and Export -->
+        <main class="flex flex-col lg:flex-row gap-8">
+
+            <!-- Left column group (Filters + List) -->
+            <div class="lg:w-3/4 flex flex-col gap-6"> 
+                
+                <!-- Filter Panel -->
+                <section class="p-6 bg-gray-700 rounded-xl shadow-lg border border-gray-600">
+                    <h3 class="text-xl font-bold text-indigo-400 mb-4 border-b border-gray-600 pb-2">Filter Cantrips</h3>
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        
+                        <!-- Component Filters -->
+                        <div class="flex items-center space-x-4 flex-wrap gap-y-2">
+                            <span class="text-sm font-medium text-gray-200 w-full sm:w-auto">Components:</span>
+                            <label class="flex items-center space-x-1">
+                                <input type="checkbox" id="filterCelestial" onchange="applyFilters()" class="h-4 w-4 text-indigo-500 rounded border-gray-500 bg-gray-800">
+                                <span class="text-gray-200 text-sm">Celestial</span>
+                            </label>
+                            <label class="flex items-center space-x-1">
+                                <input type="checkbox" id="filterEarth" onchange="applyFilters()" class="h-4 w-4 text-indigo-500 rounded border-gray-500 bg-gray-800">
+                                <span class="text-gray-200 text-sm">Earth</span>
+                            </label>
+                            <label class="flex items-center space-x-1">
+                                <input type="checkbox" id="filterNature" onchange="applyFilters()" class="h-4 w-4 text-indigo-500 rounded border-gray-500 bg-gray-800">
+                                <span class="text-gray-200 text-sm">Nature</span>
+                            </label>
+                        </div>
+                        
+                        <!-- Cost Filter -->
+                        <div>
+                            <label for="filterCost" class="text-sm font-medium text-gray-200 mr-2">Max Cost:</label>
+                            <select id="filterCost" onchange="applyFilters()" 
+                                    class="px-3 py-1 border border-gray-600 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm bg-gray-700 text-gray-100">
+                                <option value="all">Any Cost</option>
+                                <option value="0">0</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Cantrip Selection List -->
+                <section>
+                    <h2 class="text-2xl font-semibold text-gray-100 mb-4">Available Cantrips (Click to Edit)</h2>
+                    <div id="cantripList" class="space-y-3">
+                        <!-- Cantrip items will be rendered here by JavaScript -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- Export Panel -->
+            <aside class="lg:w-1/4 sticky top-4 self-start">
+                <div class="bg-gray-700 p-6 rounded-lg shadow-lg border border-gray-600">
+                    <h2 class="text-xl font-semibold text-gray-100 mb-4 border-b border-gray-600 pb-2">Export Setup</h2>
+                    
+                    <p class="font-medium mb-2 text-gray-200">Select Export Format</p>
+                    <div class="space-y-2 mb-6">
+                        <label class="flex items-center space-x-2">
+                            <input type="radio" name="exportFormat" value="pdf" checked
+                                   class="form-radio text-indigo-500 h-4 w-4 bg-gray-800 border-gray-500">
+                            <span class="text-gray-200">PDF Document</span>
+                        </label>
+                        <label class="flex items-center space-x-2">
+                            <input type="radio" name="exportFormat" value="html"
+                                   class="form-radio text-indigo-500 h-4 w-4 bg-gray-800 border-gray-500">
+                            <span class="text-gray-200">HTML File</span>
+                        </label>
+                        <label class="flex items-center space-x-2">
+                            <input type="radio" name="exportFormat" value="csv"
+                                   class="form-radio text-indigo-500 h-4 w-4 bg-gray-800 border-gray-500">
+                            <span class="text-gray-200">XLSX (CSV Format)</span>
+                        </label>
+                    </div>
+
+                    <button id="exportButton" onclick="exportFile()"
+                            class="w-full py-3 px-6 bg-indigo-600 text-white font-bold rounded-xl shadow-md hover:bg-indigo-700 transition duration-150 ease-in-out flex items-center justify-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Generate Export File
+                    </button>
+                    <p id="exportStatus" class="text-center text-sm mt-3 text-red-400 hidden">Please select at least one Cantrip.</p>
+                </div>
+            </aside>
+        </main>
+
+        <!-- Hidden container for export content -->
+        <div id="exportContainer" class="p-8 hidden bg-white text-gray-900">
+            <!-- Header for Export -->
+            <div class="mb-4">
+                <h3 class="text-indigo-200 font-bold mb-1" style="font-size: 0.75rem;">Adventure: <span id="exportTitle"></span></h1>
+            </div>
+            <!-- Table for Export: Used for the 12cm x 5cm fixed cells -->
+            <table id="exportTable" class="w-full border-collapse border border-gray-400">
+                <thead>
+                    <!-- Header will be dynamically inserted by JS to span columns -->
+                </thead>
+                <tbody id="exportTableBody">
+                    <!-- Exported cantrips will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+        
+    </div>
+
+    <!-- Modal for Cantrip Editing -->
+    <div id="editModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-lg">
+            <h3 class="text-2xl font-bold mb-4 text-indigo-400">Edit Cantrip</h3>
+            <form id="editForm" onsubmit="saveCantrip(event)">
+                <!-- Form fields will be populated by JS -->
+            </form>
+        </div>
+    </div>
+
+    <script src="event-variables.js"></script>
+    <script src="cantrips-data.js"></script>
+    <script>
+        // --- Data Initialization ---
+        // Data populated from "Nero World Cantrips - Sheet1.csv"
+        let cantrips = window.cantripsData;
+        /*
+            { id:1, name: "Acidic Weapon", celestial: false, earth: false, nature: true, type: "Personal", duration: "Invoked", cost:1, tag: "Ryanar’s Acidic Aura", verbal: "\"By Nature I gain an acid aura.\"", description: "The caster of this Cantrip gains the damage type Acid against one opponent when invoked. Acid as a carrier has no special properties except that it is not Normal. This works on melee but not ranged attacks. If the caster dies and requires a Life spell the Acid Aura is lost. ", isSelected: false},
+            { id:2, name: "Armored to Magic", celestial: true, earth: true, nature: true, type: "Personal", duration: "Day", cost:0, tag: "Indessa’s Dweomer Barrier", verbal: "\“I grant myself Armor to <spell type>.\"", description: "This protection spell bestows upon the caster an automatic Spell Defense which is triggered by the next appropriate effect which hits them, negating the attack or effect. <br> When triggered, Armored to Magic is expended. This Spell Defense is used after any other automatic Spell Defenses such as Magic Armor, Shield Magic, Elemental Shield, and Poison Shield (see Protection Hierarchy on  page 82 of the NERO World Classic Rulebook). The character may choose to use Cloak, Bane, or Dodge before the Armored to Magic, but may not use Resist or Return. <br> The player must say the out-of-game verbal phrase  '<Type> Shield' within three-seconds of being affected. Armored to Magic is school specific with regard to which  effects are permitted: <br> Celestial: Command, I Call Forth, Imprison, Mystic Force,  and Summoned Force. <br>Earth: Chaos, Command, Curse, Earth, Gift, Mystic Force, and Summoned Force. <br> Touch-Cast spells may be “accepted” through this Spell Defense normally (see Touch-Casting on page 40 of the NERO World Classic Rulebook). ", isSelected: false},
+            { id:3, name: "Bane of the Dead", celestial: false, earth: true, nature: false, type: "Offensive", duration: "Concentration", cost:1, tag: "Yolathurn’s Dead Strike", verbal: "\“By the Earth I Bane the Dead... Magic Harm Undead 30... Magic Harm Undead 30…\"", description: "When this spell is cast, the caster must plant both feet firmly and may not move them for the duration. The caster must maintain this spell through Concentration (this is a Concentration action, see page 55 of the NERO World Classic Rulebook), allowing the caster to continuously state the in-game verbal incant “Magic Harm Undead 30” before throwing a spell packet. Each packet thrown counts as an individual spell cast and is subject to Spell Disruption. This spell immediately causes 30 Body Points of damage to an undead creature, bypassing all armor. This spell only functions on an undead creature and will not affect any  living creature (but will still trigger Spell Defenses normally). This cantrip is a reversible spell of Boon of the Dead.", isSelected: false},
+            { id:4, name: "Blight", celestial: false, earth: true, nature: false, type: "Broad", duration: "Instant", cost:2, tag: "Bin’Aven’s Poisoned Ground", verbal: "\“By Chaos I blight this land.\"", description: "This cantrip causes ten acres of land, centered on the caster, to become infected in some way or become infertile. This cantrip will remove the Increase Harvest cantrip on any land area in range. This cantrip is a reversible spell of Increase Harvest.", isSelected: false},
+            { id:5, name: "Boltstorm", celestial: false, earth: true, nature: false, type: "Offensive", duration: "Concentration", cost:1, tag: "Runewind’s Elemental Bombardment", verbal: "\“I grant myself a Boltstorm to throw... <Fire, Ice, Lightning, or Stone>... 10 Elemental <Element>... 10 Elemental <Element>…\"", description: "When this spell is cast, the caster must plant both feet firmly and may not move them for the duration. The caster must maintain this spell through Concentration (this is a Concentration action, see page 55 of the NERO World Classic Rulebook), allowing the caster to continuously state the in-game verbal incant '10 Elemental <chosen Element>' before throwing a spell packet. Each packet  thrown counts as an individual spell cast.  <br> This spell creates an eldritch bolt of magical fire, ice, lightning, or stone which deals 10 points of damage to the target. The caster designates which one option to choose at the time of the casting by designating either fire, ice, lightning, or stone in the verbal spell incant. Once chosen, the element may not be changed.", isSelected: false},
+            { id:6, name: "Boon of the Dead", celestial: false, earth: true, nature: false, type: "Offensive", duration: "Concentration", cost:1, tag: "Yolathurn’s Dead Strength", verbal: "\“By Chaos I Boon the Dead... Magic Help Undead 30... Magic Help Undead 30…\"", description: "When this spell is cast, the caster must plant both feet firmly and may not move them for the duration. The caster must maintain this spell through Concentration (this is a Concentration action, see page 55 of the NERO World Classic Rulebook), allowing the caster to continuously  state the in-game verbal incant 'Magic Harm Undead 30' before throwing a spell packet. Each packet thrown counts as an individual spell cast and is subject to Spell   Disruption. <br>This spell immediately restores up to 30 Body Points of damage to an undead creature, bypassing all armor, but will not heal the creature beyond their maximum Body Points. This spell only functions on an undead creature and will not affect any living creature (but will still trigger Spell Defenses normally). This cantrip is a reversible spell of Bane the Dead.", isSelected: false},
+            { id:7, name: "Carrier Immunity", celestial: true, earth: true, nature: true, type: "Personal", duration: "Invoked", cost:1, tag: "Karvecki’s Protection from Dweomered Claws", verbal: "\“I grant myself Carrier Immunity to :&lt;effect&gt;.\"", description: "This protection bestows upon the caster a temporary Immunity to a specific effect type designated by the caster which may be invoked against a single chosen target. <br> Carrier Immunity does not prevent the damage portion of the attack and will not protect against weapon damage types, spells, or Spellstrikes. The caster designates one option at the time of the casting by designating it in the verbal spell incant. Once chosen, the option may not be changed and may only have a single Carrier Immunity Cantrip active regardless of school (see Stacked Effects on page 40 of the NERO World Classic Rulebook). To specify a target, the character must state the verbal phrase 'I invoke Carrier Immunity &lt;option&gt; against you.' expending one use of the invoked cantrip. Additional targets may be designated, one at a time by expending additional Invoked uses of this Cantrip (up to a maximum of five targets). See Damage Types (and also Effects) on page 82 of the NERO World Classic Rulebook for more information about 'Carrier Attacks'.", isSelected: false},
+            { id:8, name: "Channeling", celestial: true, earth: true, nature: true, type: "Personal", duration: "Day", cost:1, tag: "Erol’s Mnemonic Spellstrike", verbal: "\“I grant myself the ability of Channeling. &lt;incant of first spell&gt;&lt;incant of second spell&gt;.\"", description: "This Cantrip places any two spells from the memory of the caster into a delayed state which allows them to later deliver those spells by weapon as a Spellstrike at any time before the next Standard Reset. The total spell levels of both held spells must be equal to or less than the total levels of Formal Magic skill levels possessed by the caster and must be of the same school of magic at this Cantrip. <br> The caster may only have a single Channeling Cantrip active regardless of school (see Stacked Effects on page 40 of the NERO World Classic Rulebook).  <br> To use a held Channeled spell, the character must state 'Spellstrike &lt;spell name&gt; &lt;option&gt;' and swing their weapon at an opponent. The effect is used whether the attack  is successful or not. Spell Defenses (such as Shield Magic or Reflect Magic) may be used to defend against the Spellstrike, however Magic Armor and Resist Physical may not be used (the effect is a spell, not a weapon attack)", isSelected: false},
+            { id:9, name: "Claws of the Beast", celestial: false, earth: false, nature: true, type: "Personal", duration: "Hour", cost:2, tag: "Annik’s Animalistic Offense", verbal: "\"By Nature I Grow Claws of the Beast.\"", description: "By casting this spell the caster can grow a pair of claws. These are standard short sword sized Body Weaponry that deliver 5 points of normal damage with each strike. These claws cannot be cast upon anyone but the caster. While using these claws the caster may retract them so that other actions can be performed, and each claw may be retracted independent of the other. While the claws are active (not retracted), no game skill other than touch-casting may be performed with that hand. In order to extend or retract the claw or claws, the wielder must perform a three-counted action. The caster must provide his or her own standard red claw phys. reps. The caster can  end this spell at any time, but once ended the claws are gone and cannot be regained except by a new casting of this spell. These claws are always visible to any that take the time to notice for the spell’s entire duration. The  damage dealt by Claws cannot be improved through the purchase of weapon proficiencies, but extraordinary strength and Blade spells/poisons will function as normal. ", isSelected: false},
+            { id:10, name: "Contingency", celestial: true, earth: true, nature: true, type: "Personal", duration: "Day", cost:1, tag: "Karvecki’s Grant of Hope", verbal: "\“I grant myself <spell name> spell Contingent upon my (being) <trigger condition>.\"", description: "This Cantrip places any one spell from the memory of the caster into a delayed state which will automatically be triggered when the trigger condition is met, at any time before the next Standard Reset; nothing can prevent the spell being delivered once the trigger condition is met and is not subject by Spell Disruption. The Contingent spell must be of the same school of magic at this Cantrip. The caster may only have a single Contingency Cantrip active regardless of school (see Stacked Effects on page 40 of the NERO World Classic Rulebook). <br>Contingency is limited to one of the following conditions:<br>Bound (Pin/Bind/Web/Confine), Charmed, Cursed, Death, Dying, Paralyzed, Poisoned, Imprisoned, Silenced, Sleeping, or Unconsciousness. <br><br>When the trigger condition is met, the player must state the out-of-game verbal phrase 'Contingency &lt;spell name&gt;&lt;option or number&gt;'.", isSelected: false},
+            { id:11, name: "Copy Formal Cantrip", celestial: true, earth: true, nature: true, type: "Item", duration: "2 Years", cost:1, tag: "Pasadelin’s Cantrip Duplication", verbal: "\“I scribe this Cantrip into my Tome.\"", description: "This Cantrip places an exact copy of any one Cantip from an existing Cantrip Tome into the target Cantrip Tome. <br>Both Cantrip Tomes must be the same school as this Cantrip being cast and the target Tome must be able to receive the copied Cantrip (each Tome can hold up to ten Cantrips). The caster must be touching both Tomes during the casting of Copy Cantrip.", isSelected: false},
+            { id:12, name: "Corrupt", celestial: false, earth: true, nature: false, type: "Broad", duration: "Instant", cost:2, tag: "Bin’Aven’s Unnatural Growth", verbal: "\“By Chaos I corrupt this land.\"", description: "This cantrip causes an area land to become tainted by chaos in some way, causing unnatural twisting of the region. The affected area is ten square feet per level of Earth Formal Magic possessed by the caster and is centered on the caster. This cantrip will remove a Replenish Land cantrip on any land area in range. This cantrip is a reversible spell of Replenish Land.", isSelected: false},
+            { id:13, name: "Create Water", celestial: false, earth: false, nature: true, type: "Broad", duration: "Indefinite", cost:2, tag: "Pylarius’s Magic Spring", verbal: "\"By Nature I Create Water.\"", description: "This cantrip creates an amount of clean, pure, Tyrran water that can be used to fill a small lake or reservoir, container, well, or even to water crops or plants. At plot approval, this cantrip can optionally be used to generate seasonal or permanent springs. The volume of static water created is up to 10 cubic feet of water per level of Formal Nature Magic possessed by the caster – the caster can choose to make less at his or her own discretion. If the caster chooses, the water can be distributed among distinct containers, but all must be within arm's reach and accessible to the caster via normal means (i.e. the removal of a lid) – no creating water within an Imprison or other inaccessible or otherwise sealed container to drown anyone. When created, this water will not drop or otherwise flow to cause damage. This water can be added to existing water in order to cause an increase in the level of a pond, lake, stream, or cistern. At plot’s discretion created water can be packet delivered as a 150 point pool delivered as '10 Tyrran Water' for purposes such as fighting natural fires.", isSelected: false},
+            { id:14, name: "Crumble Construction", celestial: false, earth: false, nature: true, type: "Broad", duration: "Instant", cost:2, tag: "Jendor’s De-Civilizer", verbal: "\"By Nature I crumble these structures.\"", description: "Crumble Construction will weaken all man-made structures in a 10’ radius area per level of Nature Formal Magic of the caster. This cantrip will cause new structures to reach a damage state, damaged structures to reach an aged state, and aged structures to crumble entirely. The caster is the center of this cantrip's effect. <br><br>OOG Note: For each level of formal magic of the caster the dimensions increase by 10’, so that someone with 2 levels has a 20’ maximum radius around them and someone with 8 levels has an 80’ maximum radius. ", isSelected: false},
+            { id:15, name: "Defiling Pool", celestial: false, earth: true, nature: false, type: "Personal", duration: "Day", cost:1, tag: "Yolathurn’s Putrid Pool", verbal: "\“By Chaos I create a Defiling Pool.\"", description: "This cantrip creates within the caster a 150 point pool of Elemental Chaos. The pool may be expended by touchcast (may not be thrown) as “10 Elemental Chaos” which will heal undead creatures (up to their maximum Body  Points) and harm living characters (touch-casts may be refused as normal). Each touch-cast counts as an individual casting and is subject to Spell Disruption (the remaining pool is not lost). The caster may only have a single  Defiling Pool Cantrip active (see Stacked Effects on page 40 of the NERO World Classic Rulebook), but it may be stacked with a Healing Pool. This cantrip is a reversible spell of Healing Pool.", isSelected: false},
+            { id:16, name: "Devastating Charge", celestial: true, earth: false, nature: false, type: "Broad", duration: "Hour", cost:2, tag: "Gintain’s Thunderous Charge", verbal: "\“By the Stars may these lances strike true.\"", description: "This cantrip temporarily grants a Damage Aura-like effect to up to two NPC creatures for every level of Celestial Formal Magic possessed by the caster. The bonus is +1 for every two levels of Celestial Formal Magic possessed by  the caster (maximum of +5). The caster must touch each creature to be affected immediately following the casting of the cantrip. This cantrip cannot target player characters in any way. ", isSelected: false},
+            { id:17, name: "Eldritch Bless", celestial: false, earth: true, nature: false, type: "Personal", duration: "Day", cost:0, tag: "Var’s Superior Protection", verbal: "\“I grant myself the power of an Eldritch Bless 10.\"", description: "This protection cantrip grants the caster ten temporary Body Points. The additional Body Points are applied beyond the normal Body Points of the recipient, and are expended before normal Body Points when damage is taken. <br><br> This cantrip does not restore lost Body Points. An Eldritch Bless does not protect the recipient from Spell Disruption.", isSelected: false},
+            { id:18, name: "Eldritch Shield", celestial: true, earth: false, nature: false, type: "Personal", duration: "Day", cost:0, tag: "PanTarsa’s Superior Protective Field", verbal: "\“I grant myself an Eldritch Shield 10.\"", description: "This protection cantrip grants the caster ten temporary Armor Points. The additional Armor Points are applied beyond the normal Armor Wear Points of the recipient, and are expended before normal Armor Points when  damage is taken. This spell does not restore lost Armor Points. An Eldritch Shield spell will protect the recipient from Spell Disruption if the damage dealt does not exceed the current Armor Points the recipient has.", isSelected: false},
+            { id:19, name: "Element's Fury", celestial: true, earth: false, nature: false, type: "Offensive", duration: "Day", cost:1, tag: "Karvecki’s Planar Conduit", verbal: "\“I grant myself &lt;Element&gt;’s Fury.\"", description: "This cantrip creates within the caster a 150 point pool of Elemental energy. The caster decides which one option to choose at the time of the casting by designating either fire, ice, lightning, or stone in the verbal incant. The pool may be expended by throwing attacks as “10 Elemental &lt;chosen element&gt;”. Each attack counts as an individual casting and is subject to Spell Disruption (the remaining pool is not lost).", isSelected: false},
+            { id:20, name: "Element's Way", celestial: true, earth: false, nature: false, type: "Personal", duration: "Invoked", cost:1, tag: "Tuscon’s Elemental Aura", verbal: "\“I grant myself the way of &lt;Element&gt;.\"", description: "This cantrip allows the caster to change their weapon damage type to a specified Element (Fire, Ice, Lightning, or Stone) against a single opponent when the cantrip is Invoked. The Element type may be changed to a different  option each time the cantrip is Invoked, causing the previous option to end and be replaced. This cantrip may be used with melee weapons and ranged weapons.", isSelected: false},
+            { id:21, name: "Enchant Cantrip Tome", celestial: true, earth: true, nature: true, type: "Item", duration: "2 Years", cost:2, tag: "Tamir’s Enchanted Tome", verbal: "\“I Enchant this book as a(n) &lt;school&gt; Cantrip Tome.\"", description: "This cantrip enchants a normal book transforming it into a Cantrip Tome of the same school of magic as this cantrip. It can hold a maximum of ten cantrips and must be at least six inches by four inches in size (but may be larger if  desired). The caster must be touching the target book when this cantrip is cast, after which cantrips may be copied into the tome by way of Copy Cantrip. The Tome is destroyed by anything which would destroy a normal book and can be Shattered or Destroyed. If the Tome item is Strengthened it will Resist the a Shatter or Destroy effect (see the Smithing Special Ability: Strengthen an Item on page 33 pf the NERO World Classic Rulebook) and may be targeted by the Rendering Cantrip. Formal Magic may not be cast on the Cantrip Tome or it is destroyed.", isSelected: false},
+            { id:22, name: "Enchant Engine", celestial: true, earth: false, nature: false, type: "Broad", duration: "Hour", cost:2, tag: "Gintain’s Mighty Siege Engine", verbal: "\“By the Stars may this engine strike true.\"", description: "This cantrip temporarily grants a Damage Aura-like effect to one siege engine. The bonus is +1 for every two levels of Celestial Formal Magic possessed by the caster. The caster must touch the siege engine during the entire casting of this cantrip. This effect may never target a melee weapon, ranged weapon, or any weapon usable in combat. This cantrip cannot target a siege engine during a game event in any way.", isSelected: false},
+            { id:23, name: "Ethereal Sword", celestial: true, earth: false, nature: false, type: "Personal", duration: "Hour", cost:1, tag: "Tuscon’s Blade", verbal: "\“I grant myself an Ethereal Sword.\"", description: "This cantrip creates one Ethereal Sword which may be used by the caster for one hour. The Ethereal Sword is a special type of Body Weaponry which deals a base damage of 5 Normal and requires no special skill to use (may still be used if they are unable to use game skills). If the caster has abilities or skills which increase melee weapon damage, they may not be used to increase the damage of the Ethereal Sword. The Ethereal Sword may not be affected by Sharpening or be Silvered (see the Smithing special ability) and may not be enchanted by Formal Magic or Cantrips. The character may use Blade Effects spells (Endow, Delayed Endow, Elemental Blade, Enchanted Blade, and Silver Aura) in conjunction with Ethereal Sword. Like all Body Weaponry, the Ethereal Sword cannot be Fumbled, Shattered, or Destroyed (see page 83 of the NERO World Classic Rulebook). <br><br>The Ethereal Sword may be up to the size of a Long Sword and may be summoned into either hand, used in either hand, switched between hands, and may be sheathed or stowed when not in use for the one-hour duration. The Ethereal Sword must always be touching the caster, in a similar way as Spirit Linked weapon (see Spirit Link on page 43 of the NERO World Classic Rulebook). <br><br>The caster may have a total of two Ethereal Sword cantrips, or two Tyrra’s Claw cantrips, or one of each, but may only have two of either cantrips in effect at any time; the second weapon may be no longer than a Short Sword. The Ethereal Sword phys-rep used must be a red in color and must have a cross-guard in order to be valid. <br>The caster may end the Ethereal Sword cantrip effect anytime within the one hour duration.", isSelected: false},
+            { id:24, name: "Exhaustion", celestial: false, earth: true, nature: false, type: "Broad", duration: "Day", cost:2, tag: "Olvenca’s Damning Fatigue", verbal: "\“By Chaos I exhaust these men.\"", description: "This cantrip causes a group of NPC creatures to be slowed to move at half the normal walking pace for the duration of the cantrip. The number of targets affected is five for every level of Earth Formal Magic possessed by the caster. All targets must be within the radius of the effect is 10 feet for every level of Earth Formal Magic, centered on the caster, when the cantrip is cast. This cantrip will remove the Forced March cantrip on any creatures in range. This cantrip cannot target player characters in any way. This cantrip is a reversible spell of Forced March.", isSelected: false},
+            { id:25, name: "Field Resurrection", celestial: false, earth: true, nature: false, type: "Spirit", duration: "Instant", cost:2, tag: "Benevolence's Instantaneous Resurrection", verbal: "\“By the earth I resurrect this spirit.\"", description: "Prior to the casting of this cantrip, the caster must draw or place a Platform Circle (per the specifications for casting Formal Magic). The caster must spend one-minute attuning the circle to be used as a Field Resurrection point and must stand in the center while holding out their arms, with the palms of their hands outstretched towards the edges of the circle. The caster then casts the Field Resurrection cantrip on the phys-rep and places a personalized “R” in the center of the circle to denote it as a Resurrection point. The “R” marking is out-of-game. Once completed, the circle gains a temporary Special Circle Power: Resurrection as if it were an Extended Earth Circle of Power  (see page 44 of the NERO World Classic Rulebook). This Platform Circle may not be used to cast Formal Magic and may not be within a Circle of Power or Ward (see page 58 of the NERO World Classic Rulebook). No other characters may be Invested in the circle and only the caster may use it. Once prepared, any character who dissipates on the battlefield, will be aware that this circle is suitable as a Resurrection point. If the caster is within the circle, they may follow all the normal rules for Resurrecting a Spirit (see Spirits & Resurrections on page 15 of the NERO World Classic Rulebook for information of how Resurrections work). <br><br>To begin a Resurrection, caster must first have a set of Resurrection Stones, which must be approved by a Marshal. The caster must then cast this cantrip, saying the verbal incant, then state “Begin Resurrection” and touch the target spirit with a spell packet. If the spirit refuses, the cantrip fails and the components are still lost, and the cantrip level expended (and may not be redirected to another spirit). Once the resurrection begins, the body of the character reforms immediately and they are unconscious for one-minute. When the character forms, they will have their full Body Points restored but none of their Skills or Abilities Renewed (this requires am Extended Earth Circle of Power). For the resurrection to complete, a Marshal must validate the resurrection.", isSelected: false},
+            { id:26, name: "Forced March", celestial: false, earth: true, nature: false, type: "Broad", duration: "Day", cost:2, tag: "Olvenca’s Light Feet", verbal: "\“By the Earth I sustain these men.\"", description: "This cantrip causes a group of NPC creatures to move at double the normal walking pace for the duration of the cantrip. The number of targets affected is five for every level of Earth Formal Magic possessed by the caster. All targets must be within the radius of the effect is 10 feet for every level of Earth Formal Magic,  entered on the caster, when the cantrip is cast. This cantrip cannot target player characters in any way. This cantrip is a reversible spell of Exhaustion.", isSelected: false},
+            { id:27, name: "Fortify Defense", celestial: true, earth: false, nature: false, type: "Broad", duration: "Day", cost:2, tag: "Anvicia’s Fortress", verbal: "\“By the Stars may these defenses be fortified.\"", description: "This cantrip targets one defensive structure with a size of ten cubic feet for each level of Celestial Formal Magic possessed by the caster, or less. The defense rating of the structure is increased by one category. Multiple casters may join together to increase the affected area of the structure and all casters must be touching the structure when the cantrip is cast. This cantrip will remove the Weaken Defense cantrip on any one defensive structure within range.", isSelected: false},
+            { id:28, name: "Foundering Mounts", celestial: false, earth: true, nature: false, type: "Broad", duration: "Day", cost:2, tag: "Sydello’s Equine Eliminator", verbal: "\“By Chaos I founder these mounts.\"", description: "This cantrip causes one horse to be slowed to move at half the normal walking pace for the duration of the cantrip. The number of horses affected is one for every level of Earth Formal Magic possessed by the caster. All horses must be within the radius of the effect is 10 feet for every level of Earth Formal Magic, centered on the caster, when the cantrip is cast. This cantrip will remove the Riders on the Wind cantrip on any horses in range. This cantrip is a reversible spell of Riders on the Wind.", isSelected: false},
+            { id:29, name: "Fury's Strength", celestial: true, earth: false, nature: false, type: "Personal", duration: "Invoked", cost:0, tag: "Kodos’ Strength of the Bear", verbal: "\“I grant myself Fury’s Strength.\"", description: "This cantrip grants the caster Superhuman Strength +2 (+1 in each hand) against a single opponent when Invoked (see Superhuman Strength on page 84 of the NERO World Classic Rulebook for how this ability works). The caster may also Invoke the cantrip to Rip from a Pin or Bind effect (see the Racial Ability Rip from Binding on page 24 of the NERO World Classic Rulebook).", isSelected: false},
+            { id:30, name: "Healer's Grace", celestial: false, earth: true, nature: false, type: "Personal", duration: "Invoked", cost:1, tag: "Johovan’s Grace", verbal: "\“I grant myself Healer’s Grace.\"", description: "This cantrip allows the caster to change their weapon damage type to Healing against a single opponent when the cantrip is Invoked. The Healing type deals double damage to undead creatures and zero damage to living characters (but will still trigger Spell Defenses such as a Magic Armor). Healer’s Grace will not restore Body Points to any target. This cantrip may be used with melee weapons only and may not be used with ranged weapons.", isSelected: false},
+            { id:31, name: "Healing Pool", celestial: false, earth: true, nature: false, type: "Personal", duration: "Day", cost:1, tag: "Yolathurn’s Pool of Purity", verbal: "\“By the Earth I create a Healing Pool.\"", description: "This cantrip creates within the caster a 150 point pool of Elemental Healing. The pool may be expended by touchcast (may not be thrown) as “10 Elemental Healing” which will heal living characters (up to their maximum Body Points) and harm undead creatures (touch-casts may be refused as normal). Each touch-cast counts as an individual casting and is subject to Spell Disruption (the remaining pool is not lost). The caster may only have a single Healing Pool Cantrip active (see Stacked Effects on page 40 of the NERO World Classic Rulebook), but it may be stacked with a Defiling Pool. <br><br>This cantrip is a reversible spell of Defiling Pool.", isSelected: false},
+            { id:32, name: "Imbue", celestial: true, earth: true, nature: true, type: "Spirit", duration: "Day", cost:1, tag: "Yolathurn’s Transfer of Spell Ability", verbal: "\“I enchant you with a &lt;spell name&gt; spell Imbued from my knowledge.\"", description: "This cantrip transfers one spell from the memory of the caster to another character by touch-cast, which they may then cast by full spell incant and following all normal rules for casting spells, until the next Standard Reset, after which it is used up and the Imbue effect ends. A recipient may never be Imbued with more  than one spell at any time (see Stacked Effects on page 40 of the NERO World Classic Rulebook).", isSelected: false},
+            { id:33, name: "Increase Harvest", celestial: false, earth: true, nature: false, type: "Broad", duration: "Instant", cost:2, tag: "Bin’Aven’s Plentiful Earth", verbal: "\“By the Earth I increase this harvest.\"", description: "This cantrip causes ten acres of land, centered on the caster, to be increased in some way or to grow rapidly. This cantrip will remove Blight cantrip on any land area in range. This cantrip is a reversible spell of Blight.", isSelected: false},
+            { id:34, name: "Level Ground", celestial: true, earth: false, nature: false, type: "Broad", duration: "Instant", cost:2, tag: "Holace’s Smooth Path", verbal: "\“By the Stars may this ground be leveled.\"", description: "This cantrip causes an undeveloped area land to become level, stable, and suitable for use. The affected area is ten square feet per level of Celestial Formal Magic possessed by the caster and is centered on the caster. This cantrip cannot be used in areas already developed.", isSelected: false},
+            { id:35, name: "Lore", celestial: true, earth: false, nature: false, type: "Item", duration: "Instant", cost:1, tag: "Indessa’s Sight of Attributes", verbal: "\“I grant myself the vision to see the Lore of what is before me.\"", description: "This cantrip allows the caster to perform an Identify on two objects in their possession, as if they were in an Extended Celestial Circle (see Special Circle Power: Identify on page 45 of the NERO World Classic Rulebook). This cantrip cannot be used on any target with a Spirit.", isSelected: false},
+            { id:36, name: "Magic Deliverance", celestial: true, earth: true, nature: true, type: "Personal", duration: "Day", cost:0, tag: "Erol’s Innate Aura", verbal: "\“I grant myself the ability of Magic Deliverance.\"", description: "This cantrip allows the caster to deliver one spell from their memory as a Magical Ability instead of by full spell incant. The spell to be cast is chosen at the time it is used (Cast-on-the-Fly), must be the same school of magic as this cantrip, and must be less than the total Formal Magic levels (again, of the same school)  possessed by the caster. The use of the Magical Ability is delivered by the character speaking the verbal phrase “Magic &lt;spell name or effect&gt; &lt;option or number&gt;”, even if the character is bound (such as in a Bind or Web), but the character must be able to speak (cannot be used when Silenced). All other standard rules for casting spells must be followed (see Magical Ability on page 22 of the NERO World Classic Rulebook).", isSelected: false},
+            { id:37, name: "Mark", celestial: true, earth: true, nature: true, type: "Item", duration: "Year", cost:1, tag: "Madaline’s Magical Imprint", verbal: "\“I scribe a Mark upon this &lt;item&gt;.\"", description: "This cantrip places a magical Mark upon an item in their possession. The caster chooses the design of the Mark, which may be up to four inches square in size and up to two colors. The Mark may not damage the out-of-game property of another player. This cantrip is removed by the Unmark cantrip or by the Formal Magic Destroy Magic of the same school as this cantrip, or if the item is completely destroyed by some means. This cantrip does not take up a Formal Magic effect slot on the target item (and does not count against the 5-effect limit). A target may only have one Mark cantrip active.", isSelected: false},
+            { id:38, name: "Morale", celestial: false, earth: true, nature: false, type: "Broad", duration: "Day", cost:2, tag: "Lucin’s Enhanced Morale", verbal: "\“By the Earth I raise morale.\"", description: "This cantrip causes the Morale of a group of NPC creatures to be improved by one category for the duration of the cantrip. The number of targets affected is ten for every level of Earth Formal Magic possessed by the caster. All targets must be within the radius of the effect is 10 feet for every level of Earth Formal Magic, centered on the caster, when the cantrip is cast. This cantrip will remove Rout cantrip on any creatures in range. This cantrip cannot target player characters in any way.<br><br> This cantrip is a reversible spell of Rout.", isSelected: false},
+            { id:39, name: "Nature's Carapace", celestial: false, earth: false, nature: true, type: "Personal", duration: "Hour", cost:2, tag: "Annik’s Chitinous Shell", verbal: "\"By Nature I grow a carapace.\"", description: "By casting this spell the caster can grow a carapace that will act as Natural Armor. Natural armor cannot be stolen or destroyed, and will require a 60-second count to refit. The Caster will receive Natural Armor equal to their current armor wear total for the duration of the effect. This armor can be effected by the battle spell Refresh.", isSelected: false},
+            { id:40, name: "Nature’s Harmony", celestial: false, earth: false, nature: true, type: "Broad", duration: "Instant", cost:1, tag: "Vina’s Malignancy Culling", verbal: "\"By Nature I bring harmony to this place.\"", description: "Nature’s Harmony will bring a 10’ radius area per level of Nature Formal Magic of the caster more in line with the natural flow of Tyrran energy. This will undo the effects of corruption and interplanar influences that blight the land and its denizens. The caster is the center of this cantrip's effect.<br><br> OOG Note: For each level of formal magic of the caster the dimensions increase by 10’, so that someone with 2 levels has a 20’ maximum radius around them and someone with 8 levels has an 80’ maximum radius.", isSelected: false},
+            { id:41, name: "Nature’s Revival", celestial: false, earth: false, nature: true, type: "Personal", duration: "Day", cost:2, tag: "Balvar’s Spiritual Respite", verbal: "\"By Nature I gain the power of Revival as a &lt;type&gt;.\"", description: "This cantrip allows the caster to Revive per the core rules, with the added restriction that at the end of the Revive the target will become a Tyrran animal or plant creature. This effect does not take up a slot on the target’s spirit. A character using this cannot be prevented from Reviving in any way. No game effects other than Life will work to target a character Reviving by means of this effect, and any that strike a character while they are Reviving should get the response of “no effect.” A single character may never have more than one Revive upon their person at any time. Revive begins as soon as the target is in need of a life spell, thus all active effects lost when the character needs a Life spell will still be lost. Effects lost at resurrection will be maintained because the character will not resurrect. Creatures that are immune to Life spells or crumble at 0 body cannot be effected by this ccntrip. This cantrip can never provide benefit to extraplanar creatures. As soon as the target of this Cantrip begins to Revive they must say, “begin Revive.” This is an out-of-game statement. After the 60 second count for Reviving, the character must state “end Revive,” again as an out-of-game statement. Any character who takes the time to notice will be able to tell if a character is Reviving. No skills are reset by Reviving in this way. When the character revives, they will return in the form of a Tyrran animal or plant creature. Upon successful revival, the character must drop all tagged items, as their new form is unable to wield or wear equipment. The caster's form is chosen from the chart below and declared at the time of casting.<br>The creature will have 40 body points, short claws at 2 Normal, and a unique strength based on its type (shown in Table 1-1). The player is responsible for providing their own red claw reps.  <br><br>Table 1-1<br>Giant Beetle - 20 Natural Armor<br>Giant Lizard  - Threshold 4<br>Fungaloid - Immune to Poison<br>Bear - +6 Strength <br><br>In all cases the target retains their own intellect, but cannot use any of their character skills. The character under this effect will be unable to communicate except in the manner appropriate for their creature type, although they will understand what is going on around them as well as they normally would. The change in form will require the target to provide proper phys reps of the innate weaponry and appropriate makeup and/or  costuming. The change will occur slowly over the course of the Revive count. If the proper costuming is not added prior to the end of the 60 second Revive count, the Nature’s Revival will not work and the character will begin their death count as usual. In order to return to their natural form the target must either wait for the effect to wear off at the end of the Game Day, must be the target of the Reverse Nature’s Revival cantrip, or must spend one minute  concentrating in an Extended Nature Circle of Power to retake their natural form.", isSelected: false},
+            { id:42, name: "Poison Well", celestial: false, earth: true, nature: false, type: "Broad", duration: "Instant", cost:2, tag: "Lucin’s Taint", verbal: "\“By Chaos I poison this well.\"", description: "This cantrip causes one spring, brook, stream, or Well (or similar water storage method such as a Cistern), touched by the caster, to cause unnatural sickness. Anyone who drinks the water will be affected by Disease. <br><br>This cantrip is a reversible spell of Purify Well. ", isSelected: false},
+            { id:43, name: "Pooled Spittle", celestial: false, earth: false, nature: true, type: "Offensive", duration: "Day", cost:2, tag: "Xavier’s Damaging Reservoir", verbal: "\"By Nature I gain a pool of &lt;Physical Acid or Damage Poison&gt;.\"", description: "The caster may choose a type (Physical Acid or Damage Poison) in which they will receive a pool of 150 points. The caster may  throw attacks of 10 Physical Acid or 10 Damage Poison (depending on the type selected) until the pool is used up. The caster may only have one Pooled Spittle at any time. This pool is lost if the caster dies and requires a life spell. A new casting of Pooled Spittle will replace an old casting of it. Casting the packets for this effect follow the same rules as casting a spell and thus may not be done if taking body damage or if the caster cannot speak or use their hands. The damage caused by the Physical Acid packets is NOT destructive in nature beyond the damage amount being delivered. The damage caused by the Damage Poison packets will bypass Armor and go directly to Body.", isSelected: false},
+            { id:44, name: "Purify Well", celestial: false, earth: true, nature: false, type: "Broad", duration: "Instant", cost:2, tag: "Lucin’s Purity", verbal: "\“By the Earth I purify this well.\"", description: "This cantrip causes one spring, brook, stream, or Well (or similar water storage method such as a Cistern), touched by the caster, to be cleansed of Disease, Poisons, Taints, or other impurities. This cantrip will also remove a Poison Well cantrip. This cantrip is a reversible spell of Poison Well.", isSelected: false},
+            { id:45, name: "Rampant Growth", celestial: false, earth: false, nature: true, type: "Broad", duration: "Instant", cost:2, tag: "Balvar’s Supernatural Stimulant", verbal: "\"By Nature I grow this flora and fauna.\"", description: "Rampant Growth will cause all natural plants and animals within a 10’ radius per level of Nature Formal Magic of the caster to grow by 10% immediately. This growth is natural and irreversible. Plants and animals can only be affected by this spell once per calendar year. The caster is the center of this cantrip's effect. <br><br>OOG Note: For each level of formal magic of the caster the dimensions increase by so that someone with 2 levels has a 20’  maximum radius around them and someone with 8 levels has an 80’ maximum radius.", isSelected: false},
+            { id:46, name: "Rendering", celestial: true, earth: true, nature: true, type: "Item", duration: "Hour", cost:1, tag: "Tamir’s Temporary Indestructibility", verbal: "\“I enchant this &lt;item&gt; to be Rendered invulnerable to harm.\"", description: "This cantrip will temporarily enchant a single item touched by the caster to be Rendered Indestructible for one hour. The item is immune to Shatter and Destroy effects.", isSelected: false},
+            { id:47, name: "Replenish", celestial: false, earth: true, nature: false, type: "Broad", duration: "Instant", cost:2, tag: "Bin’Aven’s Natural Enhancement", verbal: "\“By the Earth I Replenish this land.\"", description: "This cantrip causes an area land to return to a natural state. The affected area is ten square feet per level of Earth Formal Magic possessed by the caster and is centered on the caster. This cantrip will remove a Corrupt cantrip  on any land area in range. <br><br>This cantrip is a reversible spell of Corrupt.", isSelected: false},
+            { id:48, name: "Reverse Nature’s Revival", celestial: false, earth: false, nature: true, type: "Spirit", duration: "Instant", cost:0, tag: "Georg’s Spiritual Restoration", verbal: "\"By Nature I reverse your Revival.\"", description: "By means of this cantrip the caster can return one being back to his or her true form from an Alteration caused by the Nature’s Revival cantrip. Once this is successfully cast, the target will require a full, uninterrupted 60-seconds to return to form. This will follow the rules of Meditation, and the count will start as soon as this cantrip is successfully delivered. If the Meditation is interrupted, the Reverse Nature’s Revival cantrip will be interrupted for no effect and the Altered character will remain in animal form until a successful casting of this cantrip is received or the effect ends in another manner, whichever comes first.", isSelected: false},
+            { id:49, name: "Riders on the Wind", celestial: false, earth: true, nature: false, type: "Broad", duration: "Day", cost:2, tag: "Sydello’s Equine Enhancement", verbal: "\“I call upon the Earth to make these horses fleet.\"", description: "This cantrip causes one horse to move at a full gallop and sustain that pace without tiring for the duration of the cantrip. The number of horses affected is one for every level of Earth Formal Magic possessed by the caster. All horses must be within the radius of the effect is 10 feet for every level of Earth Formal Magic, centered on the caster, when the cantrip is cast. This cantrip will remove the Foundering Mounts cantrip on any horses in range. <br><br>This  cantrip is a reversible spell of Foundering Mounts.", isSelected: false},
+            { id:50, name: "Rout", celestial: false, earth: true, nature: false, type: "Broad", duration: "Day", cost:2, tag: "Lucin’s Devastation of Hope", verbal: "\“By Chaos I rout these men.\"", description: "This cantrip causes the Morale of a group of NPC creatures to be reduced by one category for the duration of the cantrip. The number of targets affected is ten for every level of Earth Formal Magic possessed by the caster. All  targets must be within the radius of the effect is 10 feet for every level of Earth Formal Magic, centered on the caster, when the cantrip is cast. This cantrip will remove Morale cantrip on any creatures in range. This cantrip cannot target player characters in any way.<br><br> This cantrip is a reversible spell of Morale .", isSelected: false},
+            { id:51, name: "Shillalegh", celestial: false, earth: false, nature: true, type: "Item/Personal", duration: "Day/Invoked", cost:1, tag: "Neveah’s Threshold Breaker", verbal: "\"By Nature I Make a Shillelagh.\"", description: "When cast onto a small blunt, one handed blunt, two handed blunt, or staff, this Cantrip adds a Tyrran Aura to that weapon for the remainder of the Game Day or until the second part of this effect is Invoked. Only the caster of this  cantrip will gain the Tyrran Aura and Invoked portion of this effect, and any other character using the weapon will deliver their usual damage and the carrier appropriate for the weapon. When Sillalegh is Invoked against a single target, the weapon’s damage will be increased to one point higher than the target’s Threshold against that target only. As soon as the Shillalegh is Invoked, the wielder will be able to ask the target what their Threshold is. If the target does not have a Threshold the weapon damage remains unchanged. Either way, the increased damage can only be used against the targeted opponent for the remainder of the duration of the Invocation, and it will deal the character’s typical damage against all other creatures. When the creature this effect is Invoked against is destroyed or the invocation expires, the weapon will lose the Tyrran Aura and will take a Shatter effect. Weapons that can  Resist Shatter or are Indestructible will be able to avoid destruction, and will continue to function as normal with no lasting effect. This effect only has one invocation per casting.", isSelected: false},
+            { id:52, name: "Spirit Mark", celestial: true, earth: true, nature: true, type: "Spirit", duration: "Year", cost:1, tag: "Madaline’s Magical Spirit Imprint", verbal: "\“I scribe a Spirit Mark upon this being.\"", description: "This cantrip places a magical Spirit Mark upon the spirit of one character touched by the caster. The caster chooses the design of the Spirit Mark, which may be up to four inches square in size and up to two colors. The Spirit Mark  will be visible on the body location where it is placed, and will be visible even if covered by clothing or armor. The Spirit Mark will persist even if the character Resurrects. The player receiving the Spirit Mark may ask for a different  mark if they think it is too embarrassing, derogatory, or difficult out-of-game, however must eventually accept the Spirit Mark effect. The recipient is responsible for applying the mark after the initial placement. <br><br>This  cantrip is removed by the Spirit Unmark cantrip or by the Formal Magic Destroy Magic of the same school as this cantrip. This cantrip does not take up a Formal Magic effect slot on the target spirit (and does not count against  the  5-effect limit). A target may only have one Spirit Mark cantrip active.", isSelected: false},
+            { id:53, name: "Spirit Unmark", celestial: true, earth: true, nature: true, type: "Spirit", duration: "Instant", cost:1, tag: "Madaline’s Spirit Imprint Eraser", verbal: "\“I remove this Spirit Mark.\"", description: "This cantrip removes one Spirit Mark (including Formal Magic Spirit Mark) of the same school of magic from the spirit of the touched target.", isSelected: false},
+            { id:54, name: "Tyrra's Claw", celestial: 	false	, earth: 	true	, nature: 	false	, type: "	Personal	", duration: "	Hour	", cost:	1	, tag: "	Angat’s Rake	", verbal: "\“I grant myself a Claw from Tyrra.	\"", description: 	"This cantrip causes the caster to grow one Claw which may be used by the caster for one hour. The Tyrra’s Claw  is a special type of Body Weaponry which deals a base damage of 5 Normal and requires no special skill to use (may still be used while skilless). If the player accidentally drops their claw phys-rep or it is knocked away, they must  retrieve it before they may use it again (consider it retracted until retrieved). The Tyrra’s Claw phys-rep used must be a red in color and must not have a cross-guard in order to be valid. The caster may end the Tyrra’s Claw cantrip effect anytime within the one hour duration. <br>If the caster has abilities or skills which increase melee weapon damage, they may not be used to increase the damage of the Tyrra’s Claw. The Tyrra’s Claw may not be affected by Sharpening or be Silvered (see the Smithing special ability) or enchanted by Formal Magic or Cantrips. <br>The character may use Blade Effects spells (Endow, Delayed Endow, Elemental Blade, Enchanted Blade, and Silver Aura) in conjunction with Tyrra’s Claw. Like all Body Weaponry, the Tyrra’s Claw cannot be Fumbled, Shattered, or Destroyed (see Body Weaponry on page 83 of the NERO World Classic Rulebook). The Tyrra’s Claw may be up to the size of a Long Sword and may be summoned into either hand, used in either hand, switched between hands, and may be sheathed or stowed when not in use for the one-hour duration. The Tyrra’s Claw must always be touching the caster, in a similar way as Spirit Linked weapon (see Spirit Link on page 43 of the NERO World Classic Rulebook). <br>The caster may have a total of two Tyrra’s Claw cantrips, or two Ethereal Sword cantrips, or one of each, but may only have two of either cantrips in effect at any time; the second weapon may be no longer than a Short Sword.", isSelected: false},
+            { id:55, name: "Tyrra’s Well", celestial: false, earth: false, nature: true, type: "Personal", duration: "Indefinite", cost:1, tag: "Mercury’s Tyrran Geyser", verbal: "\"By Nature I tap the mana flow of Tyrra... 20 Elemental Tyrran... 20 Elemental Tyrran…\"", description: "At the time of casting, the caster must plant both feet. As long as both feet remain planted and the cantrip is not disrupted as per normal spell rules, the caster may throw a packet after completing the incant “20 Elemental Tyrran“. While the cantrip is in effect,the caster can perform no other skill nor cast any other spell or cantrip. Each packet thrown acts as a separate Elemental attack doing 20 points of Tyrran damage to the target. The call “20  Elemental Tyrran” is considered part of the verbal and like any otherverbal the cantrip is lost if the caster takes body damage, performs an in game skill, or speaks other words to interrupt the verbal.<br><br>Tyrran damage only  effects extra planar beings. Against any being that is native to the plane of Tyrra this spell will do nothing except blow an Elemental Shield.", isSelected: false},
+            { id:56, name: "Unmark", celestial: true, earth: true, nature: true, type: "Item", duration: "Instant", cost:1, tag: "Madaline’s Imprint Eraser", verbal: "\“I remove this Mark.\"", description: "This cantrip removes one Spirit Mark (including Formal Magic Spirit Mark) of the same school of magic from the spirit of the touched target.", isSelected: false},
+            { id:57, name: "Weaken Defense", celestial: true, earth: false, nature: false, type: "Broad", duration: "Instant", cost:2, tag: "Anvicia’s Undoing", verbal: "\“By the Stars may these defenses be weakened.\"", description: "This cantrip targets one defensive structure with a size of ten cubic feet for each level of Celestial Formal Magic possessed by the caster, or less. The defense rating of the structure is reduced by one category. Multiple casters  may join together to increase the affected area of the structure and all casters must be touching the structure when the cantrip is cast. This cantrip will remove the Fortify Defense cantrip on any one defensive structure within  range.", isSelected: false},
+            { id: 58, name: "Wizard's Sense", celestial: true, earth: false, nature: false, type: "Broad", duration: "Instant", cost: 2, tag: "Buronto’s Vision", verbal: "“I grant these eyes a Wizard’s Sense.”", description: "This cantrip temporarily bestows superhuman senses to one NPC creature touched by the caster. The number of targets affected is ten for every level of Celestial Formal Magic possessed by the caster. This cantrip cannot target player characters in any way.", isSelected: false },
+            // imported and sorted 
+
+        ];
+    */
+
+
+        const durationOptions = ["Invoked", "Day", "Instant", "Concentration", "Indefinite"];
+        const typeOptions = ["Personal", "Offensive", "Broad", "Item", "Item/Personal", "Spirit"];
+
+        // --- Core Functions ---
+        
+        /**
+         * Applies the active filters to the global cantrip list and updates the display.
+         */
+        function applyFilters() {
+            const celestialChecked = document.getElementById('filterCelestial').checked;
+            const earthChecked = document.getElementById('filterEarth').checked;
+            const natureChecked = document.getElementById('filterNature').checked;
+            const maxCost = document.getElementById('filterCost').value; // 'all', '0', '1', or '2'
+
+            const filtered = cantrips.filter(cantrip => {
+                // 1. Component Filtering (Uses OR logic: must have at least one checked component, OR no component filters are active)
+                
+                const componentFiltersActive = celestialChecked || earthChecked || natureChecked;
+
+                if (componentFiltersActive) {
+                    let passesComponentFilter = false;
+                    // Check if the cantrip has a checked component
+                    if (celestialChecked && cantrip.celestial) {
+                        passesComponentFilter = true;
+                    }
+                    if (earthChecked && cantrip.earth) {
+                        passesComponentFilter = true;
+                    }
+                    if (natureChecked && cantrip.nature) {
+                        passesComponentFilter = true;
+                    }
+                    
+                    if (!passesComponentFilter) {
+                        return false;
+                    }
+                }
+                
+                // 2. Cost Filtering (Less than or equal to max cost)
+                if (maxCost !== 'all') {
+                    const costLimit = parseInt(maxCost);
+                    if (cantrip.cost > costLimit) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+
+            renderCantripList(filtered);
+        }
+
+        /**
+         * Renders the list of cantrips to the UI.
+         * @param {Array<Object>} [cantripArray=cantrips] - The array of cantrips to display.
+         */
+        function renderCantripList(cantripArray = cantrips) {
+            const listContainer = document.getElementById('cantripList');
+            listContainer.innerHTML = cantripArray.map(cantrip => `
+                <div id="cantrip-${cantrip.id}" class="bg-gray-700/70 border border-gray-600 rounded-xl p-4 shadow-md transition duration-150 ease-in-out hover:shadow-lg flex items-center justify-between group">
+                    <!-- Left Section: Selection and Name -->
+                    <div class="flex items-center space-x-4">
+                        <!-- Checkbox state reflects the global cantrips array's isSelected status -->
+                        <input type="checkbox" id="check-${cantrip.id}" ${cantrip.isSelected ? 'checked' : ''}
+                               onclick="toggleSelection(${cantrip.id})"
+                               class="h-5 w-5 text-indigo-500 rounded border-gray-600 bg-gray-800 focus:ring-indigo-500">
+                        <!-- Removed $ symbol here -->
+                        <span class="font-bold text-lg text-gray-100">${cantrip.name}        Cost: ${cantrip.cost}</span>
+                    </div>
+
+                    <!-- Right Section: Metadata and Edit Button -->
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm text-gray-400 hidden sm:inline">
+                            ${cantrip.type} | ${cantrip.duration}
+                        </span>
+                        <button onclick="openEditModal(${cantrip.id})"
+                                class="p-2 text-indigo-400 rounded-full hover:bg-indigo-900 transition duration-150 ease-in-out"
+                                title="Edit Cantrip Details">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            updateTotalCost();
+        }
+
+        /**
+         * Toggles the selection status of a cantrip and updates the UI.
+         * @param {number} id - The ID of the cantrip to toggle.
+         */
+        function toggleSelection(id) {
+            const cantrip = cantrips.find(c => c.id === id);
+            if (cantrip) {
+                cantrip.isSelected = !cantrip.isSelected;
+                updateTotalCost();
+                updateExportData();
+            }
+        }
+
+        /**
+         * Calculates and updates the total production cost display.
+         */
+        function updateTotalCost() {
+            const total = cantrips
+                .filter(c => c.isSelected)
+                .reduce((sum, c) => sum + c.cost, 0);
+            
+            // Removed $ symbol
+            document.getElementById('totalCost').textContent = total;
+        }
+
+        /**
+         * Opens the modal to edit a specific cantrip.
+         * @param {number} id - The ID of the cantrip to edit.
+         */
+        function openEditModal(id) {
+            const cantrip = cantrips.find(c => c.id === id);
+            if (!cantrip) return;
+
+            const form = document.getElementById('editForm');
+            form.setAttribute('data-cantrip-id', id);
+
+            const formFields = `
+                <input type="hidden" name="id" value="${cantrip.id}">
+
+                ${createTextInput('Name', 'name', cantrip.name)}
+                ${createSelectInput('Type', 'type', cantrip.type, typeOptions)}
+                ${createSelectInput('Duration', 'duration', cantrip.duration, durationOptions)}
+                <!-- Updated label to remove currency symbol -->
+                ${createNumberInput('Cost (0, 1, or 2)', 'cost', cantrip.cost, 0, 2)}
+                
+                <div class="flex space-x-4 mb-4">
+                    ${createCheckboxInput('Celestial', 'celestial', cantrip.celestial)}
+                    ${createCheckboxInput('Earth', 'earth', cantrip.earth)}
+                    ${createCheckboxInput('Nature', 'nature', cantrip.nature)}
+                </div>
+
+                ${createTextInput('Tag', 'tag', cantrip.tag)}
+                ${createTextInput('Verbal', 'verbal', cantrip.verbal)}
+                ${createTextAreaInput('Description', 'description', cantrip.description)}
+
+                <div class="flex justify-end space-x-4 mt-6">
+                    <button type="button" onclick="closeEditModal()" 
+                            class="px-4 py-2 text-gray-200 border border-gray-600 rounded-lg hover:bg-gray-700 transition duration-150 bg-gray-700">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition duration-150">
+                        Save Changes
+                    </button>
+                </div>
+            `;
+            form.innerHTML = formFields;
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        /**
+         * Helper to create a standard text input HTML string.
+         */
+        function createTextInput(label, name, value) {
+            return `
+                <div class="mb-4">
+                    <label for="${name}" class="block text-sm font-medium text-gray-200">${label}</label>
+                    <input type="text" id="${name}" name="${name}" value="${value}" required
+                           class="mt-1 block w-full px-3 py-2 border border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-gray-700 text-gray-100">
+                </div>
+            `;
+        }
+
+        /**
+         * Helper to create a number input HTML string.
+         */
+        function createNumberInput(label, name, value, min, max) {
+            return `
+                <div class="mb-4">
+                    <label for="${name}" class="block text-sm font-medium text-gray-200">${label}</label>
+                    <input type="number" id="${name}" name="${name}" value="${value}" min="${min}" max="${max}" required
+                           class="mt-1 block w-full px-3 py-2 border border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-gray-700 text-gray-100">
+                </div>
+            `;
+        }
+        
+        /**
+         * Helper to create a select input HTML string.
+         */
+        function createSelectInput(label, name, currentValue, options) {
+            const optionTags = options.map(opt => 
+                `<option value="${opt}" ${opt === currentValue ? 'selected' : ''}>${opt}</option>`
+            ).join('');
+            return `
+                <div class="mb-4">
+                    <label for="${name}" class="block text-sm font-medium text-gray-200">${label}</label>
+                    <select id="${name}" name="${name}" 
+                            class="mt-1 block w-full px-3 py-2 border border-gray-600 bg-gray-700 text-gray-100 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        ${optionTags}
+                    </select>
+                </div>
+            `;
+        }
+
+        /**
+         * Helper to create a checkbox input HTML string.
+         */
+        function createCheckboxInput(label, name, isChecked) {
+            return `
+                <div class="flex items-center">
+                    <input id="${name}" name="${name}" type="checkbox" ${isChecked ? 'checked' : ''}
+                           class="h-4 w-4 text-indigo-500 border-gray-600 rounded focus:ring-indigo-500 bg-gray-700">
+                    <label for="${name}" class="ml-2 block text-sm font-medium text-gray-200">${label}</label>
+                </div>
+            `;
+        }
+
+        /**
+         * Helper to create a textarea input HTML string.
+         */
+        function createTextAreaInput(label, name, value) {
+            return `
+                <div class="mb-4">
+                    <label for="${name}" class="block text-sm font-medium text-gray-200">${label}</label>
+                    <textarea id="${name}" name="${name}" rows="3"
+                           class="mt-1 block w-full px-3 py-2 border border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-gray-700 text-gray-100">${value}</textarea>
+                </div>
+            `;
+        }
+
+        /**
+         * Closes the edit modal.
+         */
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        /**
+         * Saves changes from the modal back to the cantrip data.
+         * @param {Event} event - The form submission event.
+         */
+        function saveCantrip(event) {
+            event.preventDefault();
+            const form = event.target;
+            const id = parseInt(form.getAttribute('data-cantrip-id'));
+            const data = new FormData(form);
+
+            const cantrip = cantrips.find(c => c.id === id);
+            if (cantrip) {
+                // Update properties based on form data
+                cantrip.name = data.get('name');
+                cantrip.type = data.get('type');
+                cantrip.duration = data.get('duration');
+                cantrip.cost = parseInt(data.get('cost'));
+                cantrip.tag = data.get('tag');
+                cantrip.verbal = data.get('verbal');
+                cantrip.description = data.get('description');
+                
+                // Handle booleans (checkboxes)
+                cantrip.celestial = data.get('celestial') === 'on';
+                cantrip.earth = data.get('earth') === 'on';
+                cantrip.nature = data.get('nature') === 'on';
+            }
+
+            closeEditModal();
+            applyFilters(); // Re-apply filters to ensure the list is updated correctly
+            updateExportData();
+        }
+
+        // --- Export Functions ---
+
+        /**
+         * Updates the hidden export container with current data in the card format.
+         */
+        function updateExportData() {
+            const selectedCantrips = cantrips.filter(c => c.isSelected);
+            const adventureTitle = document.getElementById('adventureTitle').value;
+
+            // 1. Update Header
+            document.getElementById('exportTitle').textContent = adventureTitle;
+
+            // Set to 2 columns
+            const fieldsPerRow = 2; 
+            
+            // 2. Build Table Body
+            const tbody = document.getElementById('exportTableBody');
+            tbody.innerHTML = '';
+            
+            let row;
+            
+            // Generate the table header dynamically
+            const thead = document.getElementById('exportTable').querySelector('thead');
+
+
+            selectedCantrips.forEach((c, index) => {
+                // Start a new row for every fieldsPerRow (2) items
+                    if (index % fieldsPerRow === 0) {
+                        row = tbody.insertRow();
+                        // Add page-break class after every second row (i.e., after 2, 4, 6... rows)
+                        if (((index / fieldsPerRow + 1) % 2 === 0)) {
+                            row.classList.add('page-break');
+                        }
+                    }
+                
+                // Get components list
+                const components = [];
+                if (c.celestial) components.push('Celestial');
+                if (c.earth) components.push('Earth');
+                if (c.nature) components.push('Nature');
+                const componentsText = components.length > 0 ? components.join(', ') : 'None';
+
+                // Format the Cantrip data based on the user's template (inside the single cell)
+                const cellContent = `
+                    
+                     
+                        <p class="font-extrabold text-sm" style="line-height: 1.2; margin-bottom: 8px; margin-top: 0;">${c.name} <span class="font-normal text-xs">  </p>
+                        <p class="font-verbal text-xs mt-1 text-gray-600" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;">${c.cost}</span> Components</p>
+                        <p class="text-xs mt-1 font-semibold text-gray-700" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;">${componentsText}</p>
+                        
+                        <!-- Line 2: Tag, Duration -->
+                        <p class="text-xs mt-1"style="line-height: 1.0; margin-bottom: 0; margin-top: 0;">${c.tag}</p>
+                        <p class="text-xs"style="line-height: 1.0; margin-bottom: 0; margin-top: 0;"><b>Duration:</b> ${c.duration}</p>
+
+                        <!-- Line 3: Type -->
+                        <p class="text-xs mt-1" style="line-height: 1.0; margin-bottom: 6px; margin-top: 0;"><b>Type:</b> ${c.type}</p>
+
+                        <!-- Line 4: Verbal -->
+                        <p class="font-verbal text-xs mt-2 text-gray-600" style="line-height: 1.5; margin-bottom: 8px; margin-top: 0;">${c.verbal}</p>
+
+                        <!-- Line 5: Description -->
+                        <div class="mt-2 pt-2 border-t border-gray-200">
+                            <p class="font-description" style="line-height: 1.2; margin-bottom: 0; margin-top: 0;"><b>Description:</b> ${c.description}</p>
+                        </div>
+             
+                `;
+
+                const cell = row.insertCell();
+                
+                // Apply the required styling class (12cm height, 50% width) with page-break-inside: avoid
+                cell.classList.add('export-cell');
+                cell.classList.add('border', 'border-gray-400', 'align-top');
+                cell.innerHTML = cellContent;
+            });
+            
+            // Fill remaining cells in the last row if necessary to maintain table structure
+            const remainingCells = fieldsPerRow - (selectedCantrips.length % fieldsPerRow);
+            if (remainingCells > 0 && remainingCells < fieldsPerRow) {
+                for (let i = 0; i < remainingCells; i++) {
+                    const cell = row.insertCell();
+                    cell.classList.add('export-cell');
+                    // Changed background to white for PDF export consistency
+                    cell.classList.add('border', 'border-gray-400', 'bg-white'); 
+                    cell.innerHTML = '&nbsp;';
+                }
+            }
+
+
+            // Show status if no items are selected
+            const statusElement = document.getElementById('exportStatus');
+            if (selectedCantrips.length === 0) {
+                statusElement.classList.remove('hidden');
+            } else {
+                statusElement.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Initiates the file export based on the selected format.
+         */
+        function exportFile() {
+            const format = document.querySelector('input[name="exportFormat"]:checked').value;
+            const selectedCantrips = cantrips.filter(c => c.isSelected);
+
+            if (selectedCantrips.length === 0) {
+                // The status message is already updated by updateExportData
+                return;
+            }
+
+            const title = document.getElementById('adventureTitle').value;
+            const filename = `${title.replace(/\s/g, '_')}_Cantrips`;
+
+            // Prepare the export content HTML structure (already done by updateExportData)
+            const exportElement = document.getElementById('exportContainer');
+
+            // Handle export based on format
+            if (format === 'pdf') {
+                exportAsPDF(filename, exportElement);
+            } else if (format === 'html') {
+                exportAsHTML(filename, exportElement);
+            } else if (format === 'csv') {
+                // CSV export remains the same: a flat data list.
+                exportAsCSV(filename, selectedCantrips);
+            }
+        }
+
+        /**
+         * Generates and downloads a PDF file using html2pdf.js.
+         * The required cell dimensions are handled by the .export-cell class.
+         */
+        function exportAsPDF(filename, element) {
+            const originalHidden = element.classList.contains('hidden');
+            element.classList.remove('hidden'); // Must be visible for html2pdf to process correctly
+
+            const opt = {
+                margin: 1,
+                filename: `${filename}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                // Landscape orientation is maintained for wider cards
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' } 
+            };
+
+            html2pdf().from(element).set(opt).save().then(() => {
+                if (originalHidden) {
+                    element.classList.add('hidden'); // Hide it again after export
+                }
+            });
+        }
+
+        /**
+         * Downloads the generated HTML structure as a file.
+         */
+        function exportAsHTML(filename, element) {
+            // New modern styles for the HTML export, including Inter font and card differentiation
+            const injectedStyles = `
+                <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+                    
+                    body {
+                        color: #1f2937;
+                        background-color: #ffffff; /* Very light blue/gray background */
+                        font-family: 'Inter', sans-serif;
+                        padding: 20px;
+                        line-height: 1.4;
+                    }
+                    
+                    /* The Cantrip Card Styling */
+                    .export-cell {
+                        height: 12cm;
+                        width: 50%; 
+                        padding: 1.25rem; /* More padding for card look */
+                        box-sizing: border-box;
+                        font-size: 0.8rem; /* Slightly larger font */
+                        vertical-align: top;
+                        page-break-inside: avoid;
+                        background-image: url('SmallLogo_Black_NoBG.png');
+                        background-size: 75%;
+                        background-repeat: no-repeat;
+                        background-position: top right;
+                        
+                        /* Differentiation Styling */
+                        border: 1px solid #e2e8f0; /* Subtle border */
+                        border-radius: 12px;
+                        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+                        background-color: white; /* White card background */
+                    }
+                    
+                    /* Table Structure for Layout */
+                    #exportTable {
+                        border-collapse: separate;
+                        border-spacing: 10px 10px; /* Space between cards */
+                        border: none; /* Remove table border */
+                    }
+                    
+                    /* Remove cell default borders in HTML export */
+                    #exportTable td, #exportTable th {
+                        border: none !important;
+                        vertical-align: top;
+                    }
+
+                    /* Header Styling */
+                    #exportTable thead th {
+                        background-color: #4f46e5;
+                        color: white;
+                        font-family: 'Inter', sans-serif;
+                        font-size: 1.0rem;
+                        font-weight: 500;
+                        padding: 15px;
+                        border-radius: 10px;
+                    }
+
+                    /* Individual Cantrip Content Styling */
+                    .text-gray-900 { color: #1f2937 !important; }
+                    .font-extrabold { font-weight: 800; }
+                    .font-verbal {font-weight: 200; font-style: italic;}
+                    .font-description { font-weight: 100; font-size: 90%; font-family: 'Tahoma', sans-serif; text-align: justify; }
+                    .font-normal { font-weight: 400; }
+                    .text-gray-700 { color: #4a5568; }
+                    .text-gray-600 { color: #718096; }
+                    .border-t { border-top: 1px solid #e2e8f0; }
+
+                </style>
+            `;
+
+            // The exportElement already contains the table structure
+            const fullHTML = `<!DOCTYPE html><html><head><title>${filename}</title>${injectedStyles}</head><body>${element.innerHTML}</body></html>`;
+
+            const blob = new Blob([fullHTML], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${filename}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        /**
+         * Generates and downloads a CSV file (representing the XLSX format).
+         */
+        function exportAsCSV(filename, data) {
+            const headers = ['Name', 'Celestial', 'Earth', 'Nature', 'Type', 'Duration', 'Cost', 'Tag', 'Verbal', 'Description'];
+            
+            // Header for CSV
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += `Adventure: "${document.getElementById('adventureTitle').value}"\n\n`;
+            // Removed: Total Production Cost line from CSV
+            csvContent += headers.join(',') + '\n';
+
+            // Data rows
+            data.forEach(c => {
+                const row = headers.map(header => {
+                    const key = header.toLowerCase();
+                    let value = c[key] !== undefined ? c[key] : c[key.replace(/\s/g, '').toLowerCase()];
+                    
+                    // Escape internal quotes and wrap in quotes for robust CSV
+                    if (typeof value === 'string') {
+                        // Replace newlines and tabs with spaces for cleaner CSV
+                        value = value.replace(/(\r\n|\n|\r|\t)/gm, " ");
+                        value = `"${value.replace(/"/g, '""')}"`;
+                    } else if (typeof value === 'boolean') {
+                        value = value ? 'Yes' : 'No';
+                    }
+                    return value;
+                }).join(',');
+                csvContent += row + '\n';
+            });
+
+            // Create download link
+            const encodedUri = encodeURI(csvContent);
+            const a = document.createElement('a');
+            a.href = encodedUri;
+            a.download = `${filename}.csv`; // Use .csv for universal Excel compatibility
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            // NOTE: URL.revokeObjectURL(url); is not needed here as no local URL was created for the encoded URI
+        }
+
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const eventVars = window.EventVariables?.get?.();
+            const eventTitle = window.EventVariables?.buildTitle?.(eventVars);
+            const adventureTitleInput = document.getElementById('adventureTitle');
+            if (adventureTitleInput && !adventureTitleInput.value.trim() && eventTitle) {
+                adventureTitleInput.value = eventTitle;
+            }
+
+            applyFilters(); // Call applyFilters to initially render the list
+            updateExportData();
+        });
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>E10-24-Hello Adventure Loot Report</title>
+                    <style>
+                        body { font-family: sans-serif; margin: 20px; background-color: #1a202c; color: #e2e8f0; }
+                        h1 { color: #edf2f7; }
+                        h2 { color: #cbd5e0; }
+                        h3 { color: #a0aec0; margin-top: 20px; }
+                        table {
+                            width: 100%; /* Ensure table takes full width */
+                            border-collapse: collapse;
+                            margin-top: 10px;
+                            page-break-inside: auto;
+                        }
+                        .normal-table {
+                            width: 100%; /* Allow non-scroll table to size naturally */
+                            table-layout: auto;
+                        }
+                        .scroll-table {
+                            width: 100%; /* Ensure scroll table takes full width */
+                            border-collapse: collapse; /* Crucial for removing space between cells */
+                            table-layout: fixed; /* Crucial for side-by-side cells with percentage width */
+border: 2px solid #4a5568;
+                        }
+                        tr { page-break-inside: avoid; page-break-after: auto; }
+                        /* Default styles for normal cells */
+                        .normal-cell {
+                            border: 1px solid #4a5568; /* Darker border */
+                            padding: 8px;
+                            text-align: left;
+                            height: 3cm;
+                            width: 5cm; /* Adjusted width for HTML export (increased from 6.06cm) */
+                            box-sizing: border-box;
+                            vertical-align: top;
+                            overflow: hidden;
+                            word-wrap: break-word;
+                            white-space: pre-wrap;
+                            font-size: 12px;
+                            background-color: #2d3748; /* Darker cell background */
+                            color: #e2e8f0; /* Light text */
+                        }
+        /* Specific styles for scroll cells in HTML export */
+       
+                        .scroll-cell {
+                            border: 2px solid #4a5568; /* Darker border */
+                            padding: 8px;
+                            text-align: left;
+                            height: 18cm; /* Larger height */
+                            width: 7cm; /* Larger width */
+                            box-sizing: border-box;
+                            vertical-align: top;
+                            overflow: hidden;
+
+                            word-wrap: break-word;
+                            white-space: pre-wrap;
+                            font-size: 12px;
+                            background-color: #2d3748; /* Darker cell background */
+                            color: #e2e8f0; /* Light text */
+				 position: relative;
+                        }
+                        .scroll-cell .scroll-content {
+                            flex-grow: 1; /* Allows content to take available space */
+                            display: flex;
+                            flex-direction: column;
+                        }
+                        .scroll-cell .item-name {
+                            font-size: 24px;
+                            font-weight: bold;
+                        }
+                        .scroll-cell .verbal-field {
+                            font-size: 2em; /* Increase font size */
+                            font-style: italic; /* Italicize */
+                            margin-top: 8px; /* Spacing above verbal field */
+                        }
+                        .scroll-cell .duration-field {
+                            margin-top: auto; /* Pushes it to the bottom */
+                        }
+                        th { background-color: #4a5568; color: #cbd5e0; } /* Darker table header */
+                    </style>
+                </head>
+                <body>
+                    <h1>E10-24-Hello Adventure</h1>
+                    <h2>Total Production Cost: S25</h2>
+            <table class="normal-table"><thead><tr></tr></thead><tbody><tr><td class="normal-cell"><span style="font-weight: bold;">Potion</span><br><span style="font-weight: bold;">Bless</span><br>Effect: Grants recipient 5 temporary Body Points.<br>Level: 1<br>Duration: Indefinite<br>Expiry: 2027-05-14</td><td class="normal-cell"><span style="font-weight: bold;">Potion</span><br><span style="font-weight: bold;">Bless</span><br>Effect: Grants recipient 5 temporary Body Points.<br>Level: 1<br>Duration: Indefinite<br>Expiry: 2027-05-14</td><td class="normal-cell"><span style="font-weight: bold;">Alchemy</span><br><span style="font-weight: bold;">Cause Light Damage</span><br>Type: Elixir<br>Duration: Instant<br>Effect: 5 damage directly to Body<br>Expiry: 2027-05-14</td><td class="normal-cell"><span style="font-weight: bold;">Special Material</span><br><span style="font-weight: bold;">Rune Making Materials</span><br>Value: 10</td></tr><tr><td class="normal-cell"><span style="font-weight: bold;">Weapon</span><br><span style="font-weight: bold;">Sap</span><br>Material: Steel<br>Expiry: 2027-05-14</td><td class="normal-cell"><span style="font-weight: bold;">Weapon</span><br><span style="font-weight: bold;">Hatchet</span><br>Material: Steel<br>Expiry: 2027-05-14</td><td class="normal-cell"><span style="font-weight: bold;">Armour</span><br><span style="font-weight: bold;">Back Armour</span><br>Material: Plate<br>Armour Value: 9<br>Expiry: 2027-05-14</td><td class="normal-cell"><span style="font-weight: bold;">Armour</span><br><span style="font-weight: bold;">Shoulder/ Upper Arm Armour (L+R)</span><br>Material: Plate<br>Armour Value: 6<br>Expiry: 2027-05-14</td></tr><tr><td class="normal-cell"><span style="font-weight: bold;">Trap</span><br><span style="font-weight: bold;">Alarms/Noisemakers</span><br>Expiry: 2027-05-14</td><td class="normal-cell"><span style="font-weight: bold;">Trap</span><br><span style="font-weight: bold;">Acid trap 2</span><br>Expiry: 2027-05-14</td><td class="normal-cell"><span style="font-weight: bold;">Runic Tattoo</span><br><span style="font-weight: bold;">Illumination</span><br>Effect: Creates a light (must have phys rep)<br>Duration: 5 Days<br>Level: 1<br>Expiry: 2027-05-14</td><td class="normal-cell"><span style="font-weight: bold;">Runic Tattoo</span><br><span style="font-weight: bold;">Endow</span><br>Effect: Allows recipient to deal two additional points of damage for next attack with a melee weapon<br>Duration: Indefinite<br>Level: 1<br>Expiry: 2027-05-14</td></tr><tr><td class="normal-cell"><span style="font-weight: bold;">Formal Component</span><br><span style="font-weight: bold;">Fairy Dust</span><br>Type: Destruction<br>Value: 1</td><td class="normal-cell"><span style="font-weight: bold;">Formal Component</span><br><span style="font-weight: bold;">Naga Scale</span><br>Type: Destruction<br>Value: 1</td><td class="normal-cell"><span style="font-weight: bold;">Formal Component</span><br><span style="font-weight: bold;">Basilisk Eye</span><br>Type: Elemental<br>Value: 1</td><td class="normal-cell"><span style="font-weight: bold;"></span></td></tr></tbody></table><table class="scroll-table">
+                    <colgroup>
+                        <col style="width: 50%;">
+                        <col style="width: 50%;">
+                    </colgroup>
+                    <tbody><tr><td class="scroll-cell">
+                            <div class="scroll-content">
+                                <span class="item-name">Endow</span>
+                                <p>Effect: Allows recipient to deal two additional points of damage for next attack with a melee weapon</p>
+                                <p>Level: 1</p>
+                                <p class="verbal-field">Verbal: I grant you the power of an Endow.</p>
+                            </div>
+                            <p class="duration-field">Duration: Indefinite</p>
+                        </td><td class="scroll-cell">
+                            <div class="scroll-content">
+                                <span class="item-name">Endow</span>
+                                <p>Effect: Allows recipient to deal two additional points of damage for next attack with a melee weapon</p>
+                                <p>Level: 1</p>
+                                <p class="verbal-field">Verbal: I grant you the power of an Endow.</p>
+                            </div>
+                            <p class="duration-field">Duration: Indefinite</p>
+                        </td></tr><tr><td class="scroll-cell">
+                            <div class="scroll-content">
+                                <span class="item-name">Endow</span>
+                                <p>Effect: Allows recipient to deal two additional points of damage for next attack with a melee weapon</p>
+                                <p>Level: 1</p>
+                                <p class="verbal-field">Verbal: I grant you the power of an Endow.</p>
+                            </div>
+                            <p class="duration-field">Duration: Indefinite</p>
+                        </td><td class="scroll-cell"></td></tr></tbody></table>
+                </body>
+                </html>
+            

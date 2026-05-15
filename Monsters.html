@@ -1,0 +1,1096 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monster Encounter Builder</title>
+  <link rel="stylesheet" href="theme.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Chosen Palette: Slate & Amber -->
+    <!-- Application Structure Plan: A responsive two-column layout is used to create a clear workflow. The left column ("Monster Library") acts as the master source of data, allowing users to browse, search, and manage all monsters. The right column ("Adventure Roster") is the user's workspace for building a specific encounter. This separation of concerns is intuitive: users finds what they need on the left and build with it on the right. Modals are used for focused tasks like adding/editing monsters to keep the main UI clean. An export section at the bottom of the right column concludes the workflow naturally. This structure was chosen to mirror a common "source-to-target" workflow, making it highly usable for the task of building an encounter list from a larger database. -->
+    <!-- Visualization & Content Choices: 
+        - Monster Database: An interactive HTML table. Goal: Inform/Organize. Interaction: Search, sort. Justification: Standard, effective way to display tabular data. Method: HTML table + JS.
+        - Adventure Roster: A list of custom cards. Goal: Organize/Inform. Interaction: Change quantity, edit instance details, remove. Justification: Cards provide more space for per-instance controls than a table row. Method: HTML divs + JS.
+        - Monster Type Distribution: A doughnut chart. Goal: Inform. Interaction: Hover for tooltips. Justification: Provides a quick visual summary of the database composition, adding value beyond the core requirements. Library: Chart.js.
+        - Data Editing: Modals. Goal: Inform/Inform. Interaction: Form input. Justification: Prevents UI clutter and focuses the user on a single task. Method: HTML/CSS + JS for show/hide.
+        - Export Preview: A formatted HTML table. Goal: Inform. Interaction: None. Justification: Shows the user exactly what they will get before exporting. Method: HTML table.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .modal-backdrop {
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal {
+            transition: opacity 0.3s ease;
+        }
+        .table-sortable th {
+            cursor: pointer;
+        }
+        .table-sortable th:hover {
+            background-color: #475569; /* slate-600 */
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b; /* slate-800 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569; /* slate-600 */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b; /* slate-500 */
+        }
+        .spinner {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid #ffffff;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-200">
+
+    <div id="app" class="container mx-auto p-4 lg:p-6">
+        <header class="text-center mb-6">
+            <h1 class="text-4xl font-bold text-amber-400">Monster Encounter Builder</h1>
+            <p class="text-slate-400 mt-1">Browse the library, build your adventure, and export your encounter sheet.</p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+            <!-- Left Column: Monster Library -->
+            <div class="lg:col-span-3 bg-slate-800 p-4 rounded-lg shadow-lg">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-amber-500 mb-2 sm:mb-0">Monster Library</h2>
+                    <button id="add-new-monster-btn" class="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                        Add New Monster
+                    </button>
+                </div>
+                
+                <div class="mb-4 flex flex-col sm:flex-row gap-2">
+                    <input type="text" id="search-input" placeholder="Search monsters by name..." class="flex-grow p-2 rounded-lg bg-slate-700 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <select id="type-filter" class="w-full sm:w-auto p-2 rounded-lg bg-slate-700 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                        <option value="">Filter by Type</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div class="md:col-span-2">
+                        <h3 class="text-lg font-semibold text-slate-300 mb-2 text-center">Library Stats</h3>
+                        <p class="text-sm text-slate-400 text-center">Total monsters in library: <span id="total-monsters-stat" class="font-bold text-amber-400">0</span></p>
+                    </div>
+                    <div class="md:col-span-1 flex justify-center items-center">
+                         <div class="chart-container relative h-32 w-32">
+                            <canvas id="monster-type-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-slate-300 table-sortable">
+                        <thead class="text-xs text-amber-400 uppercase bg-slate-700">
+                            <tr>
+                                <th scope="col" class="p-3" data-sort="Name">Name</th>
+                                <th scope="col" class="p-3" data-sort="Type">Type</th>
+                                <th scope="col" class="p-3 text-center" data-sort="Power">Power</th>
+                                <th scope="col" class="p-3 text-center" data-sort="APL">APL</th>
+                                <th scope="col" class="p-3 text-center" data-sort="Body">Body</th>
+                                <th scope="col" class="p-3 text-center" data-sort="Armour">Armour</th>
+                                <th scope="col" class="p-3 text-center" data-sort="Strength">Strength</th>
+                                <th scope="col" class="p-3 text-center" data-sort="PCLevels">PCLevels</th>
+                                <th scope="col" class="p-3 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="monster-table-body">
+                           <!-- JS will populate this -->
+                        </tbody>
+                    </table>
+                     <p id="no-results-msg" class="text-center p-4 text-slate-400 hidden">No monsters found.</p>
+                </div>
+            </div>
+
+            <!-- Right Column: Adventure Roster -->
+            <div class="lg:col-span-2 bg-slate-800 p-4 rounded-lg shadow-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-amber-500">Adventure Roster</h2>
+                    <button id="clear-adventure-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-lg text-sm transition-colors">
+                        Clear Adventure
+                    </button>
+                </div>
+
+                <div>
+                    <label for="adventure-title" class="block mb-2 text-sm font-medium text-slate-300">Adventure Title</label>
+                    <input type="text" id="adventure-title" value="" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5">
+                </div>
+                
+                <div id="adventure-roster-list" class="mt-4 space-y-3 max-h-96 overflow-y-auto pr-2">
+                   <!-- JS will populate this -->
+                   <div id="roster-placeholder" class="text-center py-10 px-4 border-2 border-dashed border-slate-600 rounded-lg">
+                       <p class="text-slate-400">Add monsters from the library to get started.</p>
+                   </div>
+                </div>
+
+                <div class="mt-6 border-t border-slate-700 pt-4">
+                     <h3 class="text-xl font-bold text-amber-500 mb-2">Export Encounter</h3>
+                     <p class="text-sm text-slate-400 mb-4">Generate a formatted sheet of your adventure roster.</p>
+                     <div class="flex space-x-2">
+                        <button id="export-pdf-btn" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Export PDF</button>
+                        <button id="export-xlsx-btn" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Export XLSX</button>
+                        <button id="export-html-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Export HTML</button>
+                     </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Monster Form Modal -->
+    <div id="monster-modal" class="fixed inset-0 z-50 justify-center p-4 hidden modal-backdrop"> 
+        <div class="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div class="relative bg-slate-800 rounded-lg shadow-xl modal">
+                <form id="monster-form" class="p-4 md:p-5">
+                    <div class="flex items-center justify-between pb-4 mb-4 border-b rounded-t border-slate-600">
+                        <h3 id="modal-title" class="text-lg font-semibold text-amber-400">Add New Monster</h3>
+                        <button type="button" class="text-slate-400 bg-transparent hover:bg-slate-600 hover:text-white rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center" onclick="closeModal()">
+                            <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/></svg>
+                            <span class="sr-only">Close modal</span>
+                        </button>
+                    </div>
+                    
+                    <input type="hidden" id="monster-id">
+                    
+                    <div class="grid gap-4 mb-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                        <div class="col-span-full">
+                            <label for="name" class="block mb-2 text-sm font-medium text-slate-300">Name</label>
+                            <input type="text" name="name" id="name" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5" required>
+                        </div>
+                        <div class="col-span-2 sm:col-span-1 lg:col-span-1">
+                            <label for="type" class="block mb-2 text-sm font-medium text-slate-300">Type</label>
+                            <select id="type" name="type" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5"></select>
+                        </div>
+                        <div>
+                             <label for="power" class="block mb-2 text-sm font-medium text-slate-300">Power</label>
+                            <input type="number" name="power" id="power" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5">
+                        </div>
+                        <div>
+                             <label for="apl" class="block mb-2 text-sm font-medium text-slate-300">APL</label>
+                            <input type="number" name="apl" id="apl" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5">
+                        </div>
+                        <div>
+                             <label for="body" class="block mb-2 text-sm font-medium text-slate-300">Body</label>
+                            <input type="number" name="body" id="body" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5">
+                        </div>
+                        <div>
+                             <label for="armour" class="block mb-2 text-sm font-medium text-slate-300">Armour</label>
+                            <input type="text" name="armour" id="armour" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5">
+                        </div>
+                        <div>
+                             <label for="strength" class="block mb-2 text-sm font-medium text-slate-300">Strength</label>
+                            <input type="number" name="strength" id="strength" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5">
+                        </div>
+                        <div>
+                             <label for="pcLevels" class="block mb-2 text-sm font-medium text-slate-300">PCLevels</label>
+                            <input type="text" name="pcLevels" id="pcLevels" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5">
+                        </div>
+                        <div>
+                             <label for="protectives" class="block mb-2 text-sm font-medium text-slate-300">Protectives</label>
+                            <input type="text" name="protectives" id="protectives" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5">
+                        </div>
+                        <div>
+                             <label for="onDeath" class="block mb-2 text-sm font-medium text-slate-300">OnDeath</label>
+                            <input type="text" name="onDeath" id="onDeath" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5">
+                        </div>
+                        <div>
+                             <label for="rips" class="block mb-2 text-sm font-medium text-slate-300">Rips</label>
+                            <input type="text" name="rips" id="rips" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5">
+                        </div>
+                        <div class="col-span-full">
+                            <label for="description" class="block mb-2 text-sm font-medium text-slate-300">Description</label>
+                            <textarea id="description" name="description" rows="2" class="block p-2.5 w-full text-sm text-slate-200 bg-slate-700 rounded-lg border border-slate-600 focus:ring-amber-500 focus:border-amber-500"></textarea>                    
+                        </div>
+                        <div>
+                             <label for="motive" class="block mb-2 text-sm font-medium text-slate-300">Motive</label>
+                            <textarea id="motive" name="motive" rows="2" class="block p-2.5 w-full text-sm text-slate-200 bg-slate-700 rounded-lg border border-slate-600 focus:ring-amber-500 focus:border-amber-500"></textarea>                    
+                        </div>
+                        <div>
+                             <label for="earthSpells" class="block mb-2 text-sm font-medium text-slate-300">EarthSpells</label>
+                            <textarea id="earthSpells" name="earthSpells" rows="2" class="block p-2.5 w-full text-sm text-slate-200 bg-slate-700 rounded-lg border border-slate-600 focus:ring-amber-500 focus:border-amber-500"></textarea>                    
+                        </div>
+                        <div>
+                             <label for="celestialSpells" class="block mb-2 text-sm font-medium text-slate-300">CelestialSpells</label>
+                            <textarea id="celestialSpells" name="celestialSpells" rows="2" class="block p-2.5 w-full text-sm text-slate-200 bg-slate-700 rounded-lg border border-slate-600 focus:ring-amber-500 focus:border-amber-500"></textarea>                    
+                        </div>
+                        <div>
+                             <label for="weapons" class="block mb-2 text-sm font-medium text-slate-300">Weapons</label>
+                            <input type="text" name="weapons" id="weapons" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5">
+                        </div>
+                        <div>
+                             <label for="claws" class="block mb-2 text-sm font-medium text-slate-300">Claws</label>
+                            <input type="text" name="claws" id="claws" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5">
+                        </div>
+                        <div class="col-span-full">
+                            <label for="weaponTag" class="block mb-2 text-sm font-medium text-slate-300">WeaponTag</label>
+                            <textarea id="weaponTag" name="weaponTag" rows="2" class="block p-2.5 w-full text-sm text-slate-200 bg-slate-700 rounded-lg border border-slate-600 focus:ring-amber-500 focus:border-amber-500"></textarea>                    
+                        </div>
+                        <div class="col-span-full">
+                            <label for="clawTag" class="block mb-2 text-sm font-medium text-slate-300">ClawTag</label>
+                            <textarea id="clawTag" name="clawTag" rows="2" class="block p-2.5 w-full text-sm text-slate-200 bg-slate-700 rounded-lg border border-slate-600 focus:ring-amber-500 focus:border-amber-500"></textarea>                    
+                        </div>
+                        <div>
+                             <label for="healedBy" class="block mb-2 text-sm font-medium text-slate-300">HealedBy</label>
+                            <input type="text" name="healedBy" id="healedBy" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5">
+                        </div>
+                        <div class="col-span-full">
+                             <label for="specialAbilities" class="block mb-2 text-sm font-medium text-slate-300">SpecialAbilities</label>
+                             <textarea id="specialAbilities" name="specialAbilities" rows="4" class="block p-2.5 w-full text-sm text-slate-200 bg-slate-700 rounded-lg border border-slate-600 focus:ring-amber-500 focus:border-amber-500"></textarea>
+                        </div>
+                        <div>
+                             <label for="climate" class="block mb-2 text-sm font-medium text-slate-300">Climate</label>
+                            <textarea id="climate" name="climate" rows="2" class="block p-2.5 w-full text-sm text-slate-200 bg-slate-700 rounded-lg border border-slate-600 focus:ring-amber-500 focus:border-amber-500"></textarea>                    
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button type="submit" class="text-white bg-amber-600 hover:bg-amber-700 focus:ring-4 focus:outline-none focus:ring-amber-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">
+                            Save Monster
+                        </button>
+                         <button type="button" id="delete-monster-btn" class="text-red-500 inline-flex items-center hover:text-white border border-red-500 hover:bg-red-600 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center hidden">
+                            <svg class="w-5 h-5 me-1 -ms-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                            Delete
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div> 
+
+    <script src="event-variables.js"></script>
+    <script src="monsters-data.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', async () => { 
+
+        // --- EMBEDDED MONSTER DATA ---
+        // Add Monsters HERE
+        const initialMonsterData = window.initialMonsterData // Will be populated from initialMonsterData
+
+        let currentAdventure = {
+            title: "", 
+            monsters: []
+        };
+        
+        let sortState = { key: 'Name', asc: true }; // Changed to 'Name'
+        let monsterTypeChart = null; 
+
+        // --- DOM ELEMENTS ---
+        const monsterTableBody = document.getElementById('monster-table-body');
+        const searchInput = document.getElementById('search-input');
+        const typeFilter = document.getElementById('type-filter'); 
+        const noResultsMsg = document.getElementById('no-results-msg');
+        const rosterList = document.getElementById('adventure-roster-list');
+        const rosterPlaceholder = document.getElementById('roster-placeholder');
+        const adventureTitleInput = document.getElementById('adventure-title');
+
+        const eventVars = window.EventVariables?.get?.();
+        const eventTitle = window.EventVariables?.buildTitle?.(eventVars);
+        if (adventureTitleInput && !adventureTitleInput.value.trim() && eventTitle) {
+            adventureTitleInput.value = eventTitle;
+            currentAdventure.title = eventTitle;
+        }
+        
+        const modal = document.getElementById('monster-modal');
+        const monsterForm = document.getElementById('monster-form');
+        const modalTitle = document.getElementById('modal-title');
+        const monsterIdInput = document.getElementById('monster-id');
+        const deleteBtn = document.getElementById('delete-monster-btn');
+        const clearAdventureBtn = document.getElementById('clear-adventure-btn'); 
+
+        // --- RENDER FUNCTIONS ---
+        const renderMonsterTable = () => {
+            monsterTableBody.innerHTML = '';
+            const filterText = searchInput.value.toLowerCase();
+            const selectedType = typeFilter.value; 
+
+            const filteredData = monsterDatabase.filter(m => 
+                (m.Name.toLowerCase().includes(filterText) || // Changed to m.Name
+                (m.Type && m.Type.toLowerCase().includes(filterText))) && // Changed to m.Type
+                (selectedType === '' || (m.Type && m.Type === selectedType)) // Changed to m.Type
+            );
+
+            filteredData.sort((a, b) => {
+                let valA = a[sortState.key];
+                let valB = b[sortState.key];
+                
+                const numericKeys = ['Power', 'APL', 'Body', 'Strength']; // Changed to capitalized keys
+                if (numericKeys.includes(sortState.key)) {
+                    valA = parseFloat(valA) || 0;
+                    valB = parseFloat(valB) || 0;
+                }
+
+                if (valA < valB) return sortState.asc ? -1 : 1;
+                if (valA > valB) return sortState.asc ? 1 : -1;
+                return 0;
+            });
+            
+            noResultsMsg.classList.toggle('hidden', filteredData.length > 0);
+
+            filteredData.forEach(monster => {
+                const tr = document.createElement('tr');
+                tr.className = 'bg-slate-800 border-b border-slate-700 hover:bg-slate-600';
+                tr.innerHTML = `
+                    <td class="p-3 font-medium text-white">${monster.Name}</td>
+                    <td class="p-3">${monster.Type || ''}</td>
+                    <td class="p-3 text-center">${monster.Power}</td>
+                    <td class="p-3 text-center">${monster.APL}</td>
+                    <td class="p-3 text-center">${monster.Body}</td>
+                    <td class="p-3 text-center">${monster.Armour}</td>
+                    <td class="p-3 text-center">${monster.Strength}</td>
+                    <td class="p-3 text-center">${monster.PCLevels}</td>
+                    <td class="p-3 text-center">
+                        <button class="add-to-adventure-btn font-medium text-amber-500 hover:underline" data-id="${monster.id}">Add</button> / 
+                        <button class="edit-monster-btn font-medium text-blue-500 hover:underline" data-id="${monster.id}">Edit</button>
+                    </td>
+                `;
+                monsterTableBody.appendChild(tr);
+            });
+            updateStats();
+        };
+        
+        const renderAdventureRoster = () => {
+            rosterList.innerHTML = '';
+            rosterPlaceholder.classList.toggle('hidden', currentAdventure.monsters.length > 0);
+
+            currentAdventure.monsters.forEach(advMonster => {
+                const baseMonster = monsterDatabase.find(m => m.id === advMonster.baseMonsterId);
+                if (!baseMonster) return;
+                
+                const card = document.createElement('div');
+                card.className = 'bg-slate-700 p-3 rounded-lg flex items-center justify-between gap-2';
+                const displayName = advMonster.overriddenName || baseMonster.Name;
+                const displayType = baseMonster.Type || '';
+                const displayBody = advMonster.overriddenBody || baseMonster.Body;
+                const displayArmour = advMonster.overriddenArmour || baseMonster.Armour; 
+
+                card.innerHTML = `
+                    <div class="flex-grow">
+                        <p class="font-bold text-white">${displayName} <span class="text-xs text-slate-400">(${displayType})</span></p>
+                        <p class="text-xs text-slate-400">Body: ${displayBody}, Armour: ${displayArmour}</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label for="qty-${advMonster.id}" class="sr-only">Qty</label>
+                        <input type="number" id="qty-${advMonster.id}" value="${advMonster.quantity}" min="1" class="roster-qty-input w-16 text-center bg-slate-600 rounded-md p-1" data-id="${advMonster.id}">
+                        <button class="edit-roster-monster-btn text-slate-400 hover:text-white" data-id="${advMonster.id}">
+                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z"></path></svg>
+                        </button>
+                        <button class="remove-from-roster-btn text-red-500 hover:text-red-400" data-id="${advMonster.id}">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                `;
+                rosterList.appendChild(card);
+            });
+        };
+        
+        const renderTypeChart = () => {
+            const ctx = document.getElementById('monster-type-chart').getContext('2d');
+            const typeCounts = monsterDatabase.reduce((acc, m) => {
+                if (m.Type) { 
+                    acc[m.Type] = (acc[m.Type] || 0) + 1;
+                } else { 
+                    acc['(No Type)'] = (acc['(No Type)'] || 0) + 1;
+                }
+                return acc;
+            }, {});
+            
+            const labels = Object.keys(typeCounts);
+            const data = Object.values(typeCounts);
+
+            if(monsterTypeChart) {
+                monsterTypeChart.destroy();
+            }
+
+            monsterTypeChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Monster Types',
+                        data: data,
+                        backgroundColor: ['#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6', '#10b981', '#ec4899', '#6366f1', '#d946ef', '#f97316', '#06b6d4', '#cbd5e1'], 
+                        borderColor: '#1e293b', 
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                             bodyFont: { size: 10 },
+                             titleFont: { size: 12 },
+                        }
+                    }
+                }
+            });
+        };
+
+        const updateStats = () => {
+            document.getElementById('total-monsters-stat').textContent = monsterDatabase.length;
+            renderTypeChart();
+        };
+
+        // --- MODAL & FORM LOGIC ---
+        const openModalForNew = () => {
+            monsterForm.reset();
+            modalTitle.textContent = 'Add New Monster';
+            monsterIdInput.value = '';
+            deleteBtn.classList.add('hidden');
+            const typeSelect = document.getElementById('type');
+            typeSelect.value = monsterTypesData[0] ? monsterTypesData[0].Type : ''; 
+            typeSelect.disabled = false; 
+            modal.classList.remove('hidden');
+            modal.classList.add('flex'); 
+        };
+
+        const openModalForEdit = (monster) => {
+            monsterForm.reset();
+            modalTitle.textContent = 'Edit Monster';
+            monsterIdInput.value = monster.id;
+            
+            document.getElementById('name').value = monster.Name || '';
+            document.getElementById('type').value = monster.Type || ''; 
+            document.getElementById('power').value = monster.Power || '';
+            document.getElementById('apl').value = monster.APL || '';
+            document.getElementById('body').value = monster.Body || '';
+            document.getElementById('armour').value = monster.Armour || ''; 
+            document.getElementById('strength').value = monster.Strength || '';
+            document.getElementById('pcLevels').value = monster.PCLevels || ''; 
+            document.getElementById('protectives').value = monster.Protectives || '';
+            document.getElementById('onDeath').value = monster.OnDeath || ''; 
+            document.getElementById('rips').value = monster.Rips || '';
+            document.getElementById('description').value = monster.Description || ''; 
+            document.getElementById('motive').value = monster.Motive || '';
+            document.getElementById('earthSpells').value = monster.EarthSpells || ''; 
+            document.getElementById('celestialSpells').value = monster.CelestialSpells || ''; 
+            document.getElementById('weapons').value = monster.Weapons || ''; 
+            document.getElementById('claws').value = monster.Claws || ''; 
+            document.getElementById('weaponTag').value = monster.WeaponTag || ''; 
+            document.getElementById('clawTag').value = monster.ClawTag || ''; 
+            document.getElementById('healedBy').value = monster.HealedBy || ''; 
+            document.getElementById('specialAbilities').value = monster.SpecialAbilities || ''; 
+            document.getElementById('climate').value = monster.CLIMATE || '';
+
+            deleteBtn.classList.remove('hidden');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        };
+
+        const openModalForRosterEdit = (advMonster) => {
+            const baseMonster = monsterDatabase.find(m => m.id === advMonster.baseMonsterId);
+            monsterForm.reset();
+            modalTitle.textContent = `Edit Instance: ${advMonster.overriddenName || baseMonster.Name}`;
+            monsterIdInput.value = advMonster.id; 
+            document.getElementById('name').value = advMonster.overriddenName || baseMonster.Name;
+            document.getElementById('name').disabled = true; 
+
+            document.getElementById('type').value = baseMonster.Type || ''; 
+            document.getElementById('type').disabled = true; 
+
+            document.getElementById('power').value = baseMonster.Power || ''; document.getElementById('power').disabled = true;
+            document.getElementById('apl').value = baseMonster.APL || ''; document.getElementById('apl').disabled = true;
+            document.getElementById('body').value = advMonster.overriddenBody || baseMonster.Body || '';
+            document.getElementById('armour').value = advMonster.overriddenArmour || baseMonster.Armour || ''; 
+            document.getElementById('strength').value = baseMonster.Strength || ''; document.getElementById('strength').disabled = true;
+            document.getElementById('pcLevels').value = baseMonster.PCLevels || ''; document.getElementById('pcLevels').disabled = true; 
+            document.getElementById('protectives').value = baseMonster.Protectives || ''; document.getElementById('protectives').disabled = true;
+            document.getElementById('onDeath').value = baseMonster.OnDeath || ''; document.getElementById('onDeath').disabled = true; 
+            document.getElementById('rips').value = baseMonster.Rips || ''; document.getElementById('rips').disabled = true;
+            document.getElementById('description').value = baseMonster.Description || ''; document.getElementById('description').disabled = true; 
+            document.getElementById('motive').value = baseMonster.Motive || ''; document.getElementById('motive').disabled = true;
+            document.getElementById('earthSpells').value = baseMonster.EarthSpells || ''; document.getElementById('earthSpells').disabled = true; 
+            document.getElementById('celestialSpells').value = baseMonster.CelestialSpells || ''; document.getElementById('celestialSpells').disabled = true; 
+            document.getElementById('weapons').value = baseMonster.Weapons || ''; document.getElementById('weapons').disabled = true; 
+            document.getElementById('claws').value = baseMonster.Claws || ''; document.getElementById('claws').disabled = true; 
+            document.getElementById('weaponTag').value = baseMonster.WeaponTag || ''; document.getElementById('weaponTag').disabled = true; 
+            document.getElementById('clawTag').value = baseMonster.ClawTag || ''; document.getElementById('clawTag').disabled = true; 
+            document.getElementById('healedBy').value = baseMonster.HealedBy || ''; document.getElementById('healedBy').disabled = true; 
+            document.getElementById('specialAbilities').value = baseMonster.SpecialAbilities || ''; document.getElementById('specialAbilities').disabled = true; 
+            document.getElementById('climate').value = baseMonster.CLIMATE || ''; document.getElementById('climate').disabled = true;
+            
+            deleteBtn.classList.add('hidden');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        };
+
+        window.closeModal = () => {
+            const fields = ['name', 'type', 'power', 'apl', 'body', 'armour', 'strength', 'pcLevels', 'protectives', 'onDeath', 'rips', 'description', 'motive', 'earthSpells', 'celestialSpells', 'weapons', 'claws', 'weaponTag', 'clawTag', 'healedBy', 'specialAbilities', 'climate'];
+            fields.forEach(field => {
+                const element = document.getElementById(field);
+                if (element) element.disabled = false;
+            });
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        };
+
+        monsterForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(monsterForm);
+            const id = monsterIdInput.value;
+
+            const newStats = {
+                Name: formData.get('name'),
+                Type: formData.get('type'), 
+                Power: formData.get('power'), 
+                APL: parseInt(formData.get('apl')) || 0,
+                Body: parseInt(formData.get('body')) || 0,
+                Armour: formData.get('armour'), 
+                Strength: parseInt(formData.get('strength')) || 0,
+                PCLevels: formData.get('pcLevels'), 
+                Protectives: formData.get('protectives'), 
+                OnDeath: formData.get('onDeath'), 
+                Rips: formData.get('rips'), 
+                Description: formData.get('description'),
+                Motive: formData.get('motive'),
+                EarthSpells: formData.get('earthSpells'),
+                CelestialSpells: formData.get('celestialSpells'),
+                Weapons: formData.get('weapons'), 
+                Claws: formData.get('claws'), 
+                WeaponTag: formData.get('weaponTag'),
+                ClawTag: formData.get('clawTag'),
+                HealedBy: formData.get('healedBy'), 
+                SpecialAbilities: formData.get('specialAbilities'), 
+                CLIMATE: formData.get('climate')
+            };
+
+            const rosterMonster = currentAdventure.monsters.find(m => m.id === id);
+            const libraryMonster = monsterDatabase.find(m => m.id === id);
+
+            if (rosterMonster) { 
+                rosterMonster.overriddenName = newStats.Name; 
+                rosterMonster.overriddenBody = newStats.Body;
+                rosterMonster.overriddenArmour = newStats.Armour; 
+                renderAdventureRoster();
+            } else if (libraryMonster) { 
+                Object.assign(libraryMonster, newStats); 
+                renderMonsterTable();
+                renderAdventureRoster(); 
+            } else { 
+                const newMonster = {
+                    id: crypto.randomUUID(),
+                    ...newStats
+                };
+                monsterDatabase.push(newMonster);
+                renderMonsterTable();
+            }
+            closeModal();
+        });
+
+        // --- EVENT HANDLERS ---
+        searchInput.addEventListener('input', renderMonsterTable);
+        typeFilter.addEventListener('change', renderMonsterTable); 
+        
+        document.getElementById('add-new-monster-btn').addEventListener('click', openModalForNew);
+        
+        deleteBtn.addEventListener('click', () => {
+            const id = monsterIdInput.value;
+            showCustomConfirm('Are you sure you want to delete this monster from the library? This action cannot be undone.', () => {
+                monsterDatabase = monsterDatabase.filter(m => m.id !== id);
+                currentAdventure.monsters = currentAdventure.monsters.filter(m => m.baseMonsterId !== id);
+                renderMonsterTable();
+                renderAdventureRoster();
+                closeModal();
+            });
+        });
+
+        monsterTableBody.addEventListener('click', (e) => {
+            if (e.target.classList.contains('add-to-adventure-btn')) {
+                const id = e.target.dataset.id;
+                const existing = currentAdventure.monsters.find(m => m.baseMonsterId === id);
+                if (existing) {
+                    existing.quantity++;
+                } else {
+                    currentAdventure.monsters.push({
+                        id: crypto.randomUUID(),
+                        baseMonsterId: id,
+                        quantity: 1
+                    });
+                }
+                renderAdventureRoster();
+            }
+            if (e.target.classList.contains('edit-monster-btn')) {
+                const id = e.target.dataset.id;
+                const monster = monsterDatabase.find(m => m.id === id);
+                if (monster) openModalForEdit(monster);
+            }
+        });
+        
+        rosterList.addEventListener('change', (e) => {
+            if (e.target.classList.contains('roster-qty-input')) {
+                const id = e.target.dataset.id;
+                const monster = currentAdventure.monsters.find(m => m.id === id);
+                if(monster) monster.quantity = parseInt(e.target.value) || 1;
+            }
+        });
+
+        rosterList.addEventListener('click', (e) => {
+            const button = e.target.closest('button');
+            if (!button) return;
+
+            if (button.classList.contains('remove-from-roster-btn')) {
+                const id = button.dataset.id;
+                currentAdventure.monsters = currentAdventure.monsters.filter(m => m.id !== id);
+                renderAdventureRoster();
+            }
+            if (button.classList.contains('edit-roster-monster-btn')) {
+                 const id = button.dataset.id;
+                 const monster = currentAdventure.monsters.find(m => m.id === id);
+                 if (monster) openModalForRosterEdit(monster);
+            }
+        });
+
+        document.querySelector('.table-sortable thead').addEventListener('click', (e) => {
+            const th = e.target.closest('th');
+            if (!th || !th.dataset.sort) return;
+            
+            const key = th.dataset.sort;
+            if (sortState.key === key) {
+                sortState.asc = !sortState.asc;
+            } else {
+                sortState.key = key;
+                sortState.asc = true;
+            }
+            renderMonsterTable();
+        });
+
+        adventureTitleInput.addEventListener('change', (e) => {
+            currentAdventure.title = e.target.value;
+        });
+
+        // New: Clear Adventure Button Handler
+        clearAdventureBtn.addEventListener('click', () => {
+            showCustomConfirm('Are you sure you want to clear the entire adventure roster and title? This action cannot be undone.', () => {
+                currentAdventure.title = ""; // Reset to blank title
+                currentAdventure.monsters = []; // Clear monsters
+                adventureTitleInput.value = currentAdventure.title; // Update the input field
+                renderAdventureRoster(); // Re-render the roster list
+            });
+        });
+
+
+        // --- CUSTOM CONFIRMATION DIALOG ---
+        function showCustomConfirm(message, onConfirm) {
+            const confirmModal = document.createElement('div');
+            confirmModal.className = 'fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black bg-opacity-50';
+            confirmModal.innerHTML = `
+                <div class="bg-slate-800 p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
+                    <p class="text-slate-200 mb-4">${message}</p>
+                    <div class="flex justify-center space-x-4">
+                        <button id="confirm-yes" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">Yes</button>
+                        <button id="confirm-no" class="bg-slate-600 hover:bg-slate-700 text-white font-bold py-2 px-4 rounded-lg">No</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(confirmModal);
+
+            document.getElementById('confirm-yes').addEventListener('click', () => {
+                onConfirm();
+                document.body.removeChild(confirmModal);
+            });
+            document.getElementById('confirm-no').addEventListener('click', () => {
+                document.body.removeChild(confirmModal);
+            });
+        }
+
+
+        // --- EXPORT LOGIC ---
+        const getExportData = () => {
+            // Calculate summary data
+            const totalMonsters = currentAdventure.monsters.reduce((sum, monster) => sum + monster.quantity, 0);
+            const totalAPL = currentAdventure.monsters.reduce((sum, advMonster) => { 
+                const baseMonster = monsterDatabase.find(m => m.id === advMonster.baseMonsterId);
+                return sum + (baseMonster.APL * advMonster.quantity); 
+            }, 0);
+
+            const summary = {
+                adventureName: currentAdventure.title,
+                totalMonsters: totalMonsters,
+                totalAPL: totalAPL
+            };
+
+            // Define the order of fields for export and their display names, mapping to internal keys
+            const exportFields = [
+                { key: 'Type', display: 'Type' },
+                { key: 'Power', display: 'Power' },
+                { key: 'APL', display: 'APL' },
+                { key: 'Body', display: 'Body' },
+                { key: 'Armour', display: 'Armour' },
+                { key: 'Strength', display: 'Strength' },
+                { key: 'PCLevels', display: 'PCLevels' },
+                { key: 'Protectives', display: 'Protectives' },
+                { key: 'OnDeath', display: 'OnDeath' },
+                { key: 'Rips', display: 'Rips' },
+                { key: 'Description', display: 'Description' },
+                { key: 'Motive', display: 'Motive' },
+                { key: 'EarthSpells', display: 'EarthSpells' },
+                { key: 'CelestialSpells', display: 'CelestialSpells' },
+                { key: 'Weapons', display: 'Weapons' },
+                { key: 'Claws', display: 'Claws' },
+                { key: 'WeaponTag', display: 'WeaponTag' },
+                { key: 'ClawTag', display: 'ClawTag' },
+                { key: 'HealedBy', display: 'HealedBy' },
+                { key: 'SpecialAbilities', display: 'SpecialAbilities' }, 
+                { key: 'CLIMATE', display: 'Climate' }
+            ];
+
+            const monsterDetails = currentAdventure.monsters.map(advMonster => {
+                const baseMonster = monsterDatabase.find(m => m.id === advMonster.baseMonsterId);
+                const details = [];
+                
+                // Add Name field first
+                let nameValue = advMonster.overriddenName || baseMonster.Name;
+                details.push({ label: 'Name', value: nameValue });
+
+                // Add QTY field second
+                details.push({ label: 'QTY', value: advMonster.quantity });
+
+                // Add the rest of the fields
+                exportFields.forEach(field => {
+                    let value = baseMonster[field.key];
+                    // Apply overrides if they exist for roster monsters
+                    if (field.key === 'Body' && advMonster.overriddenBody !== undefined) value = advMonster.overriddenBody;
+                    if (field.key === 'Armour' && advMonster.overriddenArmour !== undefined) value = advMonster.Armour; 
+                    
+                    details.push({ label: field.display, value: value !== undefined && value !== null ? String(value) : '' });
+                });
+
+                return details;
+            });
+            return { monsterDetails, summary, exportFields }; 
+        }
+
+        document.getElementById('export-pdf-btn').addEventListener('click', () => {
+            if (currentAdventure.monsters.length === 0) {
+                showCustomConfirm('Roster is empty. Add monsters to export.', () => {});
+                return;
+            }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF(); 
+            const { monsterDetails, summary } = getExportData(); 
+            
+            // --- Summary Section ---
+            const summaryStartX = 10;
+            const summaryStartY = 10;
+            const summaryWidth = doc.internal.pageSize.width - 2 * summaryStartX;
+            const summaryHeight = 40; 
+            let currentSummaryY = summaryStartY;
+            const summaryLineHeight = 6; 
+            const summaryPadding = 5;
+
+            doc.setFontSize(10); 
+            doc.setTextColor(0, 0, 0); 
+
+            doc.setFont(undefined, 'bold'); 
+            doc.text(`Adventure: ${summary.adventureName}`, summaryStartX + summaryPadding, currentSummaryY + summaryLineHeight);
+            
+            currentSummaryY += summaryLineHeight + 5; 
+
+            doc.setFontSize(8); 
+            doc.setFont(undefined, 'bold'); 
+            doc.text(`Total APL:   `, summaryStartX + summaryPadding, currentSummaryY + summaryLineHeight);
+            doc.setFont(undefined, 'normal'); 
+            doc.text(`${String(summary.totalAPL)}`, summaryStartX + summaryPadding + doc.getTextWidth(`Total APL:   `), currentSummaryY + summaryLineHeight);
+
+            doc.setFont(undefined, 'bold'); 
+            doc.text(`Total Monsters: `, summaryStartX + summaryPadding + 80, currentSummaryY + summaryLineHeight); 
+            doc.setFont(undefined, 'normal'); 
+            doc.text(`${String(summary.totalMonsters)}`, summaryStartX + summaryPadding + 80 + doc.getTextWidth(`Total Monsters:   `), currentSummaryY + summaryLineHeight);
+            
+            currentSummaryY += summaryLineHeight + summaryPadding + 5; 
+            const topMarginStart = currentSummaryY;
+
+
+            const leftMargin = 5; 
+            const columnGap = 7;
+            const rowGap = 10;
+            const numColumns = 3;
+            const pageHeight = doc.internal.pageSize.height;
+            const pageWidth = doc.internal.pageSize.width;
+
+            const effectivePageWidth = pageWidth - 2 * leftMargin;
+            const blockWidth = (effectivePageWidth - (numColumns - 1) * columnGap) / numColumns;
+            const lineHeight = 5; 
+            const blockPadding = 3; 
+            const minBlockHeight = 40; 
+
+            const labelColumnWidth = 20; 
+            const internalValuePad = 2; 
+            const valueColumnWidth = blockWidth - (2 * blockPadding) - labelColumnWidth - internalValuePad;
+
+            let currentY = topMarginStart;
+            let colIndex = 0;
+            let maxHeightInCurrentRow = 0;
+
+            // Step 1: Pre-process monster data to calculate exact heights with text wrapping
+            const processedMonsterDetails = monsterDetails.map(monster => {
+                let totalContentHeight = 0;
+                const fieldsToDraw = [];
+
+                monster.forEach(field => {
+                    let currentFieldLabelFontSize = 8; 
+                    let currentFieldValueFontSize = 8; 
+
+                    if (field.label === 'Name') {
+                        currentFieldLabelFontSize = 10; 
+                        currentFieldValueFontSize = 10; 
+                    } else if (field.label === 'QTY') {
+                        currentFieldLabelFontSize = 8; 
+                        currentFieldValueFontSize = 8; 
+                    }
+
+                    doc.setFontSize(currentFieldValueFontSize); 
+                    const wrappedLines = doc.splitTextToSize(String(field.value), valueColumnWidth);
+                    const fieldRenderedHeight = Math.max(lineHeight, wrappedLines.length * lineHeight);
+                    totalContentHeight += fieldRenderedHeight;
+                    
+                    fieldsToDraw.push({
+                        label: field.label,
+                        valueLines: wrappedLines,
+                        height: fieldRenderedHeight,
+                        labelFontSize: currentFieldLabelFontSize, 
+                        valueFontSize: currentFieldValueFontSize 
+                    });
+                });
+                
+                const calculatedBlockHeight = Math.max(minBlockHeight, totalContentHeight + (2 * blockPadding)); 
+                return {
+                    originalMonster: monster,
+                    calculatedHeight: calculatedBlockHeight,
+                    fieldsToDraw: fieldsToDraw
+                };
+            });
+
+            // Step 2: Iterate and draw blocks with dynamic positioning and page breaks
+            processedMonsterDetails.forEach((pMonster) => {
+                const blockHeight = pMonster.calculatedHeight;
+                let blockStartX = leftMargin + colIndex * (blockWidth + columnGap); 
+
+                if (currentY + blockHeight > pageHeight - leftMargin) { 
+                    doc.addPage();
+                    currentY = topMarginStart; 
+                    colIndex = 0; 
+                    maxHeightInCurrentRow = 0; 
+                    blockStartX = leftMargin; 
+                }
+
+                doc.setDrawColor(100, 100, 100); 
+                doc.setLineWidth(0.2);
+                doc.rect(blockStartX, currentY, blockWidth, blockHeight, 'S');
+
+                let textDrawY = currentY + blockPadding + lineHeight / 2; 
+
+                pMonster.fieldsToDraw.forEach(field => {
+                    doc.setFont(undefined, 'bold');
+                    doc.setTextColor(0, 0, 0); 
+                    
+                    doc.setFontSize(field.labelFontSize); 
+                    doc.text(`${field.label}:`, blockStartX + blockPadding, textDrawY); 
+
+                    doc.setFontSize(field.valueFontSize); 
+                    doc.setFont(undefined, 'normal');
+                    doc.text(field.valueLines, blockStartX + blockPadding + labelColumnWidth + internalValuePad, textDrawY); 
+                    
+                    textDrawY += field.height; 
+                });
+
+                maxHeightInCurrentRow = Math.max(maxHeightInCurrentRow, blockHeight);
+                colIndex++;
+
+                if (colIndex === numColumns) {
+                    currentY += maxHeightInCurrentRow + rowGap;
+                    colIndex = 0;
+                    maxHeightInCurrentRow = 0; 
+                }
+            });
+
+            doc.save(`${currentAdventure.title.replace(/\s+/g, '_')}.pdf`);
+        });
+
+        document.getElementById('export-xlsx-btn').addEventListener('click', () => {
+            if (currentAdventure.monsters.length === 0) {
+                showCustomConfirm('Roster is empty. Add monsters to export.', () => {});
+                return;
+            }
+            const { monsterDetails, summary, exportFields } = getExportData();
+            
+            const worksheetData = [];
+
+            // Add summary section
+            worksheetData.push(['Adventure:', summary.adventureName]);
+            worksheetData.push(['Total APL:', summary.totalAPL, 'Total Monsters:', summary.totalMonsters]);
+            worksheetData.push([]); 
+            worksheetData.push([]); 
+
+            // Add monster details
+            monsterDetails.forEach(monster => {
+                monster.forEach(field => {
+                    worksheetData.push([field.label, field.value]);
+                });
+                worksheetData.push([]); 
+            });
+
+            const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Encounter Details');
+
+            XLSX.writeFile(workbook, `${currentAdventure.title.replace(/\s+/g, '_')}.xlsx`);
+        });
+
+        document.getElementById('export-html-btn').addEventListener('click', () => {
+            if (currentAdventure.monsters.length === 0) {
+                showCustomConfirm('Roster is empty. Add monsters to export.', () => {});
+                return;
+            }
+            const { monsterDetails, summary } = getExportData();
+
+            let htmlContent = `
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>${summary.adventureName} - Encounter Sheet</title>
+                    <style>
+                        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #e2e8f0; margin: 20px; }
+                        .container { max-width: 800px; margin: 0 auto; background-color: #1e293b; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+                        h1 { color: #fbbf24; text-align: center; margin-bottom: 20px; }
+                        h2 { color: #fcd34d; border-bottom: 1px solid #475569; padding-bottom: 5px; margin-top: 20px; margin-bottom: 15px; }
+                        .summary-section { display: flex; justify-content: space-around; margin-bottom: 30px; padding: 10px; background-color: #334155; border-radius: 6px; }
+                        .summary-item { text-align: center; }
+                        .summary-item strong { color: #fcd34d; font-size: 1.2em; }
+                        
+                        /* Styles for three columns */
+                        .monster-grid {
+                            display: flex;
+                            flex-wrap: wrap;
+                            gap: 20px; 
+                            justify-content: center; 
+                        }
+                        .monster-block { 
+                            border: 1px solid #475569; 
+                            border-radius: 6px; 
+                            padding: 15px; 
+                            background-color: #334155; 
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+                            flex: 0 0 calc(33.33% - 14px); 
+                            box-sizing: border-box; 
+                        }
+                        @media (max-width: 768px) {
+                            .monster-block {
+                                flex: 0 0 calc(50% - 10px); 
+                            }
+                        }
+                        @media (max-width: 480px) {
+                            .monster-block {
+                                flex: 0 0 100%; 
+                            }
+                        }
+
+                        .monster-block div { display: flex; margin-bottom: 5px; }
+                        .monster-block div:last-child { margin-bottom: 0; }
+                        .monster-block .label { font-weight: bold; color: #cbd5e1; width: 80px; flex-shrink: 0; }
+                        .monster-block .value { flex-grow: 1; }
+                        .monster-block .qty-label { font-weight: bold; color: #fcd34d; width: 80px; flex-shrink: 0; }
+                        .monster-block .qty-value { flex-grow: 1; font-size: 1.2em; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h1>${summary.adventureName}</h1>
+                        <div class="summary-section">
+                            <div class="summary-item">Total APL: <strong>${summary.totalAPL}</strong></div>
+                            <div class="summary-item">Total Monsters: <strong>${summary.totalMonsters}</strong></div>
+                        </div>
+                        <h2>Monsters</h2>
+                        <div class="monster-grid"> 
+            `;
+
+            monsterDetails.forEach(monster => {
+                htmlContent += `<div class="monster-block">`;
+                monster.forEach(field => {
+                    if (field.label === 'QTY') {
+                        htmlContent += `<div><span class="qty-label">${field.label}:</span> <span class="qty-value">${field.value}</span></div>`;
+                    } else {
+                        htmlContent += `<div><span class="label">${field.label}:</span> <span class="value">${field.value}</span></div>`;
+                    }
+                });
+                htmlContent += `</div>`;
+            });
+
+            htmlContent += `
+                        </div> 
+                    </div>
+                </body>
+                </html>
+            `;
+
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${summary.adventureName.replace(/\s+/g, '_')}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+
+        // --- INITIALIZATION ---
+        const init = async () => { 
+            const typeSelect = document.getElementById('type');
+            typeSelect.innerHTML = ''; 
+            monsterTypesData.forEach(t => {
+                const option = document.createElement('option');
+                option.value = t.Type;
+                option.textContent = t.Type;
+                typeSelect.appendChild(option);
+            });
+
+            // Populate type filter dropdown
+            const typeFilterSelect = document.getElementById('type-filter');
+            typeFilterSelect.innerHTML = '<option value="">All Types</option>'; 
+            monsterTypesData.forEach(t => {
+                const option = document.createElement('option');
+                option.value = t.Type;
+                option.textContent = t.Type;
+                typeFilterSelect.appendChild(option);
+            });
+
+            // Populate monsterDatabase directly from the embedded data
+            monsterDatabase = initialMonsterData.map(monster => ({ ...monster, id: crypto.randomUUID() })); 
+            
+            renderMonsterTable();
+            renderAdventureRoster();
+        };
+
+        init();
+    });
+    </script>
+</body>
+</html>
+

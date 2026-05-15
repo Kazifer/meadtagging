@@ -1,0 +1,69 @@
+{
+  "title": "E12 - Hoping for Summer",
+  "updatedAt": "2026-05-14T15:00:34.016Z",
+  "items": [
+    {
+      "name": "John's Cup",
+      "code": "45",
+      "description": "A cup full of Juice",
+      "enchantment": "No enchantments",
+      "expiry": "12/02/2026"
+    },
+    {
+      "name": "Peter's Cup",
+      "code": "A4",
+      "description": "Just like John's",
+      "enchantment": "A little",
+      "expiry": "24/05/2026"
+    },
+    {
+      "name": "Alice's Cup",
+      "code": "A5",
+      "description": "Not like the others",
+      "enchantment": "Very Magical",
+      "expiry": "Never"
+    },
+    {
+      "name": "John's Cup",
+      "code": "45",
+      "description": "A cup full of Juice",
+      "enchantment": "No enchantments",
+      "expiry": "12/02/2026"
+    },
+    {
+      "name": "Peter's Cup",
+      "code": "A4",
+      "description": "Just like John's",
+      "enchantment": "A little",
+      "expiry": "24/05/2026"
+    },
+    {
+      "name": "Alice's Cup",
+      "code": "A5",
+      "description": "Not like the others",
+      "enchantment": "Very Magical",
+      "expiry": "Never"
+    },
+    {
+      "name": "John's Cup",
+      "code": "45",
+      "description": "A cup full of Juice",
+      "enchantment": "No enchantments",
+      "expiry": "12/02/2026"
+    },
+    {
+      "name": "Peter's Cup",
+      "code": "A4",
+      "description": "Just like John's",
+      "enchantment": "A little",
+      "expiry": "24/05/2026"
+    },
+    {
+      "name": "Alice's Cup",
+      "code": "A5",
+      "description": "Not like the others",
+      "enchantment": "Very Magical",
+      "expiry": "Never"
+    }
+  ]
+}

@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Variables</title>
+    <link rel="stylesheet" href="theme.css">
+    <style>
+        .container {
+            max-width: 900px;
+        }
+
+        .event-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field label {
+            color: var(--app-muted);
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .field input {
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--app-border);
+            background: #1f2937;
+            color: var(--app-text);
+            font-size: 0.95rem;
+        }
+
+        .field select {
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--app-border);
+            background: #1f2937;
+            color: var(--app-text);
+            font-size: 0.95rem;
+        }
+
+        .field input:focus {
+            outline: 2px solid #00bcd4;
+            outline-offset: 1px;
+        }
+
+        .field select:focus {
+            outline: 2px solid #00bcd4;
+            outline-offset: 1px;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: filter 0.2s ease;
+        }
+
+        .btn:hover {
+            filter: brightness(1.06);
+        }
+
+        .btn-primary {
+            background: #00bcd4;
+            color: #0f172a;
+        }
+
+        .btn-secondary {
+            background: #4a5568;
+            color: #edf2f7;
+        }
+
+        .status {
+            margin-top: 12px;
+            color: var(--app-muted);
+            min-height: 1.2em;
+        }
+
+        .hint {
+            margin-top: 8px;
+            font-size: 0.92rem;
+        }
+
+        .loot-calc {
+            margin-top: 26px;
+            border-top: 1px solid var(--app-border);
+            padding-top: 18px;
+        }
+
+        .loot-calc h2 {
+            margin-bottom: 8px;
+        }
+
+        .loot-calc p {
+            color: var(--app-muted);
+            margin-bottom: 12px;
+        }
+
+        .loot-table-wrap {
+            overflow-x: auto;
+            border: 1px solid var(--app-border);
+            border-radius: 10px;
+        }
+
+        .loot-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 700px;
+            background: #111827;
+        }
+
+        .loot-table th,
+        .loot-table td {
+            border-bottom: 1px solid var(--app-border);
+            padding: 10px 12px;
+            text-align: left;
+            vertical-align: top;
+            font-size: 0.93rem;
+        }
+
+        .loot-table th {
+            background: #0f172a;
+            color: #d1d5db;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .loot-table tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .loot-row-total td:first-child {
+            font-weight: 700;
+        }
+
+        .loot-level-1 td:first-child {
+            border-left: 4px solid #60a5fa;
+            padding-left: 10px;
+        }
+
+        .loot-level-2 td:first-child {
+            border-left: 4px solid #a78bfa;
+            padding-left: 10px;
+        }
+
+        .loot-level-4 td:first-child {
+            border-left: 4px solid #34d399;
+            padding-left: 10px;
+        }
+
+        .loot-level-1 td {
+            background-color: rgba(96, 165, 250, 0.05);
+        }
+
+        .loot-level-2 td {
+            background-color: rgba(167, 139, 250, 0.05);
+        }
+
+        .loot-level-4 td {
+            background-color: rgba(52, 211, 153, 0.05);
+        }
+
+        .loot-number {
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
+        .loot-col-max {
+            background: rgba(34, 197, 94, 0.14);
+        }
+
+        .loot-col-mid {
+            background: rgba(59, 130, 246, 0.14);
+        }
+
+        .loot-col-min {
+            background: rgba(245, 158, 11, 0.16);
+        }
+
+        .loot-table.difficulty-max .loot-col-max,
+        .loot-table.difficulty-mid .loot-col-mid,
+        .loot-table.difficulty-min .loot-col-min {
+            background: rgba(0, 188, 212, 0.28);
+            box-shadow: inset 0 0 0 1px rgba(0, 188, 212, 0.45);
+        }
+
+        .loot-allocated-input {
+            width: 100%;
+            min-width: 120px;
+            padding: 6px 8px;
+            border-radius: 6px;
+            border: 1px solid var(--app-border);
+            background: #0b1220;
+            color: var(--app-text);
+            font-size: 0.9rem;
+        }
+
+        .loot-allocated-input:focus {
+            outline: 2px solid #00bcd4;
+            outline-offset: 1px;
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>Event Variables</h1>
+        <p>Set your event-level values once. They are saved in your browser and automatically restored the next time you open this page.</p>
+
+        <form id="eventVariablesForm" class="event-form" autocomplete="off">
+            <div class="field">
+                <label for="eventName">Event Name</label>
+                <input id="eventName" name="eventName" type="text" placeholder="e.g. Hoping for Summer" />
+            </div>
+
+            <div class="field">
+                <label for="eventNumber">Event Number</label>
+                <input id="eventNumber" name="eventNumber" type="number" min="0" step="1" placeholder="e.g. 10" />
+            </div>
+
+            <div class="field">
+                <label for="totalEventBuild">Total Event Build</label>
+                <input id="totalEventBuild" name="totalEventBuild" type="number" min="0" step="1" placeholder="e.g. 400" />
+            </div>
+
+            <div class="field">
+                <label for="players">Players</label>
+                <input id="players" name="players" type="number" min="0" step="1" placeholder="e.g. 85" />
+            </div>
+
+            <div class="field">
+                <label for="eventDays">Event Days</label>
+                <input id="eventDays" name="eventDays" type="number" min="0" step="1" placeholder="e.g. 3" />
+            </div>
+
+            <div class="field">
+                <label for="totalAdventures">Total Adventures</label>
+                <input id="totalAdventures" name="totalAdventures" type="number" min="0" step="1" placeholder="e.g. 58" />
+            </div>
+
+            <div class="field">
+                <label for="eventDifficulty">Event Difficulty</label>
+                <select id="eventDifficulty" name="eventDifficulty">
+                    <option value="max">Max</option>
+                    <option value="mid" selected>Mid</option>
+                    <option value="min">Min</option>
+                </select>
+            </div>
+        </form>
+
+        <div class="actions">
+            <button id="saveBtn" class="btn btn-primary" type="button">Save</button>
+            <button id="resetBtn" class="btn btn-secondary" type="button">Clear Saved Values</button>
+        </div>
+
+        <p id="statusMessage" class="status"></p>
+        <p class="hint">Tip: values also auto-save when you type.</p>
+
+        <section class="loot-calc" aria-labelledby="lootCalcHeading">
+            <h2 id="lootCalcHeading">Loot Calc</h2>
+            <p>Calculated from <strong>Total Event Build</strong>, <strong>Players</strong>, and <strong>Event Days</strong> using the workbook logic.</p>
+
+            <div class="loot-table-wrap">
+                <table id="lootCalcTable" class="loot-table" aria-label="Loot calculation results">
+                    <thead>
+                        <tr>
+                            <th>Item Type</th>
+                            <th class="loot-col-max">Max Drop</th>
+                            <th class="loot-col-mid">Mid</th>
+                            <th class="loot-col-min">Minimum</th>
+                            <th>Allocated Amount</th>
+                            <th>Remaining Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lootCalcBody"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script src="event-variables.js"></script>
+    <script>
+        const eventVarsApi = window.EventVariables;
+
+        const form = document.getElementById('eventVariablesForm');
+        const saveBtn = document.getElementById('saveBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const statusMessage = document.getElementById('statusMessage');
+        const lootCalcBody = document.getElementById('lootCalcBody');
+        const lootCalcTable = document.getElementById('lootCalcTable');
+
+        const lootAllocationsStorageKey = 'lootCalcAllocated.v1';
+        let lootAllocations = {};
+
+        function showStatus(message) {
+            statusMessage.textContent = message;
+        }
+
+        function toNumber(value) {
+            const num = Number(value);
+            return Number.isFinite(num) ? num : 0;
+        }
+
+        function floorInt(value) {
+            return Math.floor(value);
+        }
+
+        function roundInt(value) {
+            return Math.round(value);
+        }
+
+        function ceilInt(value) {
+            return Math.ceil(value);
+        }
+
+        function computeMid(maxDrop, minimum) {
+            return floorInt((maxDrop + minimum) / 2);
+        }
+
+        function formatInt(value) {
+            return value.toLocaleString();
+        }
+
+        function createLootRow(label, maxDrop, minimum, options = {}) {
+            return {
+                label,
+                maxDrop,
+                minimum,
+                mid: computeMid(maxDrop, minimum),
+                isGroupTotal: Boolean(options.isGroupTotal),
+                childLabels: Array.isArray(options.childLabels) ? options.childLabels : []
+            };
+        }
+
+        function sumByLabels(labels, getValue) {
+            return labels.reduce((sum, label) => sum + getValue(label), 0);
+        }
+
+        function loadLootAllocations() {
+            try {
+                const raw = localStorage.getItem(lootAllocationsStorageKey);
+                lootAllocations = raw ? JSON.parse(raw) : {};
+
+                if (!lootAllocations || typeof lootAllocations !== 'object') {
+                    lootAllocations = {};
+                }
+            } catch (error) {
+                console.error('Failed to load loot allocations:', error);
+                lootAllocations = {};
+            }
+        }
+
+        function saveLootAllocations() {
+            try {
+                localStorage.setItem(lootAllocationsStorageKey, JSON.stringify(lootAllocations));
+            } catch (error) {
+                console.error('Failed to save loot allocations:', error);
+            }
+        }
+
+        function clearLootAllocations() {
+            lootAllocations = {};
+
+            try {
+                localStorage.removeItem(lootAllocationsStorageKey);
+            } catch (error) {
+                console.error('Failed to clear loot allocations:', error);
+            }
+        }
+
+        function buildLootRows() {
+            const totalEventBuild = toNumber(form.totalEventBuild.value);
+            const players = toNumber(form.players.value);
+            const eventDays = toNumber(form.eventDays.value);
+
+            const totalSilver = ceilInt(totalEventBuild * 1.5);
+            const type2MagicItems = floorInt((players * eventDays) / 25);
+            const type1MagicItems = ceilInt((players * eventDays) / 10);
+            const productionItems = ceilInt((totalEventBuild * eventDays) / 5);
+            const cantripPages = roundInt((totalEventBuild * eventDays) / 50);
+
+            const totalLevel1 = ceilInt(players * eventDays * 2);
+            const p1 = roundInt(totalLevel1 * 0.45);
+            const c1 = roundInt(totalLevel1 * 0.1);
+            const e1 = roundInt(totalLevel1 * 0.1);
+            const s1 = roundInt(totalLevel1 * 0.1);
+            const sr1 = roundInt(totalLevel1 * 0.1);
+            const v1 = roundInt(totalLevel1 * 0.05);
+            const t1 = roundInt(totalLevel1 * 0.05);
+            const d1 = roundInt(totalLevel1 * 0.05);
+
+            const totalLevel2 = ceilInt((players * eventDays * 2) / 10);
+            const p2 = roundInt(totalLevel2 * 0.4);
+            const c2 = roundInt(totalLevel2 * 0.15);
+            const e2 = roundInt(totalLevel2 * 0.15);
+            const s2 = roundInt(totalLevel2 * 0.15);
+            const v2 = roundInt(totalLevel2 * 0.05);
+            const t2 = roundInt(totalLevel2 * 0.05);
+            const d2 = roundInt(totalLevel2 * 0.05);
+
+            const totalLevel4 = roundInt((players * eventDays) / 25);
+            const p4 = roundInt(totalLevel4 * 0.4);
+            const c4 = roundInt(totalLevel4 * 0.15);
+            const e4 = roundInt(totalLevel4 * 0.15);
+            const s4 = roundInt(totalLevel4 * 0.15);
+            const v4 = roundInt(totalLevel4 * 0.05);
+            const t4 = roundInt(totalLevel4 * 0.05);
+            const d4 = roundInt(totalLevel4 * 0.05);
+
+            const rows = [
+                createLootRow('Total Silver', totalSilver, totalSilver),
+                createLootRow('Type 2 Magic Items', type2MagicItems, floorInt(type2MagicItems / 2)),
+                createLootRow('Type 1 Magic Items', type1MagicItems, floorInt(type1MagicItems / 2)),
+                createLootRow('Production Items', productionItems, floorInt(productionItems / 2)),
+                createLootRow('Cantrip Pages', cantripPages, floorInt(cantripPages / 2)),
+                createLootRow('Total Level 1 Formal Components', totalLevel1, floorInt(totalLevel1 / 2), {
+                    isGroupTotal: true,
+                    childLabels: ['P1', 'C1', 'E1', 'S1', 'SR1', 'V1', 'T1', 'D1']
+                }),
+                createLootRow('P1', p1, floorInt(p1 / 3)),
+                createLootRow('C1', c1, floorInt(c1 / 3)),
+                createLootRow('E1', e1, floorInt(e1 / 3)),
+                createLootRow('S1', s1, floorInt(s1 / 3)),
+                createLootRow('SR1', sr1, floorInt(sr1 / 3)),
+                createLootRow('V1', v1, floorInt(v1 / 3)),
+                createLootRow('T1', t1, floorInt(t1 / 3)),
+                createLootRow('D1', d1, floorInt(d1 / 3)),
+                createLootRow('Total Level 2 Formal Components', totalLevel2, floorInt(totalLevel2 / 2), {
+                    isGroupTotal: true,
+                    childLabels: ['P2', 'C2', 'E2', 'S2', 'V2', 'T2', 'D2']
+                }),
+                createLootRow('P2', p2, floorInt(p2 / 3)),
+                createLootRow('C2', c2, floorInt(c2 / 3)),
+                createLootRow('E2', e2, floorInt(e2 / 3)),
+                createLootRow('S2', s2, floorInt(s2 / 3)),
+                createLootRow('V2', v2, floorInt(v2 / 3)),
+                createLootRow('T2', t2, floorInt(t2 / 3)),
+                createLootRow('D2', d2, floorInt(d2 / 3)),
+                createLootRow('Total Level 4 Formal Components', totalLevel4, floorInt(totalLevel4 / 2), {
+                    isGroupTotal: true,
+                    childLabels: ['P4', 'C4', 'E4', 'S4', 'V4', 'T4', 'D4']
+                }),
+                createLootRow('P4', p4, floorInt(p4 / 3)),
+                createLootRow('C4', c4, floorInt(c4 / 3)),
+                createLootRow('E4', e4, floorInt(e4 / 3)),
+                createLootRow('S4', s4, floorInt(s4 / 3)),
+                createLootRow('V4', v4, floorInt(v4 / 3)),
+                createLootRow('T4', t4, floorInt(t4 / 3)),
+                createLootRow('D4', d4, floorInt(d4 / 3))
+            ];
+
+            const rowMap = new Map(rows.map((row) => [row.label, row]));
+
+            for (const row of rows) {
+                if (!row.isGroupTotal || row.childLabels.length === 0) {
+                    continue;
+                }
+
+                row.maxDrop = sumByLabels(row.childLabels, (label) => rowMap.get(label)?.maxDrop || 0);
+                row.minimum = sumByLabels(row.childLabels, (label) => rowMap.get(label)?.minimum || 0);
+                row.mid = computeMid(row.maxDrop, row.minimum);
+            }
+
+            return rows;
+        }
+
+        function getSelectedDifficulty() {
+            const difficulty = String(form.eventDifficulty.value || 'mid').toLowerCase();
+            if (difficulty === 'max' || difficulty === 'min') {
+                return difficulty;
+            }
+
+            return 'mid';
+        }
+
+        function getSelectedValueForRow(row, difficulty) {
+            if (difficulty === 'max') return row.maxDrop;
+            if (difficulty === 'min') return row.minimum;
+            return row.mid;
+        }
+
+        function applyDifficultyHighlight(difficulty) {
+            lootCalcTable.classList.remove('difficulty-max', 'difficulty-mid', 'difficulty-min');
+            lootCalcTable.classList.add(`difficulty-${difficulty}`);
+        }
+
+        function getComponentLevel(row) {
+            const label = String(row.label || '').trim();
+
+            if (label.endsWith('1') || label.includes('Level 1')) {
+                return '1';
+            }
+
+            if (label.endsWith('2') || label.includes('Level 2')) {
+                return '2';
+            }
+
+            if (label.endsWith('4') || label.includes('Level 4')) {
+                return '4';
+            }
+
+            return '';
+        }
+
+        function renderLootCalc() {
+            const rows = buildLootRows();
+            const selectedDifficulty = getSelectedDifficulty();
+            lootCalcBody.innerHTML = '';
+            applyDifficultyHighlight(selectedDifficulty);
+
+            for (const row of rows) {
+                const tr = document.createElement('tr');
+                const componentLevel = getComponentLevel(row);
+
+                if (componentLevel) {
+                    tr.classList.add(`loot-level-${componentLevel}`);
+                }
+
+                if (row.isGroupTotal) {
+                    tr.classList.add('loot-row-total');
+                }
+
+                const labelTd = document.createElement('td');
+                labelTd.textContent = row.label;
+                tr.appendChild(labelTd);
+
+                const maxTd = document.createElement('td');
+                maxTd.className = 'loot-number loot-col-max';
+                maxTd.textContent = formatInt(row.maxDrop);
+                tr.appendChild(maxTd);
+
+                const midTd = document.createElement('td');
+                midTd.className = 'loot-number loot-col-mid';
+                midTd.textContent = formatInt(row.mid);
+                tr.appendChild(midTd);
+
+                const minTd = document.createElement('td');
+                minTd.className = 'loot-number loot-col-min';
+                minTd.textContent = formatInt(row.minimum);
+                tr.appendChild(minTd);
+
+                const allocatedTd = document.createElement('td');
+                let allocatedValue = 0;
+
+                if (row.isGroupTotal) {
+                    allocatedValue = sumByLabels(row.childLabels, (label) => toNumber(lootAllocations[label]));
+                    allocatedTd.className = 'loot-number';
+                    allocatedTd.textContent = formatInt(allocatedValue);
+                } else {
+                    const allocatedInput = document.createElement('input');
+                    allocatedInput.className = 'loot-allocated-input';
+                    allocatedInput.type = 'number';
+                    allocatedInput.min = '0';
+                    allocatedInput.step = '1';
+                    allocatedInput.placeholder = '0';
+                    allocatedInput.value = lootAllocations[row.label] ?? '';
+                    allocatedInput.setAttribute('aria-label', `Allocated amount for ${row.label}`);
+
+                    allocatedInput.addEventListener('input', () => {
+                        const value = allocatedInput.value.trim();
+
+                        if (!value) {
+                            delete lootAllocations[row.label];
+                        } else {
+                            lootAllocations[row.label] = value;
+                        }
+
+                        saveLootAllocations();
+                        renderLootCalc();
+                    });
+
+                    allocatedTd.appendChild(allocatedInput);
+                    allocatedValue = toNumber(lootAllocations[row.label]);
+                }
+
+                tr.appendChild(allocatedTd);
+
+                const selectedValue = getSelectedValueForRow(row, selectedDifficulty);
+                const remainingValue = selectedValue - allocatedValue;
+
+                const remainingTd = document.createElement('td');
+                remainingTd.className = 'loot-number';
+                remainingTd.textContent = formatInt(remainingValue);
+                tr.appendChild(remainingTd);
+
+                lootCalcBody.appendChild(tr);
+            }
+        }
+
+        function getFormData() {
+            return {
+                eventName: form.eventName.value.trim(),
+                eventNumber: form.eventNumber.value,
+                totalEventBuild: form.totalEventBuild.value,
+                players: form.players.value,
+                eventDays: form.eventDays.value,
+                totalAdventures: form.totalAdventures.value,
+                eventDifficulty: form.eventDifficulty.value
+            };
+        }
+
+        function setFormData(data) {
+            form.eventName.value = data.eventName || '';
+            form.eventNumber.value = data.eventNumber || '';
+            form.totalEventBuild.value = data.totalEventBuild || '';
+            form.players.value = data.players || '';
+            form.eventDays.value = data.eventDays || '';
+            form.totalAdventures.value = data.totalAdventures || '';
+            form.eventDifficulty.value = data.eventDifficulty || 'mid';
+        }
+
+        function saveValues() {
+            try {
+                eventVarsApi?.set(getFormData());
+                showStatus('Saved.');
+                renderLootCalc();
+            } catch (error) {
+                console.error('Failed to save event variables:', error);
+                showStatus('Could not save values in this browser.');
+            }
+        }
+
+        function loadValues() {
+            try {
+                const data = eventVarsApi?.get?.();
+                const hasValues = data && Object.keys(data).some(key => key !== 'updatedAt' && data[key]);
+
+                if (!hasValues) {
+                    showStatus('No saved values yet.');
+                    return;
+                }
+
+                setFormData(data);
+                showStatus('Saved values loaded.');
+                renderLootCalc();
+            } catch (error) {
+                console.error('Failed to load event variables:', error);
+                showStatus('Could not load saved values.');
+            }
+        }
+
+        function clearValues() {
+            try {
+                eventVarsApi?.clear?.();
+                form.reset();
+                clearLootAllocations();
+                showStatus('Saved values cleared.');
+                renderLootCalc();
+            } catch (error) {
+                console.error('Failed to clear event variables:', error);
+                showStatus('Could not clear saved values.');
+            }
+        }
+
+        saveBtn.addEventListener('click', saveValues);
+        resetBtn.addEventListener('click', clearValues);
+        form.addEventListener('input', saveValues);
+    form.addEventListener('change', saveValues);
+
+        loadLootAllocations();
+        loadValues();
+        renderLootCalc();
+    </script>
+</body>
+</html>

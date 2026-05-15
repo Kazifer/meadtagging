@@ -1,0 +1,486 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formal Scroll Creator</title>
+  <link rel="stylesheet" href="theme.css">
+  <!-- Replaced Tailwind CDN with local utility CSS -->
+    <!-- Load React and ReactDOM from CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Load Babel for JSX transformation in browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- jsPDF will be loaded dynamically by the React app's useEffect -->
+    <link rel="stylesheet" href="formal-scrolls.css">
+</head>
+<body class="bg-gray-900">
+    <div id="root"></div>
+
+    <script src="event-variables.js"></script>
+    <script src="formal-scrolls-data.js"></script>
+    <script type="text/babel">
+        const formalScrolls = window.formalScrollsData
+        const initialEventVariables = window.EventVariables?.get?.() || {};
+
+        const App = () => {
+          // State variables for input fields
+          const [eventNumber, setEventNumber] = React.useState(initialEventVariables.eventNumber || '');
+          const [adventureNumber, setAdventureNumber] = React.useState('');
+          const [sequenceNumber, setSequenceNumber] = React.useState('');
+          const [dateCreated, setDateCreated] = React.useState(new Date().toISOString().split('T')[0]); // Default to today's date
+
+          // State variables for image files and their URLs for preview
+          const [signatureImageFile, setSignatureImageFile] = React.useState(null);
+          const [signatureImageUrl, setSignatureImageUrl] = React.useState('');
+          const [borderImageFile, setBorderImageFile] = React.useState(null);
+          const [borderImageUrl, setBorderImageUrl] = React.useState('');
+
+          // State variable for selected formal scroll
+          const [selectedScroll, setSelectedScroll] = React.useState(null);
+
+          // State for loading indicator during PDF generation
+          const [isLoading, setIsLoading] = React.useState(false);
+          const [message, setMessage] = React.useState(''); // For user messages (e.g., errors)
+
+          // New state to track if jsPDF is loaded
+          const [isJsPDFLoaded, setIsJsPDFLoaded] = React.useState(false);
+
+          // State for search and sort
+          const [searchTerm, setSearchTerm] = React.useState('');
+          const [sortConfig, setSortConfig] = React.useState({ key: null, direction: 'ascending' });
+
+          // Effect to clean up object URLs when component unmounts or files change
+          React.useEffect(() => {
+            return () => {
+              if (signatureImageUrl) URL.revokeObjectURL(signatureImageUrl);
+              if (borderImageUrl) URL.revokeObjectURL(borderImageUrl);
+            };
+          }, [signatureImageUrl, borderImageUrl]);
+
+          // Effect to dynamically load jsPDF and set its loaded state
+          React.useEffect(() => {
+            if (window.jspdf && window.jspdf.jsPDF) {
+              setIsJsPDFLoaded(true);
+              return;
+            }
+
+            const script = document.createElement('script');
+            script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+            script.async = true;
+
+            const handleLoad = () => {
+              if (window.jspdf && window.jspdf.jsPDF) {
+                setIsJsPDFLoaded(true);
+              } else {
+                console.error("jsPDF script loaded but window.jspdf.jsPDF is still undefined.");
+                setMessage("Error: jsPDF library failed to initialize. Please try refreshing.");
+              }
+            };
+
+            const handleError = () => {
+              console.error("Failed to load jsPDF script.");
+              setMessage("Error: Failed to load PDF generation library. Check your internet connection.");
+            };
+
+            script.onload = handleLoad;
+            script.onerror = handleError;
+
+            document.body.appendChild(script);
+
+            return () => {
+              document.body.removeChild(script);
+              script.removeEventListener('load', handleLoad);
+              script.removeEventListener('error', handleError);
+            };
+          }, []);
+
+          // Handler for file input changes
+          const handleFileChange = (e, setImageFile, setImageUrl) => {
+            const file = e.target.files[0];
+            if (file) {
+              setImageFile(file);
+              const url = URL.createObjectURL(file);
+              setImageUrl(url);
+            } else {
+              setImageFile(null);
+              setImageUrl('');
+            }
+          };
+
+          // Handler for formal scroll selection via table row click
+          const handleScrollSelect = (scroll) => {
+            setSelectedScroll(scroll);
+          };
+
+          // Sorting logic
+          const sortedAndFilteredScrolls = React.useMemo(() => {
+            let sortableItems = [...formalScrolls];
+
+            // Filter by search term first
+            if (searchTerm) {
+                sortableItems = sortableItems.filter(scroll =>
+                    scroll.name.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+            }
+
+            // Then sort
+            if (sortConfig.key !== null) {
+              sortableItems.sort((a, b) => {
+                const aValue = String(a[sortConfig.key]).toLowerCase();
+                const bValue = String(b[sortConfig.key]).toLowerCase();
+
+                if (aValue < bValue) {
+                  return sortConfig.direction === 'ascending' ? -1 : 1;
+                }
+                if (aValue > bValue) {
+                  return sortConfig.direction === 'ascending' ? 1 : -1;
+                }
+                return 0;
+              });
+            }
+            return sortableItems;
+          }, [formalScrolls, searchTerm, sortConfig]);
+
+          // Request sort handler
+          const requestSort = (key) => {
+            let direction = 'ascending';
+            if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+              direction = 'descending';
+            }
+            setSortConfig({ key, direction });
+          };
+
+          // Get sort indicator
+          const getSortIndicator = (key) => {
+            if (sortConfig.key !== key) {
+              return '';
+            }
+            return sortConfig.direction === 'ascending' ? ' â–²' : ' â–¼';
+          };
+
+          // Function to generate the PDF
+          const generatePdf = async () => {
+            setIsLoading(true);
+            setMessage('');
+
+            if (!selectedScroll) {
+                setMessage('Please select a formal scroll first.');
+                setIsLoading(false);
+                return;
+            }
+
+            try {
+              // Check if jsPDF library is loaded
+              if (!isJsPDFLoaded || typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
+                setMessage('Error: jsPDF library not fully loaded. Please wait a moment or check your internet connection.');
+                setIsLoading(false);
+                return;
+              }
+
+              // Access jsPDF from the global window object
+              const jsPDF = window.jspdf.jsPDF;
+              const doc = new jsPDF('p', 'mm', 'a4');
+
+              const pageWidth = doc.internal.pageSize.getWidth();
+              const pageHeight = doc.internal.pageSize.getHeight();
+
+              const loadImage = (file) => {
+                return new Promise((resolve, reject) => {
+                  if (!file) {
+                    resolve(null);
+                    return;
+                  }
+                  const reader = new FileReader();
+                  reader.onload = () => resolve(reader.result);
+                  reader.onerror = (error) => reject(error);
+                  reader.readAsDataURL(file);
+                });
+              };
+
+              const borderImageData = await loadImage(borderImageFile);
+              if (borderImageData) {
+                doc.addImage(borderImageData, 'PNG', 0, 0, pageWidth, pageHeight);
+              } else {
+                doc.rect(5, 5, pageWidth - 10, pageHeight - 10);
+              }
+
+              const signatureImageData = await loadImage(signatureImageFile);
+
+              doc.setFont('helvetica', 'bold');
+
+              doc.setFontSize(16);
+              const formalScrollText = `${selectedScroll.name} (${selectedScroll.level})`;
+              const formalScrollTextWidth = doc.getStringUnitWidth(formalScrollText) * doc.internal.getFontSize() / doc.internal.scaleFactor;
+              const formalScrollX = (pageWidth - formalScrollTextWidth) / 2;
+              doc.text(formalScrollText, formalScrollX, 30);
+
+              doc.setFontSize(16);
+              doc.text(selectedScroll.school, pageWidth - 40, 45, { align: 'right' });
+
+		 const textMargin = 25; // Left margin for text
+              const availableWidth = pageWidth - (2 * textMargin);
+
+
+             doc.setFontSize(12);
+doc.setFont('helvetica', 'normal');
+              // Components
+              const componentsLabel = 'Components: ';
+              const componentsText = selectedScroll.components;
+              // Calculate width of the "Components: " label
+              const componentsLabelWidth = doc.getStringUnitWidth(componentsLabel) * doc.internal.getFontSize() / doc.internal.scaleFactor;
+              // Remaining width for the actual components text
+              const componentsValueWidth = availableWidth - componentsLabelWidth;
+
+              const splitComponents = doc.splitTextToSize(componentsText, componentsValueWidth);
+
+              let currentY = 60; // Starting Y for the components line
+
+              // Draw the "Components: " label
+              doc.text(componentsLabel, textMargin, currentY);
+
+              // Draw the wrapped components text, starting after the label
+              doc.text(splitComponents, textMargin + componentsLabelWidth, currentY);
+
+              // Calculate the height taken by the wrapped components text
+              const lineHeight = doc.internal.getLineHeight() / doc.internal.scaleFactor; // Get line height in current units (mm)
+              const componentsHeight = splitComponents.length * lineHeight;
+
+              // Adjust Y for subsequent elements based on componentsHeight
+              currentY += componentsHeight; // Move Y down by the total height of components text
+
+              // Duration
+              doc.text(`Duration: ${selectedScroll.duration}`, textMargin, currentY + 8); // Add some padding
+              currentY += 8; // Update currentY for duration line
+
+              // Target
+              doc.text(`Target: ${selectedScroll.target}`, textMargin, currentY + 8); // Add some padding
+              currentY += 8; // Update currentY for target line
+
+              // Scroll Description - Start it further down based on the adjusted currentY
+              doc.setFontSize(10);
+              const descriptionText = selectedScroll.description;
+              const descriptionWidth = pageWidth - (2 * textMargin);
+              const splitDescription = doc.splitTextToSize(descriptionText, descriptionWidth);
+              doc.text(splitDescription, textMargin, currentY + 15); // Add more padding before description
+
+              doc.setFontSize(10);
+              const itemCode = `Item Code: E${eventNumber || 'XX'}A${adventureNumber || 'YY'}S${sequenceNumber || 'ZZ'}`;
+              doc.text(itemCode, 25, pageHeight - 25);
+
+              doc.text(`Signed:`, pageWidth - 70, pageHeight - 25);
+              if (signatureImageData) {
+                const imgWidth = 40;
+                const imgHeight = 20;
+                doc.addImage(signatureImageData, 'PNG', pageWidth - 70, pageHeight - 35, imgWidth, imgHeight);
+              }
+
+              doc.save('Formal_Scroll.pdf');
+              setMessage('PDF generated successfully!');
+
+            } catch (error) {
+              console.error("Error generating PDF:", error);
+              setMessage('Error generating PDF. Please check console for details.');
+            } finally {
+              setIsLoading(false);
+            }
+          };
+
+          return (
+            <div className="min-h-screen bg-gray-900 p-4 font-inter flex flex-col items-center">
+              <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-3xl mb-8">
+                <h1 className="text-3xl font-bold text-center text-gray-100 mb-6">Formal Scroll Creator</h1>
+
+                {/* Input Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div>
+                    <label htmlFor="eventNumber" className="block text-sm font-medium text-gray-200 mb-1">Event Number</label>
+                    <input
+                      type="text"
+                      id="eventNumber"
+                      value={eventNumber}
+                      onChange={(e) => setEventNumber(e.target.value)}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm bg-gray-700 text-gray-100"
+                      placeholder="e.g., 001"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="adventureNumber" className="block text-sm font-medium text-gray-200 mb-1">Adventure Number</label>
+                    <input
+                      type="text"
+                      id="adventureNumber"
+                      value={adventureNumber}
+                      onChange={(e) => setAdventureNumber(e.target.value)}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm bg-gray-700 text-gray-100"
+                      placeholder="e.g., 002"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="sequenceNumber" className="block text-sm font-medium text-gray-200 mb-1">Sequence Number</label>
+                    <input
+                      type="text"
+                      id="sequenceNumber"
+                      value={sequenceNumber}
+                      onChange={(e) => setSequenceNumber(e.target.value)}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm bg-gray-700 text-gray-100"
+                      placeholder="e.g., 003"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="dateCreated" className="block text-sm font-medium text-gray-200 mb-1">Date Created</label>
+                    <input
+                      type="date"
+                      id="dateCreated"
+                      value={dateCreated}
+                      onChange={(e) => setDateCreated(e.target.value)}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm bg-gray-700 text-gray-100"
+                    />
+                  </div>
+                </div>
+
+                {/* Image Uploads */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div>
+                    <label htmlFor="signatureImage" className="block text-sm font-medium text-gray-200 mb-1">Signature Image File</label>
+                    <input
+                      type="file"
+                      id="signatureImage"
+                      accept="image/*"
+                      onChange={(e) => handleFileChange(e, setSignatureImageFile, setSignatureImageUrl)}
+                      className="mt-1 block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-700 file:text-purple-100 hover:file:bg-purple-800"
+                    />
+                    {signatureImageUrl && (
+                      <div className="mt-2">
+                        <p className="text-xs text-gray-300 mb-1">Preview:</p>
+                        <img src={signatureImageUrl} alt="Signature Preview" className="max-w-full h-20 object-contain rounded-md border border-gray-600" />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label htmlFor="borderImage" className="block text-sm font-medium text-gray-200 mb-1">Border Image File</label>
+                    <input
+                      type="file"
+                      id="borderImage"
+                      accept="image/*"
+                      onChange={(e) => handleFileChange(e, setBorderImageFile, setBorderImageUrl)}
+                      className="mt-1 block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-700 file:text-purple-100 hover:file:bg-purple-800"
+                    />
+                    {borderImageUrl && (
+                      <div className="mt-2">
+                        <p className="text-xs text-gray-300 mb-1">Preview:</p>
+                        <img src={borderImageUrl} alt="Border Preview" className="max-w-full h-20 object-contain rounded-md border border-gray-600" />
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+
+                {/* Generate PDF Button */}
+                <button
+                  onClick={generatePdf}
+                  disabled={isLoading || !isJsPDFLoaded || !selectedScroll} // Disable if no scroll is selected
+                  className="w-full bg-gradient-to-r from-purple-600 to-fuchsia-700 text-white py-3 px-4 rounded-md font-semibold text-lg shadow-md hover:from-purple-700 hover:to-fuchsia-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Generating PDF...
+                    </div>
+                  ) : (
+                    'Generate Formal Scroll PDF'
+                  )}
+                </button>
+
+                {message && (
+                  <div className={`mt-4 p-3 rounded-md text-center ${message.includes('Error') ? 'bg-red-900 text-red-100' : 'bg-green-900 text-green-100'}`}>
+                    {message}
+                  </div>
+                )}
+                  {/* Display selected scroll details */}
+                  {selectedScroll && (
+                    <div className="mt-4 p-4 bg-purple-900 border border-purple-700 rounded-md">
+                      <h3 className="text-lg font-semibold text-purple-100 mb-2">{selectedScroll.name} ({selectedScroll.level})</h3>
+                      <p className="text-sm text-purple-200"><span className="font-medium">Components:</span> {selectedScroll.components}</p>
+                      <p className="text-sm text-purple-200"><span className="font-medium">Duration:</span> {selectedScroll.duration}</p>
+                      <p className="text-sm text-purple-200"><span className="font-medium">Target:</span> {selectedScroll.target}</p>
+                      <p className="text-sm text-purple-200"><span className="font-medium">School:</span> {selectedScroll.school}</p>
+                      <p className="text-sm text-purple-200 mt-2"><span className="font-medium">Description:</span> {selectedScroll.description}</p>
+                    </div>
+                  )}
+
+                {/* Formal Scroll Search and Selection Table */}
+                <div className="mb-8">
+                  <h2 className="block text-sm font-medium text-gray-200 mb-2">Select Formal Scroll</h2>
+
+                  {/* Search Input */}
+                  <div className="mb-4">
+                    <label htmlFor="searchScroll" className="sr-only">Search Scrolls</label>
+                    <input
+                      type="text"
+                      id="searchScroll"
+                      placeholder="Search by Name..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm bg-gray-700 text-gray-100"
+                    />
+                  </div>
+
+                  {sortedAndFilteredScrolls.length > 0 ? (
+                    <div className="overflow-x-auto rounded-md border border-gray-700 shadow-sm">
+                      <table className="min-w-full divide-y divide-gray-700">
+                        <thead className="bg-gray-700">
+                          <tr>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider sortable" onClick={() => requestSort('name')}>
+                              Name {getSortIndicator('name')}
+                            </th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider sortable" onClick={() => requestSort('level')}>
+                              Level {getSortIndicator('level')}
+                            </th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider sortable" onClick={() => requestSort('school')}>
+                              School {getSortIndicator('school')}
+                            </th>
+                            <th scope="col" className="duration-col px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider sortable" onClick={() => requestSort('duration')}>
+                              Duration {getSortIndicator('duration')}
+                            </th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider sortable" onClick={() => requestSort('target')}>
+                              Target {getSortIndicator('target')}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-gray-800 divide-y divide-gray-700">
+                          {sortedAndFilteredScrolls.map((scroll, index) => (
+                            <tr
+                              key={index}
+                              onClick={() => handleScrollSelect(scroll)}
+                              className={`cursor-pointer hover:bg-gray-700 transition-colors duration-200
+                                ${selectedScroll && selectedScroll.name === scroll.name ? 'bg-purple-800 text-purple-100' : 'text-gray-200'}`}
+                            >
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{scroll.name}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm">{scroll.level}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm">{scroll.school}</td>
+                              <td className="duration-col px-6 py-4 text-sm">{scroll.duration}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm">{scroll.target}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-gray-400 text-center py-4">No scrolls available matching your criteria. Please add data or adjust your search/filters.</p>
+                  )}
+
+
+                </div>
+              </div>
+            </div>
+          );
+        };
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
+

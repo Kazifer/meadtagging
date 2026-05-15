@@ -1,0 +1,127 @@
+
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Untitled Adventure Loot Report</title>
+                    <style>
+                        body { font-family: sans-serif; margin: 20px; background-color: #1a202c; color: #e2e8f0; }
+                        h1 { color: #edf2f7; }
+                        h2 { color: #cbd5e0; }
+                        h3 { color: #a0aec0; margin-top: 20px; }
+                        table {
+                            width: 100%; /* Ensure table takes full width */
+                            border-collapse: collapse;
+                            margin-top: 10px;
+                            page-break-inside: auto;
+                        }
+                        .normal-table {
+                            width: 100%; /* Allow non-scroll table to size naturally */
+                            table-layout: auto;
+                        }
+                        .scroll-table {
+                            width: 100%; /* Ensure scroll table takes full width */
+                            border-collapse: collapse; /* Crucial for removing space between cells */
+                            table-layout: fixed; /* Crucial for side-by-side cells with percentage width */
+border: 2px solid #4a5568;
+                        }
+                        tr { page-break-inside: avoid; page-break-after: auto; }
+                        /* Default styles for normal cells */
+                        .normal-cell {
+                            border: 1px solid #4a5568; /* Darker border */
+                            padding: 8px;
+                            text-align: left;
+                            height: 3cm;
+                            width: 5cm; /* Adjusted width for HTML export (increased from 6.06cm) */
+                            box-sizing: border-box;
+                            vertical-align: top;
+                            overflow: hidden;
+                            word-wrap: break-word;
+                            white-space: pre-wrap;
+                            font-size: 12px;
+                            background-color: #2d3748; /* Darker cell background */
+                            color: #e2e8f0; /* Light text */
+                        }
+        /* Specific styles for scroll cells in HTML export */
+       
+                        .scroll-cell {
+                            border: 2px solid #4a5568; /* Darker border */
+                            padding: 8px;
+                            text-align: left;
+                            height: 12cm; /* Larger height */
+                            width: 7cm; /* Larger width */
+                            box-sizing: border-box;
+                            vertical-align: top;
+                            overflow: hidden;
+
+                            word-wrap: break-word;
+                            white-space: pre-wrap;
+                            font-size: 12px;
+                            background-color: #2d3748; /* Darker cell background */
+                            color: #e2e8f0; /* Light text */
+				 position: relative;
+                        }
+                        .scroll-cell .scroll-content {
+                            flex-grow: 1; /* Allows content to take available space */
+                            display: flex;
+                            flex-direction: column;
+                        }
+                        .scroll-cell .item-name {
+                            font-size: 24px;
+                            font-weight: bold;
+                        }
+                        .scroll-cell .verbal-field {
+                            font-size: 2em; /* Increase font size */
+                            font-style: italic; /* Italicize */
+                            margin-top: 8px; /* Spacing above verbal field */
+                        }
+                        .scroll-cell .duration-field {
+                            margin-top: auto; /* Pushes it to the bottom */
+                        }
+                        th { background-color: #4a5568; color: #cbd5e0; } /* Darker table header */
+                    </style>
+                </head>
+                <body>
+                    <h1>Untitled Adventure</h1>
+                    <h2>Total Production Cost: S4</h2>
+            <table class="scroll-table">
+                    <colgroup>
+                        <col style="width: 50%;">
+                        <col style="width: 50%;">
+                    </colgroup>
+                    <tbody><tr><td class="scroll-cell">
+                            <div class="scroll-content">
+                                <span class="item-name">Endow</span>
+                                <p>Effect: Allows recipient to deal two additional points of damage for next attack with a melee weapon</p>
+                                <p>Level: 1</p>
+                                <p class="verbal-field">Verbal: I grant you the power of an Endow.</p>
+                            </div>
+                            <p class="duration-field">Duration: Indefinite</p>
+                        </td><td class="scroll-cell">
+                            <div class="scroll-content">
+                                <span class="item-name">Fumble</span>
+                                <p>Effect: Causes one item held by the victim to become unusable for 5-seconds.</p>
+                                <p>Level: 1</p>
+                                <p class="verbal-field">Verbal: I summon a force to Fumble your <></p>
+                            </div>
+                            <p class="duration-field">Duration: 5-seconds</p>
+                        </td></tr><tr><td class="scroll-cell">
+                            <div class="scroll-content">
+                                <span class="item-name">Fumble</span>
+                                <p>Effect: Causes one item held by the victim to become unusable for 5-seconds.</p>
+                                <p>Level: 1</p>
+                                <p class="verbal-field">Verbal: I summon a force to Fumble your <></p>
+                            </div>
+                            <p class="duration-field">Duration: 5-seconds</p>
+                        </td><td class="scroll-cell">
+                            <div class="scroll-content">
+                                <span class="item-name">Shield</span>
+                                <p>Effect: Grants 5 armour</p>
+                                <p>Level: 1</p>
+                                <p class="verbal-field">Verbal: With eldritch force I grant you a Shield 5.</p>
+                            </div>
+                            <p class="duration-field">Duration: Indefinite</p>
+                        </td></tr></tbody></table>
+                </body>
+                </html>
+            

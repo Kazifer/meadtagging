@@ -1,0 +1,1555 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adventure Loot Creator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <!-- Add jspdf-autotable plugin for autoTable functionality -->
+    <script src="https://unpkg.com/jspdf-autotable@3.5.14/dist/jspdf.plugin.autotable.js"></script>
+    <script src="https://unpkg.com/xlsx@0.17.0/dist/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Dark background */
+            color: #e2e8f0; /* Light text */
+        }
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: #2d3748; /* Darker container background */
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); /* Darker shadow */
+        }
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            border-bottom: 3px solid transparent;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #a0aec0; /* Lighter gray for inactive tabs */
+            font-size: 0.9rem;
+        }
+        .tab-button.active {
+            border-color: #667eea; /* Indigo for active tab */
+            color: #667eea; /* Indigo for active tab text */
+            background-color: #4a5568; /* Darker background for active tab */
+        }
+        .item-card {
+            background-color: #4a5568; /* Darker item card background */
+            border: 1px solid #2d3748; /* Darker border */
+            border-radius: 8px;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); /* Darker shadow */
+            font-size: 0.8rem;
+        }
+        .item-card h3 {
+            font-size: 0.9rem;
+            color: #edf2f7; /* Lighter heading text */
+        }
+        .item-card p {
+            font-size: 0.75rem;
+            color: #cbd5e0; /* Lighter text for details */
+        }
+        .item-card input[type="text"],
+        .item-card input[type="number"],
+        .item-card input[type="date"],
+        .item-card textarea {
+            border: 1px solid #4a5568; /* Darker border for inputs */
+            background-color: #2d3748; /* Darker input background */
+            color: #e2e8f0; /* Light text for inputs */
+            border-radius: 6px;
+            padding: 0.3rem 0.5rem;
+            width: 100%;
+            transition: border-color 0.2s;
+            font-size: 0.8rem;
+        }
+        .item-card input:focus,
+        .item-card textarea:focus {
+            outline: none;
+            border-color: #667eea; /* Indigo focus border */
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3); /* Indigo focus shadow */
+        }
+        .btn-primary {
+            background-color: #667eea; /* Indigo primary button */
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: background-color 0.2s, transform 0.1s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            font-size: 0.8rem;
+        }
+        .btn-primary:hover {
+            background-color: #5a67d8; /* Darker indigo on hover */
+            transform: translateY(-1px);
+        }
+        .btn-secondary {
+            background-color: #4a5568; /* Dark gray secondary button */
+            color: white;
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+            font-size: 0.75rem;
+        }
+        .btn-secondary:hover {
+            background-color: #2d3748; /* Even darker gray on hover */
+        }
+        .btn-danger {
+            background-color: #e53e3e; /* Red danger button */
+            color: white;
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+            font-size: 0.75rem;
+        }
+        .btn-danger:hover {
+            background-color: #c53030; /* Darker red on hover */
+        }
+        .table-header th {
+            padding: 0.5rem 0.6rem;
+            text-align: left;
+            background-color: #4a5568; /* Darker table header background */
+            font-weight: 600;
+            color: #cbd5e0; /* Lighter text for table headers */
+            border-bottom: 2px solid #2d3748; /* Darker border */
+            font-size: 0.7rem;
+        }
+        .table-row td {
+            padding: 0.5rem 0.6rem;
+            border-bottom: 1px solid #2d3748; /* Darker border */
+            vertical-align: top;
+            font-size: 0.75rem;
+            color: #e2e8f0; /* Light text for table cells */
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.7); /* Darker modal overlay */
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #2d3748; /* Darker modal background */
+            margin: auto;
+            padding: 1.2rem;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5); /* Darker modal shadow */
+            position: relative;
+            color: #e2e8f0; /* Light text for modal content */
+        }
+        .modal-content h3 {
+            font-size: 1.4rem;
+            color: #edf2f7; /* Lighter modal title */
+        }
+        .close-button {
+            color: #a0aec0; /* Lighter gray for close button */
+            float: right;
+            font-size: 22px;
+            font-weight: bold;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: white; /* White on hover */
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* Flexbox for stacked layout - always column */
+        .main-content-area {
+            display: flex;
+            flex-direction: column; /* Always column */
+            gap: 2rem;
+        }
+
+        /* New class for table cell content to preserve newlines without fixed dimensions */
+        .table-cell-content {
+            white-space: pre-wrap;
+            word-wrap: break-word; /* Ensure long words breaks */
+        }
+
+        /* Adjust table column widths for better fit */
+        .selected-items-section > div { /* This targets the div with bg-gray-700 */
+            overflow-x: auto; /* Enable horizontal scrolling if content overflows */
+        }
+
+        .selected-items-section table {
+            width: 100%; /* Ensure table takes full width of its container */
+            table-layout: fixed; /* Fix table layout to respect column widths */
+        }
+
+        .selected-items-section .table-header th:first-child,
+        .selected-items-section #selectedItemsTableBody td:first-child { /* Details column */
+            width: calc(100% - 160px); /* Take remaining width after actions column */
+        }
+
+        .selected-items-section .table-header th:last-child,
+        .selected-items-section #selectedItemsTableBody td:last-child { /* Actions column */
+            width: 160px; /* Fixed width for buttons */
+            text-align: right; /* Align buttons to the right */
+        }
+        /* Specific styles for scroll cells in HTML export */
+        .scroll-table {
+            width: 100%; /* Ensure scroll table takes full width */
+            border-collapse: collapse; /* Crucial for removing space between cells */
+            table-layout: fixed; /* Crucial for side-by-side cells with percentage width */
+border: 1px solid #4a5568;
+        }
+       
+                        .scroll-cell {
+                            border: 1px solid #4a5568; /* Darker border */
+                            padding: 8px;
+                            text-align: left;
+                            height: 1cm; /* Larger height */
+                            width: 7cm; /* Larger width */
+                            box-sizing: border-box;
+                            vertical-align: top;
+                            overflow: hidden;
+                            word-wrap: break-word;
+                            white-space: pre-wrap;
+                            font-size: 12px;
+                            background-color: #2d3748; /* Darker cell background */
+                            color: #e2e8f0; /* Light text */
+                            position: relative; /* For absolute positioning of duration */
+                            display: flex; /* Use flexbox for content distribution */
+                            flex-direction: column;
+			}
+                        .scroll-cell .scroll-content {
+                            flex-grow: 1; /* Allows content to take available space */
+                            display: flex;
+                            flex-direction: column;
+				border: 1px solid #4a5568;
+                        }
+                        .scroll-cell .item-name {
+                            font-size: 18px;
+                            font-weight: bold;
+                        }
+                        .scroll-cell .verbal-field {
+                            font-size: 1.2em; /* Increase font size */
+                            font-style: italic; /* Italicize */
+                            margin-top: 8px; /* Spacing above verbal field */
+                        }
+                        .scroll-cell .duration-field {
+                            margin-top: auto; /* Pushes it to the bottom */
+                        }
+                        th { background-color: #4a5568; color: #cbd5e0; } /* Darker table header */
+                    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <header class="mb-8 p-6 bg-gradient-to-r from-gray-700 to-gray-900 text-white rounded-lg shadow-lg">
+            <h1 class="text-4xl font-bold mb-4 text-center">Adventure Loot Creator</h1>
+            <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+                <div class="w-full md:w-1/2">
+                    <div class="flex items-center mb-2">
+                        <label for="adventureTitle" class="block text-lg font-medium mr-2">Adventure Title:</label>
+                        <button id="clearTitleBtn" class="btn-secondary text-xs px-2 py-1 rounded-md">Clear Title</button>
+                    </div>
+                    <input type="text" id="adventureTitle" placeholder="Enter adventure title"
+                           class="w-full p-3 rounded-md bg-white bg-opacity-20 text-white placeholder-gray-200 focus:outline-none focus:ring-2 focus:ring-white">
+                </div>
+                <div class="w-full md:w-1/2 md:text-right">
+                    <p class="text-lg font-medium mb-2">Total Production Cost:</p>
+                    <p id="totalProductionCost" class="text-5xl font-extrabold text-yellow-300">S0</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Export Section (Moved to top) -->
+        <section class="mb-8">
+            <h2 class="text-3xl font-semibold mb-6 text-gray-200">Export Options</h2>
+            <div class="flex flex-wrap gap-4">
+                <button id="exportPdfBtn" class="btn-primary">Export as PDF</button>
+                <button id="exportHtmlBtn" class="btn-primary">Export as HTML</button>
+                <button id="exportXlsxBtn" class="btn-primary">Export as XLSX</button>
+            </div>
+        </section>
+
+        <!-- Main Content Area: Item Selection and Selected Items Stacked -->
+        <div class="main-content-area">
+            <!-- Selected Items (Loot) Display Section -->
+            <section class="selected-items-section">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-semibold text-gray-200">Selected Loot Items</h2>
+                    <button id="clearSelectedItemsBtn" class="btn-danger text-sm px-3 py-1 rounded-md">Clear All Selected</button>
+                </div>
+                <div class="bg-gray-700 rounded-lg shadow-md">
+                    <table class="min-w-full divide-y divide-gray-600">
+                        <thead class="bg-blue-900 table-header">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Details</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="selectedItemsTableBody" class="bg-gray-800 divide-y divide-gray-700">
+                            <!-- Selected items will be populated here -->
+                            <tr>
+                                <td colspan="2" class="px-6 py-4 text-center text-gray-400" id="noSelectedItemsMessage">No items selected yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Item Selection Section -->
+            <section class="mb-8 md:mb-0 item-categories-section">
+                <h2 class="text-3xl font-semibold mb-6 text-gray-200">Item Categories</h2>
+                <div class="flex border-b border-gray-600 mb-6">
+                    <button class="tab-button active" data-category="potions">Potions</button>
+                    <button class="tab-button" data-category="scrolls">Scrolls</button>
+                    <button class="tab-button" data-category="alchemy">Alchemy</button>
+                    <button class="tab-button" data-category="refinedMaterials">Special Materials</button>
+                    <button class="tab-button" data-category="weapons">Weapons</button>
+                    <button class="tab-button" data-category="armour">Armour</button>
+                    <!-- Removed Special Smithing Materials button -->
+                    <button class="tab-button" data-category="traps">Traps</button>
+                    <button class="tab-button" data-category="runicTattoos">Runic Tattoos</button>
+                    <button class="tab-button" data-category="formalComponents">Formal Components</button>
+                </div>
+
+                <div id="categoryContent" class="flex flex-col space-y-4">
+                    <!-- Category items will be loaded here by JavaScript -->
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Modal for adding/editing items -->
+    <div id="itemModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h3 id="modalTitle" class="text-2xl font-semibold mb-4 text-gray-200">Add/Edit Item</h3>
+            <form id="itemForm" class="grid grid-cols-1 gap-4">
+                <!-- Dynamic form fields will be injected here -->
+            </form>
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" id="cancelModalBtn" class="btn-secondary">Cancel</button>
+                <button type="submit" id="saveItemBtn" class="btn-primary">Save Item</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="event-variables.js"></script>
+    <script src="production-data.js"></script>
+    <script>
+        // Initialize jsPDF for PDF export
+        const { jsPDF } = window.jspdf;
+
+        // Function to get today's date + 1 year in ISO (YYYY-MM-DD) format
+        function getOneYearFromTodayDateString() {
+            const today = new Date();
+            today.setFullYear(today.getFullYear() + 1); // Add one year
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Data structure for items - Initialized with today's date + 1 year for expiry where applicable
+        let items = window.productionItems
+        async function loadRunicTattoosData() {
+            try {
+                const response = await fetch('runic-tattoos.json', { cache: 'no-store' });
+                if (!response.ok) {
+                    throw new Error(`Failed to load runic-tattoos.json: ${response.status} ${response.statusText}`);
+                }
+
+                const runicTattoos = await response.json();
+                if (!Array.isArray(runicTattoos)) {
+                    throw new Error('runic-tattoos.json must contain an array of runic tattoo items.');
+                }
+
+                items.runicTattoos = runicTattoos.map(item => ({
+                    ...item,
+                    expiryDate: item.expiryDate || getOneYearFromTodayDateString()
+                }));
+            } catch (error) {
+                console.error('Error loading runic tattoos data:', error);
+                items.runicTattoos = Array.isArray(items.runicTattoos) ? items.runicTattoos : [];
+            }
+        }
+
+
+        // Initialize productionCost for refinedMaterials
+        items.refinedMaterials.forEach(material => {
+            if (material.productionCost === undefined) {
+                material.productionCost = material.value; // Set productionCost to value if not present
+            }
+        });
+
+        // Ensure productionCost is present for formalComponents, defaulting to 0 if missing
+        items.formalComponents.forEach(component => {
+            if (component.productionCost === undefined) {
+                component.productionCost = 0;
+            }
+        });
+
+        // Find and update potions based on the image data
+        const potionUpdates = window.potionUpdatesData
+
+        // Filter out the "Shield" potion before applying other updates
+        items.potions = items.potions.filter(p => p.name !== 'Shield');
+
+        potionUpdates.forEach(update => {
+            const index = items.potions.findIndex(p => p.name === update.name);
+            if (index !== -1) {
+                // Update existing potion
+                items.potions[index].productionCost = update.productionCost;
+                items.potions[index].level = update.level;
+                items.potions[index].duration = update.duration;
+                items.potions[index].effect = update.effect;
+            } else {
+                // Add new potion, assigning a unique ID
+                items.potions.push({
+                    id: 'p_' + update.name.toLowerCase().replace(/\s/g, '_'),
+                    name: update.name,
+                    effect: update.effect,
+                    productionCost: update.productionCost,
+                    expiryDate: getOneYearFromTodayDateString(),
+                    level: update.level,
+                    duration: update.duration
+                });
+            }
+        });
+
+        // Set scroll productionCost to be the same as level
+        items.scrolls.forEach(scroll => {
+            scroll.productionCost = scroll.level;
+        });
+
+        // selectedItems now includes a 'quantity' property
+        let selectedItems = [];
+        let currentCategory = 'potions'; // Default category
+
+        // UI Elements
+        const adventureTitleInput = document.getElementById('adventureTitle');
+        const totalProductionCostDisplay = document.getElementById('totalProductionCost');
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const categoryContent = document.getElementById('categoryContent');
+        const selectedItemsTableBody = document.getElementById('selectedItemsTableBody');
+        const noSelectedItemsMessage = document.getElementById('noSelectedItemsMessage');
+        const exportPdfBtn = document.getElementById('exportPdfBtn');
+        const exportHtmlBtn = document.getElementById('exportHtmlBtn');
+        const exportXlsxBtn = document.getElementById('exportXlsxBtn');
+        const clearSelectedItemsBtn = document.getElementById('clearSelectedItemsBtn'); // New button
+        const clearTitleBtn = document.getElementById('clearTitleBtn'); // New button
+
+        // Modal Elements
+        const itemModal = document.getElementById('itemModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const itemForm = document.getElementById('itemForm');
+        const saveItemBtn = document.getElementById('saveItemBtn');
+        const cancelModalBtn = document.getElementById('cancelModalBtn');
+        const closeModalButton = document.querySelector('.close-button');
+
+        let editingItemId = null; // To store the ID of the item being edited
+
+        // --- Core Functions ---
+
+        // Function to render items for the current category
+        function renderItems() {
+            categoryContent.innerHTML = ''; // Clear previous items
+            let categoryItems = [...items[currentCategory]]; // Create a shallow copy to sort
+
+            // Sort items by cost (ascending)
+            if (currentCategory === 'refinedMaterials' || currentCategory === 'formalComponents') {
+                categoryItems.sort((a, b) => a.value - b.value);
+            } else {
+                categoryItems.sort((a, b) => a.productionCost - b.productionCost);
+            }
+
+            // Add "Add New Item" button at the top
+            let addNewButtonText = '';
+            if (currentCategory === 'refinedMaterials') {
+                addNewButtonText = 'Special Material';
+            } else if (currentCategory === 'formalComponents') {
+                addNewButtonText = 'Formal Component';
+            } else {
+                addNewButtonText = currentCategory.slice(0, -1).replace('weapon', 'Weapon').replace('armour', 'Armour').replace('specialSmithingMaterial', 'Special Smithing Material').replace('trap', 'Trap').replace('runicTattoo', 'Runic Tattoo');
+            }
+
+            const addNewButtonHtml = `
+                <div class="item-card flex items-center justify-center p-3 bg-gray-600 border-gray-500 border-dashed cursor-pointer hover:bg-gray-700 transition-colors" onclick="openAddItemModal()">
+                    <span class="text-indigo-300 text-sm font-bold">+ Add New ${addNewButtonText}</span>
+                </div>
+            `;
+            categoryContent.innerHTML += addNewButtonHtml;
+
+            categoryItems.forEach(item => {
+                const selectedItemInLoot = selectedItems.find(selected => selected.id === item.id && selected.category === currentCategory);
+                const currentQuantity = selectedItemInLoot ? selectedItemInLoot.quantity : 0;
+
+                const itemHtml = `
+                    <div class="item-card flex flex-col space-y-0.5">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-sm font-semibold text-gray-100">${item.name || item.type || 'New Item'}</h3>
+                            <div class="flex items-center space-x-0.5">
+                                <span class="text-xs text-gray-300">In Loot: ${currentQuantity}</span>
+                                <button class="btn-primary text-xs px-1.5 py-0.5" onclick="addItemToSelection('${item.id}', '${currentCategory}')">Add</button>
+                            </div>
+                        </div>
+                        ${generateItemDetailsHtml(item, currentCategory)}
+                        <div class="flex justify-end gap-0.5 mt-0.5">
+                            <button class="btn-secondary text-xs" onclick="openEditItemModal('${item.id}', '${currentCategory}')">Edit</button>
+                            <button class="btn-danger text-xs" onclick="deleteItem('${item.id}', '${currentCategory}')">Delete</button>
+                        </div>
+                    </div>
+                `;
+                categoryContent.innerHTML += itemHtml;
+            });
+        }
+
+        // Helper to generate item details HTML based on category
+        function generateItemDetailsHtml(item, category) {
+            let details = '';
+            switch (category) {
+                case 'potions':
+                    details = `
+                        <p class="text-xs text-gray-300"><strong>Effect:</strong> ${item.effect}</p>
+                        <p class="text-xs text-gray-300"><strong>Level:</strong> ${item.level}</p>
+                        <p class="text-xs text-gray-300"><strong>Duration:</strong> ${item.duration}</p>
+                        <p class="text-xs text-gray-300"><strong>Cost:</strong> S${item.productionCost.toFixed(0)}</p>
+                        <p class="text-xs text-gray-300"><strong>Expiry:</strong> ${item.expiryDate}</p>
+                    `;
+                    break;
+                case 'alchemy':
+                    details = `
+                        <p class="text-xs text-gray-300"><strong>Type:</strong> ${item.type || 'N/A'}</p>
+                        <p class="text-xs text-gray-300"><strong>Duration:</strong> ${item.duration || 'N/A'}</p>
+                        <p class="text-xs text-gray-300"><strong>Effect:</strong> ${item.effect}</p>
+                        <p class="text-xs text-gray-300"><strong>Cost:</strong> S${item.productionCost.toFixed(0)}</p>
+                        <p class="text-xs text-gray-300"><strong>Expiry:</strong> ${item.expiryDate}</p>
+                    `;
+                    break;
+                case 'scrolls':
+                    details = `
+                        <p class="text-xs text-gray-300"><strong>Effect:</strong> ${item.effect}</p>
+                        <p class="text-xs text-gray-300"><strong>Level:</strong> ${item.level}</p>
+                        <p class="text-xs text-gray-300"><strong>Verbal:</strong> ${item.verbal}</p>
+                        <p class="text-xs text-gray-300"><strong>Duration:</strong> ${item.duration}</p>
+                    `;
+                    break;
+                case 'refinedMaterials':
+                    details = `
+                        <p class="text-xs text-gray-300"><strong>Value:</strong> ${item.value.toFixed(0)}</p>
+                        <p class="text-xs text-gray-300"><strong>Cost:</strong> S${item.productionCost.toFixed(0)}</p>
+                    `;
+                    break;
+                case 'weapons':
+                    details = `
+                        <p class="text-xs text-gray-300"><strong>Material:</strong> ${item.material || 'N/A'}</p>
+                        <p class="text-xs text-gray-300"><strong>Cost:</strong> S${item.productionCost.toFixed(0)}</p>
+                        <p class="text-xs text-gray-300"><strong>Expiry:</strong> ${item.expiryDate}</p>
+                    `;
+                    break;
+                case 'armour':
+                    details = `
+                        <p class="text-xs text-gray-300"><strong>Material:</strong> ${item.material}</p>
+                        <p class="text-xs text-gray-300"><strong>Armour Value:</strong> ${item.armourValue}</p>
+                        <p class="text-xs text-gray-300"><strong>Cost:</strong> S${item.productionCost.toFixed(0)}</p>
+                        <p class="text-xs text-gray-300"><strong>Expiry:</strong> ${item.expiryDate}</p>
+                    `;
+                    break;
+                case 'traps':
+                    details = `
+                        <p class="text-xs text-gray-300"><strong>Cost:</strong> S${item.productionCost.toFixed(0)}</p>
+                        <p class="text-xs text-gray-300"><strong>Expiry:</strong> ${item.expiryDate}</p>
+                    `;
+                    break;
+                case 'runicTattoos':
+                    details = `
+                        <p class="text-xs text-gray-300"><strong>Effect:</strong> ${item.effect || 'N/A'}</p>
+                        <p class="text-xs text-gray-300"><strong>Duration:</strong> ${item.duration || 'N/A'}</p>
+                        <p class="text-xs text-gray-300"><strong>Level:</strong> ${item.level}</p>
+                        <p class="text-xs text-gray-300"><strong>Verbal:</strong> ${item.verbal || 'N/A'}</p>
+                        <p class="text-xs text-gray-300"><strong>Cost:</strong> S${item.productionCost.toFixed(0)}</p>
+                        <p class="text-xs text-gray-300"><strong>Expiry:</strong> ${item.expiryDate}</p>
+                    `;
+                    break;
+                case 'formalComponents':
+                    details = `
+                        <p class="text-xs text-gray-300"><strong>Type:</strong> ${item.type || 'N/A'}</p>
+                        <p class="text-xs text-gray-300"><strong>Value:</strong> ${item.value.toFixed(0)}</p>
+                        <p class="text-xs text-gray-300"><strong>Cost:</strong> ${item.productionCost.toFixed(0)}</p>
+                    `;
+                    break;
+            }
+            return details;
+        }
+
+        // Function to add an item to selection (or increment quantity)
+        function addItemToSelection(itemId, category) {
+            const item = items[category].find(i => i.id === itemId);
+            if (!item) return;
+
+            const existingSelectedItem = selectedItems.find(selected => selected.id === itemId && selected.category === category);
+
+            if (existingSelectedItem) {
+                existingSelectedItem.quantity++;
+            } else {
+                selectedItems.push({ ...item, category: category, quantity: 1 });
+            }
+            renderItems(); // Re-render category to update quantity display
+            updateSelectedItemsDisplay();
+            calculateTotalCost();
+        }
+
+        // Function to update the selected items table
+        function updateSelectedItemsDisplay() {
+            selectedItemsTableBody.innerHTML = '';
+            if (selectedItems.length === 0) {
+                noSelectedItemsMessage.style.display = 'table-row';
+                return;
+            } else {
+                noSelectedItemsMessage.style.display = 'none';
+            }
+
+            selectedItems.forEach(item => {
+                let itemCost = item.productionCost; // Use productionCost for calculation
+                let totalItemCost = itemCost * item.quantity;
+
+                // Consolidate all details into a single string for display in the table
+                let allDetailsString = '';
+                let categoryDisplayName;
+                // Determine display name for category
+                if (item.category === 'potions') {
+                    categoryDisplayName = 'Potion';
+                } else if (item.category === 'alchemy') {
+                    categoryDisplayName = 'Alchemy';
+                } else if (item.category === 'refinedMaterials') {
+                    categoryDisplayName = 'Special Material'; // Updated display name
+                } else if (item.category === 'runicTattoos') {
+                    categoryDisplayName = 'Runic Tattoos';
+                } else if (item.category === 'formalComponents') {
+                    categoryDisplayName = 'Formal Components';
+                }
+                else {
+                    categoryDisplayName = item.category.charAt(0).toUpperCase() + item.category.slice(1); // Capitalize first letter
+                }
+                
+                allDetailsString += `${item.name || item.type}\n`; // Item name without any prefix
+                allDetailsString += `Category: ${categoryDisplayName}\n`;
+                allDetailsString += `Quantity: ${item.quantity}\n`;
+
+                // Conditional display of Cost and Value
+                if (item.category === 'formalComponents') {
+                    allDetailsString += `Value: ${item.value.toFixed(0) || 'N/A'}\n`; // No 'S'
+                    allDetailsString += `Cost (Each): ${item.productionCost.toFixed(0)}\n`; // No 'S'
+                    allDetailsString += `Total Cost: ${totalItemCost.toFixed(0)}\n`; // No 'S'
+                } else if (item.category === 'refinedMaterials') {
+                    allDetailsString += `Value: ${item.value.toFixed(0) || 'N/A'}\n`; // Changed to Value
+                    allDetailsString += `Cost (Each): S${item.productionCost.toFixed(0)}\n`;
+                    allDetailsString += `Total Cost: S${totalItemCost.toFixed(0)}\n`;
+                } else {
+                    allDetailsString += `Cost (Each): S${item.productionCost.toFixed(0)}\n`;
+                    allDetailsString += `Total Cost: S${totalItemCost.toFixed(0)}\n`;
+                }
+
+                switch (item.category) {
+                    case 'potions':
+                        allDetailsString += `Effect: ${item.effect || 'N/A'}\n`;
+                        allDetailsString += `Level: ${item.level || 'N/A'}\n`;
+                        allDetailsString += `Duration: ${item.duration || 'N/A'}\n`;
+                        allDetailsString += `Expiry: ${item.expiryDate || 'N/A'}`;
+                        break;
+                    case 'alchemy':
+                        // Removed Description from here
+                        allDetailsString += `Type: ${item.type || 'N/A'}\n`;
+                        allDetailsString += `Duration: ${item.duration || 'N/A'}\n`;
+                        allDetailsString += `Effect: ${item.effect || 'N/A'}\n`;
+                        allDetailsString += `Expiry: ${item.expiryDate || 'N/A'}`;
+                        break;
+                    case 'scrolls':
+                        allDetailsString += `Effect: ${item.effect || 'N/A'}\n`;
+                        allDetailsString += `Level: ${item.level || 'N/A'}\n`;
+                        allDetailsString += `Verbal: ${item.verbal || 'N/A'}\n`;
+                        allDetailsString += `Duration: ${item.duration || 'N/A'}`;
+                        break;
+                    case 'refinedMaterials':
+                        // Removed Type from here
+                        break;
+                    case 'weapons':
+                        allDetailsString += `Material: ${item.material || 'N/A'}\n`;
+                        allDetailsString += `Expiry: ${item.expiryDate || 'N/A'}`;
+                        break;
+                    case 'armour':
+                        allDetailsString += `Material: ${item.material || 'N/A'}\n`;
+                        allDetailsString += `Armour Value: ${item.armourValue || 'N/A'}\n`;
+                        allDetailsString += `Expiry: ${item.expiryDate || 'N/A'}`;
+                        break;
+                    case 'traps':
+                        allDetailsString += `Expiry: ${item.expiryDate || 'N/A'}`;
+                        break;
+                    case 'runicTattoos':
+                        allDetailsString += `Effect: ${item.effect || 'N/A'}\n`;
+                        allDetailsString += `Duration: ${item.duration || 'N/A'}\n`;
+                        allDetailsString += `Level: ${item.level || 'N/A'}\n`;
+                        // Removed Verbal from display in the table for Runic Tattoos
+                        allDetailsString += `Expiry: ${item.expiryDate || 'N/A'}`;
+                        break;
+                    case 'formalComponents':
+                        allDetailsString += `Type: ${item.type || 'N/A'}\n`;
+                        break; // Value and Cost already added above
+                }
+
+                const row = document.createElement('tr');
+                row.className = 'table-row hover:bg-gray-700'; /* Updated hover color */
+                // Apply the new class for content formatting, remove fixed dimensions
+                row.innerHTML = `
+                    <td class="px-2 py-1 text-xs text-gray-300 table-cell-content">${allDetailsString}</td>
+                    <td class="px-2 py-1 whitespace-nowrap text-right text-xs font-medium">
+                        <button class="btn-secondary text-xs mr-0.5" onclick="decrementItemQuantity('${item.id}', '${item.category}')">Remove One</button>
+                        <button class="btn-danger text-xs" onclick="removeAllItemFromSelection('${item.id}', '${item.category}')">Remove All</button>
+                    </td>
+                `;
+                selectedItemsTableBody.appendChild(row);
+            });
+        }
+
+        // Function to decrement item quantity or remove if quantity is 1
+        function decrementItemQuantity(id, category) {
+            const index = selectedItems.findIndex(item => item.id === id && item.category === category);
+            if (index !== -1) {
+                if (selectedItems[index].quantity > 1) {
+                    selectedItems[index].quantity--;
+                } else {
+                    selectedItems.splice(index, 1); // Remove item if quantity is 1
+                }
+                renderItems(); // Re-render category to update quantity display
+                updateSelectedItemsDisplay();
+                calculateTotalCost();
+            }
+        }
+
+        // Function to remove all instances of an item from selection
+        function removeAllItemFromSelection(id, category) {
+            selectedItems = selectedItems.filter(item => !(item.id === id && item.category === category));
+            renderItems(); // Re-render category to update quantity display
+            updateSelectedItemsDisplay();
+            calculateTotalCost();
+        }
+
+        // Function to calculate and display total production cost
+        function calculateTotalCost() {
+            let totalCost = 0;
+            selectedItems.forEach(item => {
+                // Use productionCost for all items, including refinedMaterials and formalComponents
+                const itemCost = item.productionCost;
+                totalCost += itemCost * item.quantity;
+            });
+            totalProductionCostDisplay.textContent = `S${totalCost.toFixed(0)}`;
+        }
+
+        // --- Modal Functions for Adding/Editing Items ---
+
+        function openAddItemModal() {
+            editingItemId = null;
+            let modalButtonText = '';
+            if (currentCategory === 'refinedMaterials') {
+                modalButtonText = 'Special Material';
+            } else if (currentCategory === 'formalComponents') {
+                modalButtonText = 'Formal Component';
+            } else {
+                modalButtonText = currentCategory.slice(0, -1).replace('weapon', 'Weapon').replace('armour', 'Armour').replace('specialSmithingMaterial', 'Special Smithing Material').replace('trap', 'Trap').replace('runicTattoo', 'Runic Tattoo');
+            }
+            modalTitle.textContent = `Add New ${modalButtonText}`;
+            renderItemForm(currentCategory, {}); // Pass empty object for new item
+            itemModal.style.display = 'flex';
+        }
+
+        function openEditItemModal(id, category) {
+            editingItemId = id;
+            let modalButtonText = '';
+            if (currentCategory === 'refinedMaterials') {
+                modalButtonText = 'Special Material';
+            } else if (currentCategory === 'formalComponents') {
+                modalButtonText = 'Formal Component';
+            } else {
+                modalButtonText = currentCategory.slice(0, -1).replace('weapon', 'Weapon').replace('armour', 'Armour').replace('specialSmithingMaterial', 'Special Smithing Material').replace('trap', 'Trap').replace('runicTattoo', 'Runic Tattoo');
+            }
+            modalTitle.textContent = `Edit ${modalButtonText}`;
+            const itemToEdit = items[category].find(item => item.id === id);
+            renderItemForm(currentCategory, itemToEdit);
+            itemModal.style.display = 'flex';
+        }
+
+        function renderItemForm(category, itemData) {
+            itemForm.innerHTML = ''; // Clear previous form fields
+            let fieldsHtml = '';
+
+            // Common fields based on category type
+            if (category === 'refinedMaterials') {
+                fieldsHtml += `
+                    <div>
+                        <label for="itemName" class="block text-sm font-medium text-gray-300">Name:</label>
+                        <input type="text" id="itemName" name="name" value="${itemData.name || ''}" required class="mt-1 block w-full">
+                    </div>
+                    <div>
+                        <label for="itemValue" class="block text-sm font-medium text-gray-300">Value:</label>
+                        <input type="number" id="itemValue" name="value" value="${itemData.value || 0}" min="0" step="1" required class="mt-1 block w-full">
+                    </div>
+                    <div>
+                        <label for="itemProductionCost" class="block text-sm font-medium text-gray-300">Production Cost:</label>
+                        <input type="number" id="itemProductionCost" name="productionCost" value="${itemData.productionCost || 0}" min="0" step="1" required class="mt-1 block w-full">
+                    </div>
+                `;
+            } else if (category === 'formalComponents') {
+                fieldsHtml += `
+                    <div>
+                        <label for="itemName" class="block text-sm font-medium text-gray-300">Name:</label>
+                        <input type="text" id="itemName" name="name" value="${itemData.name || ''}" required class="mt-1 block w-full">
+                    </div>
+                    <div>
+                        <label for="itemType" class="block text-sm font-medium text-gray-300">Type:</label>
+                        <input type="text" id="itemType" name="type" value="${itemData.type || ''}" required class="mt-1 block w-full">
+                    </div>
+                    <div>
+                        <label for="itemValue" class="block text-sm font-medium text-gray-300">Value:</label>
+                        <input type="number" id="itemValue" name="value" value="${itemData.value || 0}" min="0" step="1" required class="mt-1 block w-full">
+                    </div>
+                    <div>
+                        <label for="itemProductionCost" class="block text-sm font-medium text-gray-300">Production Cost:</label>
+                        <input type="number" id="itemProductionCost" name="productionCost" value="${itemData.productionCost || 0}" min="0" step="1" required class="mt-1 block w-full">
+                    </div>
+                `;
+            } else { // All other categories use 'name' and 'productionCost'
+                fieldsHtml += `
+                    <div>
+                        <label for="itemName" class="block text-sm font-medium text-gray-300">Name:</label>
+                        <input type="text" id="itemName" name="name" value="${itemData.name || ''}" required class="mt-1 block w-full">
+                    </div>
+                    <div>
+                        <label for="itemProductionCost" class="block text-sm font-medium text-gray-300">Production Cost:</label>
+                        <input type="number" id="itemProductionCost" name="productionCost" value="${itemData.productionCost || 0}" min="0" step="1" required class="mt-1 block w-full">
+                    </div>
+                `;
+                // Expiry Date is common for Potions, Alchemy, Weapons, Armour, Special Smithing Materials, Traps, Runic Tattoos
+                // Scrolls do NOT have expiryDate
+                if (!['scrolls'].includes(category)) {
+                    const defaultExpiry = itemData.expiryDate || getOneYearFromTodayDateString();
+                    fieldsHtml += `
+                        <div>
+                            <label for="itemExpiryDate" class="block text-sm font-medium text-gray-300">Expiry Date:</label>
+                            <input type="date" id="itemExpiryDate" name="expiryDate" value="${defaultExpiry}" class="mt-1 block w-full">
+                        </div>
+                    `;
+                }
+            }
+
+            // Category-specific fields
+            switch (category) {
+                case 'potions':
+                    fieldsHtml += `
+                        <div>
+                            <label for="itemEffect" class="block text-sm font-medium text-gray-300">Effect:</label>
+                            <input type="text" id="itemEffect" name="effect" value="${itemData.effect || ''}" required class="mt-1 block w-full">
+                        </div>
+                        <div>
+                            <label for="itemLevel" class="block text-sm font-medium text-gray-300">Level:</label>
+                            <input type="number" id="itemLevel" name="level" value="${itemData.level || 0}" min="0" step="1" class="mt-1 block w-full">
+                        </div>
+                        <div>
+                            <label for="itemDuration" class="block text-sm font-medium text-gray-300">Duration:</label>
+                            <input type="text" id="itemDuration" name="duration" value="${itemData.duration || ''}" class="mt-1 block w-full">
+                        </div>
+                    `;
+                    break;
+                case 'alchemy':
+                    fieldsHtml += `
+                        <div>
+                            <label for="itemDescription" class="block text-sm font-medium text-gray-300">Description:</label>
+                            <textarea id="itemDescription" name="description" class="mt-1 block w-full">${itemData.description || ''}</textarea>
+                        </div>
+                        <div>
+                            <label for="itemType" class="block text-sm font-medium text-gray-300">Type:</label>
+                            <input type="text" id="itemType" name="type" value="${itemData.type || ''}" class="mt-1 block w-full">
+                        </div>
+                        <div>
+                            <label for="itemDuration" class="block text-sm font-medium text-gray-300">Duration:</label>
+                            <input type="text" id="itemDuration" name="duration" value="${itemData.duration || ''}" class="mt-1 block w-full">
+                        </div>
+                        <div>
+                            <label for="itemEffect" class="block text-sm font-medium text-gray-300">Effect:</label>
+                            <input type="text" id="itemEffect" name="effect" value="${itemData.effect || ''}" required class="mt-1 block w-full">
+                        </div>
+                    `;
+                    break;
+                case 'scrolls':
+                    fieldsHtml += `
+                        <div>
+                            <label for="itemEffect" class="block text-sm font-medium text-gray-300">Effect:</label>
+                            <input type="text" id="itemEffect" name="effect" value="${itemData.effect || ''}" required class="mt-1 block w-full">
+                        </div>
+                        <div>
+                            <label for="itemLevel" class="block text-sm font-medium text-gray-300">Level:</label>
+                            <input type="number" id="itemLevel" name="level" value="${itemData.level || 0}" min="0" class="mt-1 block w-full">
+                        </div>
+                        <div>
+                            <label for="itemVerbal" class="block text-sm font-medium text-gray-300">Verbal:</label>
+                            <input type="text" id="itemVerbal" name="verbal" value="${itemData.verbal || ''}" class="mt-1 block w-full">
+                        </div>
+                        <div>
+                            <label for="itemDuration" class="block text-sm font-medium text-gray-300">Duration:</label>
+                            <input type="text" id="itemDuration" name="duration" value="${itemData.duration || ''}" class="mt-1 block w-full">
+                        </div>
+                    `;
+                    // Removed description field from modal
+                    break;
+                case 'weapons':
+                    fieldsHtml += `
+                        <div>
+                            <label for="itemMaterial" class="block text-sm font-medium text-gray-300">Material:</label>
+                            <input type="text" id="itemMaterial" name="material" value="${itemData.material || ''}" required class="mt-1 block w-full">
+                        </div>
+                    `;
+                    break;
+                case 'armour':
+                    fieldsHtml += `
+                        <div>
+                            <label for="itemMaterial" class="block text-sm font-medium text-gray-300">Material:</label>
+                            <input type="text" id="itemMaterial" name="material" value="${itemData.material || ''}" required class="mt-1 block w-full">
+                        </div>
+                        <div>
+                            <label for="itemArmourValue" class="block text-sm font-medium text-gray-300">Armour Value:</label>
+                            <input type="number" id="itemArmourValue" name="armourValue" value="${itemData.armourValue || 0}" min="0" step="1" required class="mt-1 block w-full">
+                        </div>
+                    `;
+                    break;
+                case 'runicTattoos':
+                    fieldsHtml += `
+                        <div>
+                            <label for="itemEffect" class="block text-sm font-medium text-gray-300">Effect:</label>
+                            <input type="text" id="itemEffect" name="effect" value="${itemData.effect || ''}" class="mt-1 block w-full">
+                        </div>
+                        <div>
+                            <label for="itemDuration" class="block text-sm font-medium text-gray-300">Duration:</label>
+                            <input type="text" id="itemDuration" name="duration" value="${itemData.duration || ''}" class="mt-1 block w-full">
+                        </div>
+                        <div>
+                            <label for="itemLevel" class="block text-sm font-medium text-gray-300">Level:</label>
+                            <input type="number" id="itemLevel" name="level" value="${itemData.level || 0}" min="0" step="1" required class="mt-1 block w-full">
+                        </div>
+                        <div>
+                            <label for="itemVerbal" class="block text-sm font-medium text-gray-300">Verbal:</label>
+                            <input type="text" id="itemVerbal" name="verbal" value="${itemData.verbal || ''}" class="mt-1 block w-full">
+                        </div>
+                    `;
+                    break;
+            }
+            itemForm.innerHTML = fieldsHtml;
+        }
+
+        // Save item handler
+        saveItemBtn.onclick = function(event) {
+            event.preventDefault();
+            const formData = new FormData(itemForm);
+            const newItem = {};
+            for (let [key, value] of formData.entries()) {
+                if (key === 'productionCost' || key === 'value' || key === 'level' || key === 'armourValue') {
+                    newItem[key] = parseInt(value); // Parse as integer
+                } else {
+                    newItem[key] = value;
+                }
+            }
+
+            // For Formal Components, ensure productionCost is set to 0 if not provided
+            if (currentCategory === 'formalComponents' && newItem.productionCost === undefined) {
+                newItem.productionCost = 0;
+            }
+
+            if (editingItemId) {
+                // Edit existing item
+                const index = items[currentCategory].findIndex(item => item.id === editingItemId);
+                if (index !== -1) {
+                    items[currentCategory][index] = { ...items[currentCategory][index], ...newItem };
+                    // If the edited item was selected, update its details in selectedItems
+                    const selectedIndex = selectedItems.findIndex(selected => selected.id === editingItemId && selected.category === currentCategory);
+                    if (selectedIndex !== -1) {
+                        selectedItems[selectedIndex] = { ...selectedItems[selectedIndex], ...newItem };
+                    }
+                }
+            } else {
+                // Add new item
+                newItem.id = 'id_' + Date.now(); // Simple unique ID
+                items[currentCategory].push(newItem);
+            }
+
+            closeModal();
+            renderItems();
+            updateSelectedItemsDisplay();
+            calculateTotalCost();
+        };
+
+        function deleteItem(id, category) {
+            // Using a custom modal for confirmation instead of alert/confirm
+            const confirmDelete = (callback) => {
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                modal.style.display = 'flex'; // Make it visible
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        <h3 class="text-xl font-semibold mb-4">Confirm Deletion</h3>
+                        <p class="mb-6">Are you sure you want to delete this item permanently?</p>
+                        <div class="flex justify-end gap-3">
+                            <button id="confirmNo" class="btn-secondary">No</button>
+                            <button id="confirmYes" class="btn-danger">Yes, Delete</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+
+                document.getElementById('confirmYes').onclick = () => {
+                    document.body.removeChild(modal);
+                    callback(true);
+                };
+                document.getElementById('confirmNo').onclick = () => {
+                    document.body.removeChild(modal);
+                    callback(false);
+                };
+                modal.onclick = (event) => {
+                    if (event.target === modal) {
+                        document.body.removeChild(modal);
+                        callback(false);
+                    }
+                };
+            };
+
+            confirmDelete((result) => {
+                if (result) {
+                    items[category] = items[category].filter(item => item.id !== id);
+                    // Also remove from selectedItems if it was selected
+                    selectedItems = selectedItems.filter(selected => !(selected.id === id && selected.category === category));
+                    renderItems();
+                    updateSelectedItemsDisplay();
+                    calculateTotalCost();
+                }
+            });
+        }
+
+
+        function closeModal() {
+            itemModal.style.display = 'none';
+            itemForm.reset();
+            editingItemId = null;
+        }
+
+        cancelModalBtn.onclick = closeModal;
+        closeModalButton.onclick = closeModal;
+        window.onclick = function(event) {
+            if (event.target === itemModal) {
+                closeModal();
+            }
+        };
+
+        // --- Export Functions ---
+
+        const EXPORT_COLUMNS_PER_ROW_NORMAL = 4; // Number of item detail cells side-by-side per row for non-scrolls
+        const EXPORT_COLUMNS_PER_ROW_SCROLLS = 2; // Changed to 2 for side-by-side scrolls
+
+        function getExportData() {
+            const adventureTitle = adventureTitleInput.value || 'Untitled Adventure';
+            const totalCost = totalProductionCostDisplay.textContent;
+
+            const allOtherItems = []; // For all non-scroll items, as strings
+            const scrollItems = []; // For scroll items, as objects
+
+            const categoryTitles = {
+                potions: 'Potion',
+                alchemy: 'Alchemy',
+                refinedMaterials: 'Special Material',
+                weapons: 'Weapon',
+                armour: 'Armour',
+                traps: 'Trap',
+                runicTattoos: 'Runic Tattoo',
+                formalComponents: 'Formal Component',
+                scrolls: 'Scroll'
+            };
+
+            selectedItems.forEach(item => {
+                // Generate a detail string for each individual quantity of the item
+                for (let i = 0; i < item.quantity; i++) {
+                    let categoryDisplayName = categoryTitles[item.category] || item.category.charAt(0).toUpperCase() + item.category.slice(1);
+                    
+                    if (item.category === 'scrolls') {
+                        // Scrolls are stored as objects for custom rendering
+                        scrollItems.push({
+                            name: item.name || item.type,
+                            category: categoryDisplayName, // Keep category for internal data, but won't be displayed in HTML export for scrolls
+                            effect: item.effect || 'N/A',
+                            level: item.level || 'N/A',
+                            verbal: item.verbal || 'N/A',
+                            duration: item.duration || 'N/A'
+                        });
+                    } else {
+                        // All other items are formatted as a single string
+                        let singleItemDetailsString = '';
+                        singleItemDetailsString += `${categoryDisplayName}\n`; // Category name only, no "Category:" prefix
+                        singleItemDetailsString += `${item.name || item.type}\n`;
+
+                        switch (item.category) {
+                            case 'potions':
+                                singleItemDetailsString += `Effect: ${item.effect || 'N/A'}\n`;
+                                singleItemDetailsString += `Level: ${item.level || 'N/A'}\n`;
+                                singleItemDetailsString += `Duration: ${item.duration || 'N/A'}\n`;
+                                singleItemDetailsString += `Expiry: ${item.expiryDate || 'N/A'}`;
+                                break;
+                            case 'alchemy':
+                                singleItemDetailsString += `Type: ${item.type || 'N/A'}\n`;
+                                singleItemDetailsString += `Duration: ${item.duration || 'N/A'}\n`;
+                                singleItemDetailsString += `Effect: ${item.effect || 'N/A'}\n`;
+                                singleItemDetailsString += `Expiry: ${item.expiryDate || 'N/A'}`;
+                                break;
+                            case 'refinedMaterials':
+                                singleItemDetailsString += `Value: ${item.value.toFixed(0) || 'N/A'}`; // Changed to Value
+                                break;
+                            case 'weapons':
+                                singleItemDetailsString += `Material: ${item.material || 'N/A'}\n`;
+                                singleItemDetailsString += `Expiry: ${item.expiryDate || 'N/A'}`;
+                                break;
+                            case 'armour':
+                                singleItemDetailsString += `Material: ${item.material || 'N/A'}\n`;
+                                singleItemDetailsString += `Armour Value: ${item.armourValue || 'N/A'}\n`;
+                                singleItemDetailsString += `Expiry: ${item.expiryDate || 'N/A'}`;
+                                break;
+                            case 'traps':
+                                singleItemDetailsString += `Expiry: ${item.expiryDate || 'N/A'}`;
+                                break;
+                            case 'runicTattoos':
+                                singleItemDetailsString += `Effect: ${item.effect || 'N/A'}\n`;
+                                singleItemDetailsString += `Duration: ${item.duration || 'N/A'}\n`;
+                                singleItemDetailsString += `Level: ${item.level || 'N/A'}\n`;
+                                // Removed Verbal from export data for Runic Tattoos
+                                singleItemDetailsString += `Expiry: ${item.expiryDate || 'N/A'}`;
+                                break;
+                            case 'formalComponents':
+                                singleItemDetailsString += `Type: ${item.type || 'N/A'}\n`;
+                                singleItemDetailsString += `Value: ${item.value.toFixed(0) || 'N/A'}`;
+                                break;
+                        }
+                        allOtherItems.push(singleItemDetailsString);
+                    }
+                }
+            });
+
+            // Group allOtherItems into rows for side-by-side display
+            const groupedAllOtherItems = [];
+            for (let i = 0; i < allOtherItems.length; i += EXPORT_COLUMNS_PER_ROW_NORMAL) {
+                const row = [];
+                for (let j = 0; j < EXPORT_COLUMNS_PER_ROW_NORMAL; j++) {
+                    if (allOtherItems[i + j]) {
+                        row.push(allOtherItems[i + j]);
+                    } else {
+                        row.push(''); // Fill empty cells if not enough items for a full row
+                    }
+                }
+                groupedAllOtherItems.push(row);
+            }
+
+            // Group scroll items into rows for side-by-side display
+            const groupedScrollItems = [];
+            for (let i = 0; i < scrollItems.length; i += EXPORT_COLUMNS_PER_ROW_SCROLLS) {
+                const row = [];
+                for (let j = 0; j < EXPORT_COLUMNS_PER_ROW_SCROLLS; j++) {
+                    if (scrollItems[i + j]) {
+                        row.push(scrollItems[i + j]);
+                    } else {
+                        row.push({}); // Fill empty cells with empty object
+                    }
+                }
+                groupedScrollItems.push(row);
+            }
+
+            return { adventureTitle, totalCost, groupedAllOtherItems, groupedScrollItems };
+        }
+
+        
+
+        // Export as HTML
+        exportHtmlBtn.onclick = function() {
+            const { adventureTitle, totalCost, groupedAllOtherItems, groupedScrollItems } = getExportData();
+
+            let htmlContent = `
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>${adventureTitle} Loot Report</title>
+                    <style>
+                        body { font-family: sans-serif; margin: 20px; background-color: #1a202c; color: #e2e8f0; }
+                        h1 { color: #edf2f7; }
+                        h2 { color: #cbd5e0; }
+                        h3 { color: #a0aec0; margin-top: 20px; }
+                        table {
+                            width: 100%; /* Ensure table takes full width */
+                            border-collapse: collapse;
+                            margin-top: 10px;
+                            page-break-inside: auto;
+                        }
+                        .normal-table {
+                            width: 100%; /* Allow non-scroll table to size naturally */
+                            table-layout: auto;
+                        }
+                        .scroll-table {
+                            width: 100%; /* Ensure scroll table takes full width */
+                            border-collapse: collapse; /* Crucial for removing space between cells */
+                            table-layout: fixed; /* Crucial for side-by-side cells with percentage width */
+border: 2px solid #4a5568;
+                        }
+                        tr { page-break-inside: avoid; page-break-after: auto; }
+                        /* Default styles for normal cells */
+                        .normal-cell {
+                            border: 1px solid #4a5568; /* Darker border */
+                            padding: 8px;
+                            text-align: left;
+                            height: 3cm;
+                            width: 5cm; /* Adjusted width for HTML export (increased from 6.06cm) */
+                            box-sizing: border-box;
+                            vertical-align: top;
+                            overflow: hidden;
+                            word-wrap: break-word;
+                            white-space: pre-wrap;
+                            font-size: 12px;
+                            background-color: #2d3748; /* Darker cell background */
+                            color: #e2e8f0; /* Light text */
+                        }
+        /* Specific styles for scroll cells in HTML export */
+       
+                        .scroll-cell {
+                            border: 2px solid #4a5568; /* Darker border */
+                            padding: 8px;
+                            text-align: left;
+                            height: 12cm; /* Larger height */
+                            width: 7cm; /* Larger width */
+                            box-sizing: border-box;
+                            vertical-align: top;
+                            overflow: hidden;
+
+                            word-wrap: break-word;
+                            white-space: pre-wrap;
+                            font-size: 12px;
+                            background-color: #2d3748; /* Darker cell background */
+                            color: #e2e8f0; /* Light text */
+				 position: relative;
+                        }
+                        .scroll-cell .scroll-content {
+                            flex-grow: 1; /* Allows content to take available space */
+                            display: flex;
+                            flex-direction: column;
+                        }
+                        .scroll-cell .item-name {
+                            font-size: 24px;
+                            font-weight: bold;
+                        }
+                        .scroll-cell .verbal-field {
+                            font-size: 2em; /* Increase font size */
+                            font-style: italic; /* Italicize */
+                            margin-top: 8px; /* Spacing above verbal field */
+                        }
+                        .scroll-cell .duration-field {
+                            margin-top: auto; /* Pushes it to the bottom */
+                        }
+                        th { background-color: #4a5568; color: #cbd5e0; } /* Darker table header */
+                    </style>
+                </head>
+                <body>
+                    <h1>${adventureTitle}</h1>
+                    <h2>Total Production Cost: ${totalCost}</h2>
+            `;
+
+            // Render All Other Loot Items
+            if (groupedAllOtherItems.length > 0) {
+
+                htmlContent += `<table class="normal-table"><thead><tr></tr></thead><tbody>`;
+                groupedAllOtherItems.forEach(row => {
+                    htmlContent += `<tr>`;
+                    row.forEach(cellContent => {
+                        const lines = cellContent.split('\n');
+                        let formattedCellContent = '';
+                        if (lines.length > 0) {
+                            formattedCellContent += `<span style="font-weight: bold;">${lines[0]}</span>`; // Category
+                            if (lines.length > 1) {
+                                formattedCellContent += `<br><span style="font-weight: bold;">${lines[1]}</span>`; // Item Name
+                                // Replace "QTY:" with "Value:" for refinedMaterials in HTML export
+                                for (let i = 2; i < lines.length; i++) {
+                                    let line = lines[i];
+                                    if (line.startsWith('QTY:')) {
+                                        line = line.replace('QTY:', 'Value:');
+                                    }
+                                    formattedCellContent += `<br>${line}`;
+                                }
+                            }
+                        } else {
+                            formattedCellContent = cellContent;
+                        }
+                        htmlContent += `<td class="normal-cell">${formattedCellContent}</td>`;
+                    });
+                    htmlContent += `</tr>`;
+                });
+                htmlContent += `</tbody></table>`;
+            }
+
+            // Render Scrolls
+            if (groupedScrollItems.length > 0) {
+
+                htmlContent += `<table class="scroll-table">
+                    <colgroup>
+                        <col style="width: 50%;">
+                        <col style="width: 50%;">
+                    </colgroup>
+                    <tbody>`;
+                groupedScrollItems.forEach(row => {
+                    htmlContent += `<tr>`;
+                    row.forEach(item => {
+                        if (!item || !item.name) {
+                            htmlContent += `<td class="scroll-cell"></td>`;
+                            return;
+                        }
+                        htmlContent += `<td class="scroll-cell">
+                            <div class="scroll-content">
+                                <span class="item-name">${item.name}</span>
+                                <p>Effect: ${item.effect}</p>
+                                <p>Level: ${item.level}</p>
+                                <p class="verbal-field">Verbal: ${item.verbal}</p>
+                            </div>
+                            <p class="duration-field">Duration: ${item.duration}</p>
+                        </td>`;
+                    });
+                    htmlContent += `</tr>`;
+                });
+                htmlContent += `</tbody></table>`;
+            }
+
+            htmlContent += `
+                </body>
+                </html>
+            `;
+
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${adventureTitle.replace(/\s/g, '_')}_loot.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+
+        // Export as XLSX
+        exportXlsxBtn.onclick = function() {
+            const { adventureTitle, totalCost, groupedAllOtherItems, groupedScrollItems } = getExportData();
+
+            const wb = XLSX.utils.book_new();
+
+            // Add Summary Sheet
+            const summaryWs = XLSX.utils.aoa_to_sheet([
+                [adventureTitle],
+                [`Total Production Cost: ${totalCost}`],
+                [] // Empty row for spacing
+            ]);
+            XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+
+            // Add "All Loot Items" sheet (excluding scrolls)
+            if (groupedAllOtherItems.length > 0) {
+                // Define headers for the XLSX, excluding 'Verbal' for Runic Tattoos
+                const allOtherHeader = [['Category', 'Item Name', 'Effect', 'Level', 'Duration', 'Type', 'Material', 'Armour Value', 'Value', 'Cost (Each)', 'Expiry']];
+                const allOtherData = [];
+
+                groupedAllOtherItems.forEach(row => {
+                    row.forEach(itemString => {
+                        if (itemString) {
+                            const lines = itemString.split('\n');
+                            const category = lines[0] ? lines[0].trim() : '';
+                            const name = lines[1] ? lines[1].trim() : '';
+
+                            // Reconstruct the original item object to extract properties for XLSX
+                            const originalItem = selectedItems.find(sItem =>
+                                sItem.name === name &&
+                                (category === 'Potion' && sItem.category === 'potions' ||
+                                 category === 'Alchemy' && sItem.category === 'alchemy' ||
+                                 category === 'Special Material' && sItem.category === 'refinedMaterials' ||
+                                 category === 'Weapon' && sItem.category === 'weapons' ||
+                                 category === 'Armour' && sItem.category === 'armour' ||
+                                 category === 'Trap' && sItem.category === 'traps' ||
+                                 category === 'Runic Tattoo' && sItem.category === 'runicTattoos' ||
+                                 category === 'Formal Component' && sItem.category === 'formalComponents')
+                            );
+
+                            if (originalItem) {
+                                // Dynamically build the row based on category to exclude 'Verbal' for Runic Tattoos
+                                const rowData = [
+                                    category,
+                                    name,
+                                    originalItem.effect || '',
+                                    originalItem.level || '',
+                                    originalItem.duration || '',
+                                    originalItem.type || '',
+                                    originalItem.material || '',
+                                    originalItem.armourValue || '',
+                                    originalItem.value || '',
+                                    originalItem.productionCost || '',
+                                    originalItem.expiryDate || ''
+                                ];
+                                allOtherData.push(rowData);
+                            }
+                        }
+                    });
+                });
+
+                const allOtherWs = XLSX.utils.aoa_to_sheet([...allOtherHeader, ...allOtherData]);
+                const colWidthsAllOther = [
+                    { wch: 15 }, // Category
+                    { wch: 25 }, // Item Name
+                    { wch: 40 }, // Effect
+                    { wch: 10 }, // Level
+                    { wch: 15 }, // Duration
+                    { wch: 15 }, // Type
+                    { wch: 15 }, // Material
+                    { wch: 15 }, // Armour Value
+                    { wch: 10 }, // Value
+                    { wch: 15 }, // Cost (Each)
+                    { wch: 15 }  // Expiry
+                ];
+                allOtherWs['!cols'] = colWidthsAllOther;
+                XLSX.utils.book_append_sheet(wb, allOtherWs, 'All Loot Items');
+            }
+
+            // Add "Scrolls" sheet
+            if (groupedScrollItems.length > 0) {
+                const scrollHeader = [['Scroll Name', 'Category', 'Effect', 'Level', 'Verbal', 'Duration']];
+                const scrollData = [];
+                groupedScrollItems.forEach(row => {
+                    row.forEach(item => {
+                        if (item && item.name) {
+                            scrollData.push([
+                                item.name || '',
+                                item.category || '',
+                                item.effect || '',
+                                item.level || '',
+                                item.verbal || '',
+                                item.duration || ''
+                            ]);
+                        }
+                    });
+                });
+                const scrollWs = XLSX.utils.aoa_to_sheet([...scrollHeader, ...scrollData]);
+                const colWidthsScrolls = [
+                    { wch: 25 }, // Scroll Name
+                    { wch: 15 }, // Category
+                    { wch: 40 }, // Effect
+                    { wch: 10 }, // Level
+                    { wch: 30 }, // Verbal
+                    { wch: 15 }  // Duration
+                ];
+                scrollWs['!cols'] = colWidthsScrolls;
+                XLSX.utils.book_append_sheet(wb, scrollWs, 'Scrolls');
+            }
+
+            // Write the workbook to a file
+            XLSX.writeFile(wb, `${adventureTitle.replace(/\s/g, '_')}_loot.xlsx`);
+        };
+
+
+        // --- Event Listeners ---
+
+        // Tab switching
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                currentCategory = button.dataset.category;
+                renderItems();
+            });
+        });
+
+        // Clear Selected Items button functionality
+        clearSelectedItemsBtn.addEventListener('click', () => {
+            // Using a custom modal for confirmation
+            const confirmClear = (callback) => {
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                modal.style.display = 'flex'; // Make it visible
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        <h3 class="text-xl font-semibold mb-4">Confirm Clear</h3>
+                        <p class="mb-6">Are you sure you want to clear all selected loot items?</p>
+                        <div class="flex justify-end gap-3">
+                            <button id="confirmNo" class="btn-secondary">No</button>
+                            <button id="confirmYes" class="btn-danger">Yes, Clear All</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+
+                document.getElementById('confirmYes').onclick = () => {
+                    document.body.removeChild(modal);
+                    callback(true);
+                };
+                document.getElementById('confirmNo').onclick = () => {
+                    document.body.removeChild(modal);
+                    callback(false);
+                };
+                modal.onclick = (event) => {
+                    if (event.target === modal) {
+                        document.body.removeChild(modal);
+                        callback(false);
+                    }
+                }
+            };
+
+            confirmClear((result) => {
+                if (result) {
+                    selectedItems = []; // Clear the array
+                    renderItems(); // Re-render categories to reset "In Loot" counts
+                    updateSelectedItemsDisplay(); // Update the selected items table
+                    calculateTotalCost(); // Recalculate total cost
+                }
+            });
+        });
+
+        // Clear Adventure Title button functionality
+        clearTitleBtn.addEventListener('click', () => {
+            adventureTitleInput.value = ''; // Clear the input field
+        });
+
+
+        // Initial render
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadRunicTattoosData();
+
+            const eventVars = window.EventVariables?.get?.();
+            const eventTitle = window.EventVariables?.buildTitle?.(eventVars);
+            if (adventureTitleInput && !adventureTitleInput.value.trim() && eventTitle) {
+                adventureTitleInput.value = eventTitle;
+            }
+
+            // Update "Desctruction" to "Destruction" in formalComponents
+            items.formalComponents.forEach(component => {
+                if (component.type === 'Desctruction') {
+                    component.type = 'Destruction';
+                }
+            });
+
+            renderItems();
+            updateSelectedItemsDisplay();
+            calculateTotalCost();
+        });
+    </script>
+</body>
+</html>
+

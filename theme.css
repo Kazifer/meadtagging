@@ -1,0 +1,97 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    --app-bg: #1a202c;
+    --app-panel: #2d3748;
+    --app-text: #e2e8f0;
+    --app-heading: #edf2f7;
+    --app-muted: #cbd5e0;
+    --app-border: #4a5568;
+}
+
+body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background-color: var(--app-bg);
+    color: var(--app-text);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: var(--app-panel);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+h1 {
+    margin-top: 0;
+    color: var(--app-heading);
+}
+
+p {
+    color: var(--app-muted);
+    line-height: 1.6;
+}
+
+.content-shell {
+    padding: 24px;
+}
+
+.app-nav {
+    background: #23272a;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    padding: 0 32px;
+    position: relative;
+    z-index: 5;
+}
+
+.app-menu {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 24px;
+    height: 60px;
+    align-items: center;
+}
+
+.app-menu li {
+    display: inline;
+}
+
+.app-menu a {
+    color: #f1f1f1;
+    text-decoration: none;
+    padding: 10px 18px;
+    border-radius: 6px;
+    transition: background 0.2s, color 0.2s;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+.app-menu a:hover,
+.app-menu a:focus {
+    background: #40444b;
+    color: #00bcd4;
+}
+
+.app-menu a.active {
+    background: #00bcd4;
+    color: #181a1b;
+    font-weight: 600;
+}
+
+.app-menu a.active:hover {
+    background: #00acc1;
+}
+
+#content h1 {
+    color: var(--app-heading);
+}
+
+#content p {
+    color: var(--app-muted);
+    line-height: 1.6;
+}

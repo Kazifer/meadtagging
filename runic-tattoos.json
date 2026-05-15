@@ -1,0 +1,353 @@
+[
+  {
+    "id": "rt_detect_poison",
+    "name": "Detect Poison",
+    "level": 1,
+    "productionCost": 1,
+    "duration": "Instant",
+    "effect": "Reveals all active poisons on target",
+    "verbal": "I call upon nature to Detect Poison"
+  },
+  {
+    "id": "rt_darkness",
+    "name": "Darkness",
+    "level": 1,
+    "productionCost": 1,
+    "duration": "Instant",
+    "effect": "Extinguish 1 in-game light",
+    "verbal": "I grant you the power of Darkness."
+  },
+  {
+    "id": "rt_illumination",
+    "name": "Illumination",
+    "level": 1,
+    "productionCost": 1,
+    "duration": "5 Days",
+    "effect": "Creates a light (must have phys rep)",
+    "verbal": "I grant you the power of Illumination"
+  },
+  {
+    "id": "rt_endow",
+    "name": "Endow",
+    "level": 1,
+    "productionCost": 1,
+    "duration": "Indefinite",
+    "effect": "Allows recipient to deal two additional points of damage for next attack with a melee weapon",
+    "verbal": "I grant you the power of an Endow"
+  },
+  {
+    "id": "rt_mend",
+    "name": "Mend",
+    "level": 1,
+    "productionCost": 1,
+    "duration": "Instant",
+    "effect": "Target's (unconscious or dying) body is 1",
+    "verbal": "I call upon nature to Mend you"
+  },
+  {
+    "id": "rt_detect_magic",
+    "name": "Detect Magic",
+    "level": 2,
+    "productionCost": 2,
+    "duration": "Instant",
+    "effect": "Reveals to the caster (and only the caster) if any magic exists on the target.",
+    "verbal": "I call forth mystic power to Detect Magic"
+  },
+  {
+    "id": "rt_leaf_armor",
+    "name": "Leaf Armor",
+    "level": 2,
+    "productionCost": 2,
+    "duration": "Indefinite",
+    "effect": "5 points of magical armour",
+    "verbal": "May Nature Grant me Leaf Armor"
+  },
+  {
+    "id": "rt_magic_armor",
+    "name": "Magic Armor",
+    "level": 2,
+    "productionCost": 2,
+    "duration": "Indefinite",
+    "effect": "Automatic spell defence against next physical attack",
+    "verbal": "I grant you the power of a Magic Armor"
+  },
+  {
+    "id": "rt_delayed_endow",
+    "name": "Delayed Endow",
+    "level": 2,
+    "productionCost": 2,
+    "duration": "Indefinite",
+    "effect": "Two additional points of damage with melee weapon - One attack. May be expended to Rip and Pin and Bind effects",
+    "verbal": "I grant you the power of a Delayed Endow"
+  },
+  {
+    "id": "rt_pin",
+    "name": "Pin",
+    "level": 2,
+    "productionCost": 2,
+    "duration": "Line of Sight",
+    "effect": "This binding spell immediately forces the right foot of the victim to be fixed in place.",
+    "verbal": "With mystic force I Pin you"
+  },
+  {
+    "id": "rt_tyrran_beam",
+    "name": "Tyrran Beam",
+    "level": 2,
+    "productionCost": 2,
+    "duration": "Instant",
+    "effect": "10 points of damage to extra-planar being",
+    "verbal": "I harness the power of a Tyrran Beam 10"
+  },
+  {
+    "id": "rt_weakness",
+    "name": "Weakness",
+    "level": 3,
+    "productionCost": 3,
+    "duration": "Indefinite",
+    "effect": "Victim deals 5 points less damage with a weapon",
+    "verbal": "I curse you with Weakness"
+  },
+  {
+    "id": "rt_remove_weakness",
+    "name": "Remove Weakness",
+    "level": 3,
+    "productionCost": 3,
+    "duration": "Instant",
+    "effect": "Removes any active Weakness effects",
+    "verbal": "I rid you of your Weakness"
+  },
+  {
+    "id": "rt_shatter",
+    "name": "Shatter",
+    "level": 3,
+    "productionCost": 3,
+    "duration": "Instant",
+    "effect": "Causes targeted hand-held item to become useless and unusable. Up to the size of a shield.",
+    "verbal": "I summon a force to Shatter <item>"
+  },
+  {
+    "id": "rt_spittle_poison_spittle",
+    "name": "Spittle/Poison Spittle",
+    "level": 3,
+    "productionCost": 3,
+    "duration": "Instant",
+    "effect": "15 points of damage to target. Acid or Poison",
+    "verbal": "I harness the power of <physical acid/damage poison> 15"
+  },
+  {
+    "id": "rt_awaken",
+    "name": "Awaken",
+    "level": 4,
+    "productionCost": 4,
+    "duration": "Instant",
+    "effect": "Removes Silence, Sleep, Calm, Shun, Charm, Fear",
+    "verbal": "I command you to Awaken"
+  },
+  {
+    "id": "rt_nausea",
+    "name": "Nausea",
+    "level": 4,
+    "productionCost": 4,
+    "duration": "5 Minutes",
+    "effect": "Victim becomes nauseated, no in-game actions",
+    "verbal": "I call upon nature to Nauseate you"
+  },
+  {
+    "id": "rt_remove_nausea",
+    "name": "Remove Nausea",
+    "level": 4,
+    "productionCost": 4,
+    "duration": "Instant",
+    "effect": "This spell removes the effect Nausea.",
+    "verbal": "I call upon nature to Remove Nausea"
+  },
+  {
+    "id": "rt_bind",
+    "name": "Bind",
+    "level": 4,
+    "productionCost": 4,
+    "duration": "Line of Sight",
+    "effect": "Bind victims arms",
+    "verbal": "With mystic force, I Bind you"
+  },
+  {
+    "id": "rt_poison_shield",
+    "name": "Poison Shield",
+    "level": 4,
+    "productionCost": 4,
+    "duration": "Indefinite",
+    "effect": "Protects recipient from next poison attack",
+    "verbal": "I grant you the power of a Poison Shield"
+  },
+  {
+    "id": "rt_treeskin",
+    "name": "Treeskin",
+    "level": 4,
+    "productionCost": 4,
+    "duration": "Indefinite",
+    "effect": "10 points of magical armour, caster only",
+    "verbal": "May nature grant me Treeskin"
+  },
+  {
+    "id": "rt_tyrran_bolt",
+    "name": "Tyrran Bolt",
+    "level": 4,
+    "productionCost": 4,
+    "duration": "Instant",
+    "effect": "20 points of damage to exra-planar being",
+    "verbal": "I harness the power of a Tyrran Bolt 20"
+  },
+  {
+    "id": "rt_greater_spittle",
+    "name": "Greater Spittle",
+    "level": 5,
+    "productionCost": 5,
+    "duration": "Instant",
+    "effect": "25 points of damage to target. Acid or Poison",
+    "verbal": "I harness the power of <physical acid/damage poison> 25"
+  },
+  {
+    "id": "rt_animal_ways",
+    "name": "Animal Ways",
+    "level": 5,
+    "productionCost": 5,
+    "duration": "5 Minutes",
+    "effect": "Caster is perceived as target animal and can communicate",
+    "verbal": "May nature grant me Animal Ways as <animal type or plant>"
+  },
+  {
+    "id": "rt_silence",
+    "name": "Silence",
+    "level": 5,
+    "productionCost": 5,
+    "duration": "5 Minutes",
+    "effect": "Victim cannot speak or cast spells",
+    "verbal": "I command you to Silence"
+  },
+  {
+    "id": "rt_tyrran_aura",
+    "name": "Tyrran Aura",
+    "level": 5,
+    "productionCost": 5,
+    "duration": "Instant",
+    "effect": "Recipient may use carrier Tyrran against 1 opponent",
+    "verbal": "I Grant you the Power of a Tyrran Aura"
+  },
+  {
+    "id": "rt_release",
+    "name": "Release",
+    "level": 5,
+    "productionCost": 5,
+    "duration": "Instant",
+    "effect": "Frees the target binding effects or held by non-magical means",
+    "verbal": "With mystic force I Release you"
+  },
+  {
+    "id": "rt_shield_magic",
+    "name": "Shield Magic",
+    "level": 5,
+    "productionCost": 5,
+    "duration": "Indefinite",
+    "effect": "Bestows an automatic Spell Defense triggered by a Spellstrike, or magical effect.",
+    "verbal": "I call forth mystic power to Shield Magic"
+  },
+  {
+    "id": "rt_elemental_shield",
+    "name": "Elemental Shield",
+    "level": 6,
+    "productionCost": 6,
+    "duration": "Indefinite",
+    "effect": "Automatic spell defence against next elemental attack",
+    "verbal": "I grant you the power of an Elemental Shield"
+  },
+  {
+    "id": "rt_sleep",
+    "name": "Sleep",
+    "level": 6,
+    "productionCost": 6,
+    "duration": "5 Minutes",
+    "effect": "Causes victim to fall into a deep sleep for the duration",
+    "verbal": "I command you to Sleep"
+  },
+  {
+    "id": "rt_destroy",
+    "name": "Destroy",
+    "level": 6,
+    "productionCost": 6,
+    "duration": "Instant",
+    "effect": "Causes the targeted item to become useless and unusable. The target may be up to the size of a normal door.",
+    "verbal": "I summon a force to Destroy <item>"
+  },
+  {
+    "id": "rt_tyrran_storm",
+    "name": "Tyrran Storm",
+    "level": 6,
+    "productionCost": 6,
+    "duration": "Instant",
+    "effect": "30 points of damage to exra-planar being",
+    "verbal": "I harness the power of a Tyrran Storm 30"
+  },
+  {
+    "id": "rt_deadly_spittle",
+    "name": "Deadly Spittle",
+    "level": 7,
+    "productionCost": 7,
+    "duration": "Instant",
+    "effect": "35 points of damage to target. Acid or Poison",
+    "verbal": "I harness the power of <physical acid/damage poison> 35"
+  },
+  {
+    "id": "rt_pestilence",
+    "name": "Pestilence",
+    "level": 7,
+    "productionCost": 7,
+    "duration": "5 Minutes",
+    "effect": "Induces Drain effect on target. No in-game skills or running",
+    "verbal": "I harness the power of Pestilence"
+  },
+  {
+    "id": "rt_dispel_magic",
+    "name": "Dispel Magic",
+    "level": 8,
+    "productionCost": 8,
+    "duration": "Instant",
+    "effect": "Removes all magical effects on the target",
+    "verbal": "I call forth mystic power to Dispel Magic"
+  },
+  {
+    "id": "rt_paralyze",
+    "name": "Paralyze",
+    "level": 8,
+    "productionCost": 8,
+    "duration": "5 Minutes",
+    "effect": "Completely immobilises victim",
+    "verbal": "I curse you with Paralysis"
+  },
+  {
+    "id": "rt_unparalyze",
+    "name": "Unparalyze",
+    "level": 8,
+    "productionCost": 8,
+    "duration": "Instant",
+    "effect": "Removes a Paralyze effect",
+    "verbal": "I rid you of Paralysis"
+  },
+  {
+    "id": "rt_reflect_magic",
+    "name": "Reflect Magic",
+    "level": 8,
+    "productionCost": 8,
+    "duration": "Indefinite",
+    "effect": "Automatic spell defence against next magical attack",
+    "verbal": "I call forth mystic power to Reflect Magic"
+  },
+  {
+    "id": "rt_tyrran_blast",
+    "name": "Tyrran Blast",
+    "level": 8,
+    "productionCost": 8,
+    "duration": "Instant",
+    "effect": "45 points of damage to exra-planar being",
+    "verbal": "I harness the power of a Tyrran Blast 40"
+  }
+]
