@@ -345,20 +345,21 @@ border: 1px solid #4a5568;
     </div>
 
     <script src="event-variables.js"></script>
+    <script>
+        // Needed by production-data.js during initial script evaluation.
+        function getOneYearFromTodayDateString() {
+            const today = new Date();
+            today.setFullYear(today.getFullYear() + 1);
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+    </script>
     <script src="production-data.js"></script>
     <script>
         // Initialize jsPDF for PDF export
         const { jsPDF } = window.jspdf;
-
-        // Function to get today's date + 1 year in ISO (YYYY-MM-DD) format
-        function getOneYearFromTodayDateString() {
-            const today = new Date();
-            today.setFullYear(today.getFullYear() + 1); // Add one year
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
-            const day = String(today.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
 
         // Data structure for items - Initialized with today's date + 1 year for expiry where applicable
         let items = window.productionItems
