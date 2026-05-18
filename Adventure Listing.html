@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adventure Listing</title>
+    <link rel="stylesheet" href="theme.css">
+    <style>
+        .container {
+            max-width: 1400px;
+        }
+
+        .intro {
+            color: var(--app-muted);
+            margin-bottom: 12px;
+        }
+
+        .stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .stat-chip {
+            background: #111827;
+            border: 1px solid var(--app-border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: var(--app-text);
+            font-size: 0.92rem;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: filter 0.2s ease;
+        }
+
+        .btn:hover {
+            filter: brightness(1.06);
+        }
+
+        .btn-secondary {
+            background: #4a5568;
+            color: #edf2f7;
+        }
+
+        .table-wrap {
+            overflow: auto;
+            max-height: calc(100vh - 260px);
+            border: 1px solid var(--app-border);
+            border-radius: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1300px;
+            background: #111827;
+        }
+
+        th,
+        td {
+            border-bottom: 1px solid var(--app-border);
+            padding: 8px;
+            text-align: left;
+            vertical-align: top;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: #0f172a;
+            color: #d1d5db;
+            font-weight: 700;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 6;
+            box-shadow: 0 1px 0 var(--app-border);
+        }
+
+        th:nth-child(12),
+        th:nth-child(13),
+        th:nth-child(14),
+        td:nth-child(12),
+        td:nth-child(13),
+        td:nth-child(14) {
+            width: 92px;
+            min-width: 92px;
+            max-width: 92px;
+            text-align: center;
+            box-sizing: border-box;
+            padding-left: 6px;
+            padding-right: 6px;
+        }
+
+        th:nth-child(12),
+        th:nth-child(13),
+        th:nth-child(14) {
+            border-left: 1px solid var(--app-border);
+        }
+
+        tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .cell-input,
+        .cell-select,
+        .cell-textarea {
+            width: 100%;
+            border: 1px solid var(--app-border);
+            border-radius: 6px;
+            background: #0b1220;
+            color: var(--app-text);
+            padding: 6px 8px;
+            font-size: 0.88rem;
+            box-sizing: border-box;
+        }
+
+        .cell-input:focus,
+        .cell-select:focus,
+        .cell-textarea:focus {
+            outline: 2px solid #00bcd4;
+            outline-offset: 1px;
+        }
+
+        .cell-textarea {
+            min-height: 54px;
+            resize: vertical;
+        }
+
+        .cell-readonly {
+            display: inline-block;
+            width: 100%;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            color: var(--app-text);
+            background: transparent;
+            border: 0;
+            padding: 0;
+        }
+
+        .checkbox-cell {
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .cell-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            display: inline-grid;
+            place-content: center;
+            margin: 0 auto;
+            cursor: pointer;
+            border: 2px solid #93a4bf;
+            border-radius: 4px;
+            background: #0b1220;
+        }
+
+        .cell-checkbox::before {
+            content: "";
+            width: 10px;
+            height: 10px;
+            transform: scale(0);
+            transition: transform 120ms ease-in-out;
+            background: #00bcd4;
+            border-radius: 2px;
+        }
+
+        .cell-checkbox:checked::before {
+            transform: scale(1);
+        }
+
+        .status {
+            margin-top: 12px;
+            color: var(--app-muted);
+            min-height: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>Adventure Listing</h1>
+        <p class="intro">Manage adventure rows here. This table is shared with Adventure Levelling metrics.</p>
+
+        <div class="stats">
+            <div class="stat-chip">Event: <span id="eventTitle">-</span></div>
+            <div class="stat-chip">Expected Adventures: <span id="expectedCount">0</span></div>
+            <div class="stat-chip">Event Level: <span id="eventLevel">-</span></div>
+        </div>
+
+        <div class="actions">
+            <button id="resetPageBtn" class="btn btn-secondary" type="button">Clear Adventure Listing Data</button>
+        </div>
+
+        <div class="table-wrap">
+            <table aria-label="Adventure listing table">
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Title</th>
+                        <th>Type</th>
+                        <th>Author</th>
+                        <th>NPCs</th>
+                        <th>Difficulty</th>
+                        <th>Target APL</th>
+                        <th>APL</th>
+                        <th>Silver</th>
+                        <th>Production</th>
+                        <th>Notes</th>
+                        <th>Received</th>
+                        <th>Processed</th>
+                        <th>Tagged</th>
+                    </tr>
+                </thead>
+                <tbody id="adventureTableBody"></tbody>
+            </table>
+        </div>
+
+        <p id="statusMessage" class="status"></p>
+    </main>
+
+    <script src="event-variables.js"></script>
+    <script>
+        const STORAGE_KEY = 'adventureLevelling.v1';
+
+        const body = document.getElementById('adventureTableBody');
+        const eventTitleEl = document.getElementById('eventTitle');
+        const expectedCountEl = document.getElementById('expectedCount');
+        const eventLevelEl = document.getElementById('eventLevel');
+        const resetPageBtn = document.getElementById('resetPageBtn');
+        const statusMessage = document.getElementById('statusMessage');
+
+        let rows = [];
+
+        function showStatus(message) {
+            statusMessage.textContent = message;
+        }
+
+        function parseAdventureCount(value) {
+            const parsed = Number(value);
+            if (!Number.isFinite(parsed)) return 0;
+            return Math.max(0, Math.floor(parsed));
+        }
+
+        function normalizeEventLevel(value) {
+            const level = (value || '').toString().trim().toLowerCase();
+            if (level === 'min' || level === 'easy') return 'easy';
+            if (level === 'max' || level === 'hard') return 'hard';
+            return 'medium';
+        }
+
+        function defaultRow(index) {
+            return {
+                no: String(index + 1),
+                title: '',
+                type: '',
+                author: '',
+                npcs: '',
+                difficulty: '',
+                apl: '',
+                silver: '',
+                production: '',
+                silverManual: false,
+                productionManual: false,
+                notes: '',
+                received: false,
+                processed: false,
+                tagged: false
+            };
+        }
+
+        function normalizeRow(row, index) {
+            const src = row || {};
+            return {
+                no: src.no ?? String(index + 1),
+                title: src.title ?? '',
+                type: src.type ?? '',
+                author: src.author ?? '',
+                npcs: src.npcs ?? '',
+                difficulty: src.difficulty ?? '',
+                apl: src.apl ?? '',
+                silver: src.silver ?? '',
+                production: src.production ?? '',
+                silverManual: Boolean(src.silverManual),
+                productionManual: Boolean(src.productionManual),
+                notes: src.notes ?? '',
+                received: Boolean(src.received),
+                processed: Boolean(src.processed),
+                tagged: Boolean(src.tagged)
+            };
+        }
+
+        function loadRows() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : { rows: [] };
+                const loadedRows = Array.isArray(parsed?.rows) ? parsed.rows : [];
+                rows = loadedRows.map((row, i) => normalizeRow(row, i));
+            } catch (error) {
+                console.error('AdventureListing: failed to load data', error);
+                rows = [];
+            }
+        }
+
+        function saveRows() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({ rows }));
+            } catch (error) {
+                console.error('AdventureListing: failed to save data', error);
+            }
+        }
+
+        function syncRowCountToEventVariables() {
+            const vars = window.EventVariables?.get?.() || {};
+            const targetCount = parseAdventureCount(vars.totalAdventures);
+            const title = window.EventVariables?.buildTitle?.(vars) || '';
+            const levelMap = {
+                easy: 'Easy',
+                medium: 'Medium',
+                hard: 'Hard'
+            };
+            const rawDifficulty = normalizeEventLevel(vars.eventDifficulty || 'medium');
+
+            eventTitleEl.textContent = title || '-';
+            expectedCountEl.textContent = String(targetCount);
+            eventLevelEl.textContent = levelMap[rawDifficulty] || '-';
+
+            if (rows.length < targetCount) {
+                for (let i = rows.length; i < targetCount; i++) {
+                    rows.push(defaultRow(i));
+                }
+                saveRows();
+            } else if (rows.length > targetCount) {
+                rows = rows.slice(0, targetCount);
+                saveRows();
+            }
+        }
+
+        function parseNumber(value) {
+            const parsed = Number(value);
+            return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function formatDecimal(value) {
+            const rounded = Math.round((value || 0) * 100) / 100;
+            return String(rounded);
+        }
+
+        function formatAutoAmount(value) {
+            const rounded = Math.round((value || 0) * 100) / 100;
+            return Number.isFinite(rounded) ? String(rounded) : '0';
+        }
+
+        function computePerAplRatios() {
+            const vars = window.EventVariables?.get?.() || {};
+            const totalBuild = Math.max(0, parseNumber(vars.totalEventBuild));
+            const players = Math.max(0, parseNumber(vars.players));
+            const eventDays = Math.max(0, parseNumber(vars.eventDays));
+            const totalAdventures = parseAdventureCount(vars.totalAdventures);
+            const playersPerAdventure = Math.max(0, parseNumber(vars.playersPerAdventure));
+            const eventLevel = normalizeEventLevel(vars.eventDifficulty || 'medium');
+
+            const averageBuild = players > 0 ? (totalBuild / players) : 0;
+            const averageLevel = Math.floor((averageBuild / 10) - 4);
+            const levelsPerAdventure = averageLevel * playersPerAdventure;
+            const totalEventAplEasy = levelsPerAdventure * totalAdventures;
+            const totalEventAplMedium = totalEventAplEasy * 1.2;
+            const totalEventAplHard = totalEventAplEasy * 1.5;
+
+            let selectedTotalGoal = totalEventAplMedium;
+            if (eventLevel === 'hard') selectedTotalGoal = totalEventAplHard;
+            else if (eventLevel === 'easy') selectedTotalGoal = totalEventAplEasy;
+
+            const totalSilver = Math.ceil(totalBuild * 1.5);
+            const silverPerApl = selectedTotalGoal > 0 ? (totalSilver / selectedTotalGoal) : 0;
+
+            const productionMax = Math.ceil((totalBuild * eventDays) / 5);
+            const productionMin = Math.floor(productionMax / 2);
+            const productionMid = Math.floor((productionMax + productionMin) / 2);
+            let selectedProductionGoal = productionMid;
+            if (eventLevel === 'hard') selectedProductionGoal = productionMax;
+            else if (eventLevel === 'easy') selectedProductionGoal = productionMin;
+
+            const productionPerApl = selectedTotalGoal > 0 ? (selectedProductionGoal / selectedTotalGoal) : 0;
+
+            return {
+                silverPerApl,
+                productionPerApl
+            };
+        }
+
+        function applyAutoCalculatedAmounts() {
+            const ratios = computePerAplRatios();
+
+            rows.forEach((row) => {
+                const aplValue = parseNumber(row.apl);
+
+                if (!row.silverManual) {
+                    row.silver = formatAutoAmount(aplValue * ratios.silverPerApl);
+                }
+
+                if (!row.productionManual) {
+                    row.production = formatAutoAmount(aplValue * ratios.productionPerApl);
+                }
+            });
+        }
+
+        function computeAplPerAdventureTargets() {
+            const vars = window.EventVariables?.get?.() || {};
+            const totalBuild = Math.max(0, parseNumber(vars.totalEventBuild));
+            const players = Math.max(0, parseNumber(vars.players));
+            const totalAdventures = parseAdventureCount(vars.totalAdventures);
+            const playersPerAdventure = Math.max(0, parseNumber(vars.playersPerAdventure));
+            const eventLevel = normalizeEventLevel(vars.eventDifficulty || 'medium');
+
+            const averageBuild = players > 0 ? (totalBuild / players) : 0;
+            const averageLevel = Math.floor((averageBuild / 10) - 4);
+            const levelsPerAdventure = averageLevel * playersPerAdventure;
+            const totalEventAplEasy = levelsPerAdventure * totalAdventures;
+            const totalEventAplMedium = totalEventAplEasy * 1.2;
+            const totalEventAplHard = totalEventAplEasy * 1.5;
+
+            let selectedTotalGoal = totalEventAplMedium;
+            if (eventLevel === 'hard') selectedTotalGoal = totalEventAplHard;
+            else if (eventLevel === 'easy') selectedTotalGoal = totalEventAplEasy;
+
+            const counts = { easy: 0, medium: 0, hard: 0 };
+            rows.forEach((row) => {
+                const difficulty = String(row?.difficulty || '').trim().toLowerCase();
+                if (difficulty === 'easy' || difficulty === 'medium' || difficulty === 'hard') {
+                    counts[difficulty] += 1;
+                }
+            });
+
+            const easyScore = counts.easy * 1;
+            const mediumScore = counts.medium * 2;
+            const hardScore = counts.hard * 3;
+            const totalScore = easyScore + mediumScore + hardScore;
+
+            const easyGoal = totalScore > 0 ? (selectedTotalGoal * easyScore / totalScore) : 0;
+            const mediumGoal = totalScore > 0 ? (selectedTotalGoal * mediumScore / totalScore) : 0;
+            const hardGoal = totalScore > 0 ? (selectedTotalGoal * hardScore / totalScore) : 0;
+
+            return {
+                easy: counts.easy > 0 ? (easyGoal / counts.easy) : 0,
+                medium: counts.medium > 0 ? (mediumGoal / counts.medium) : 0,
+                hard: counts.hard > 0 ? (hardGoal / counts.hard) : 0
+            };
+        }
+
+        function getRowTargetApl(row, targets) {
+            const difficulty = String(row?.difficulty || '').trim().toLowerCase();
+            if (difficulty === 'easy') return formatDecimal(targets.easy);
+            if (difficulty === 'medium') return formatDecimal(targets.medium);
+            if (difficulty === 'hard') return formatDecimal(targets.hard);
+            return '-';
+        }
+
+        function makeInputCell(type, value, onInput, className = 'cell-input') {
+            const td = document.createElement('td');
+            const input = document.createElement('input');
+            input.type = type;
+            input.className = className;
+            input.value = value;
+            input.addEventListener('input', onInput);
+            td.appendChild(input);
+            return td;
+        }
+
+        function makeSelectCell(options, value, onChange, fallbackValue = 'Other') {
+            const td = document.createElement('td');
+            const select = document.createElement('select');
+            select.className = 'cell-select';
+
+            const optionValues = options.map((opt) => opt.value);
+            const selectedValue = optionValues.includes(value) ? value : fallbackValue;
+
+            for (const opt of options) {
+                const optionEl = document.createElement('option');
+                optionEl.value = opt.value;
+                optionEl.textContent = opt.label;
+                select.appendChild(optionEl);
+            }
+
+            select.value = selectedValue;
+            select.addEventListener('change', onChange);
+            td.appendChild(select);
+            return td;
+        }
+
+        function makeCheckboxCell(checked, onChange) {
+            const td = document.createElement('td');
+            td.className = 'checkbox-cell';
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.className = 'cell-checkbox';
+            input.checked = checked;
+            input.addEventListener('change', onChange);
+            td.appendChild(input);
+            return td;
+        }
+
+        function makeTextareaCell(value, onInput) {
+            const td = document.createElement('td');
+            const textarea = document.createElement('textarea');
+            textarea.className = 'cell-textarea';
+            textarea.value = value;
+            textarea.addEventListener('input', onInput);
+            td.appendChild(textarea);
+            return td;
+        }
+
+        function makeReadonlyValueCell(value) {
+            const td = document.createElement('td');
+            const valueEl = document.createElement('span');
+            valueEl.className = 'cell-readonly';
+            valueEl.textContent = value;
+            td.appendChild(valueEl);
+            return td;
+        }
+
+        function renderRows() {
+            body.innerHTML = '';
+            const targetAplByDifficulty = computeAplPerAdventureTargets();
+            applyAutoCalculatedAmounts();
+
+            rows.forEach((row, index) => {
+                const tr = document.createElement('tr');
+
+                tr.appendChild(makeInputCell('text', row.no, (e) => {
+                    rows[index].no = e.target.value;
+                    saveRows();
+                }));
+
+                tr.appendChild(makeInputCell('text', row.title, (e) => {
+                    rows[index].title = e.target.value;
+                    saveRows();
+                }));
+
+                tr.appendChild(makeSelectCell([
+                    { value: 'Quest', label: 'Quest' },
+                    { value: 'NPC', label: 'NPC' },
+                    { value: 'Plot', label: 'Plot' },
+                    { value: 'Floating', label: 'Floating' },
+                    { value: 'Other', label: 'Other' }
+                ], row.type, (e) => {
+                    rows[index].type = e.target.value;
+                    saveRows();
+                }));
+
+                tr.appendChild(makeInputCell('text', row.author, (e) => {
+                    rows[index].author = e.target.value;
+                    saveRows();
+                }));
+
+                tr.appendChild(makeInputCell('number', row.npcs, (e) => {
+                    rows[index].npcs = e.target.value;
+                    saveRows();
+                }));
+
+                tr.appendChild(makeSelectCell([
+                    { value: 'None', label: 'None' },
+                    { value: 'Easy', label: 'Easy' },
+                    { value: 'Medium', label: 'Medium' },
+                    { value: 'Hard', label: 'Hard' }
+                ], row.difficulty, (e) => {
+                    rows[index].difficulty = e.target.value;
+                    saveRows();
+                    renderRows();
+                }, 'None'));
+
+                tr.appendChild(makeReadonlyValueCell(getRowTargetApl(row, targetAplByDifficulty)));
+
+                tr.appendChild(makeInputCell('number', row.apl, (e) => {
+                    rows[index].apl = e.target.value;
+                    saveRows();
+                    renderRows();
+                }));
+
+                tr.appendChild(makeInputCell('number', row.silver, (e) => {
+                    rows[index].silver = e.target.value;
+                    rows[index].silverManual = e.target.value.trim() !== '';
+                    saveRows();
+                }));
+
+                tr.appendChild(makeInputCell('number', row.production, (e) => {
+                    rows[index].production = e.target.value;
+                    rows[index].productionManual = e.target.value.trim() !== '';
+                    saveRows();
+                }));
+
+                tr.appendChild(makeTextareaCell(row.notes, (e) => {
+                    rows[index].notes = e.target.value;
+                    saveRows();
+                }));
+
+                tr.appendChild(makeCheckboxCell(row.received, (e) => {
+                    rows[index].received = e.target.checked;
+                    saveRows();
+                }));
+
+                tr.appendChild(makeCheckboxCell(row.processed, (e) => {
+                    rows[index].processed = e.target.checked;
+                    saveRows();
+                }));
+
+                tr.appendChild(makeCheckboxCell(row.tagged, (e) => {
+                    rows[index].tagged = e.target.checked;
+                    saveRows();
+                }));
+
+                body.appendChild(tr);
+            });
+        }
+
+        function initialize() {
+            loadRows();
+            syncRowCountToEventVariables();
+            renderRows();
+            showStatus('Adventure listing data loaded.');
+        }
+
+        resetPageBtn.addEventListener('click', () => {
+            rows = [];
+            saveRows();
+            syncRowCountToEventVariables();
+            renderRows();
+            showStatus('Adventure listing data cleared.');
+        });
+
+        window.EventVariables?.onChange?.(() => {
+            syncRowCountToEventVariables();
+            renderRows();
+            showStatus('Adventure count synced from Event Variables.');
+        });
+
+        initialize();
+    </script>
+</body>
+</html>

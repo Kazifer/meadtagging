@@ -30,10 +30,20 @@
     iframe.style.background = '#111827';
     document.body.appendChild(iframe);
 
-    // position now and on resize/scroll
+    // Position now and throttle resize/scroll updates to one layout pass per frame.
+    let positionRafId = null;
+
+    function scheduleIframePosition() {
+        if (positionRafId !== null) return;
+        positionRafId = window.requestAnimationFrame(() => {
+            positionRafId = null;
+            positionIframe(iframe);
+        });
+    }
+
     positionIframe(iframe);
-    window.addEventListener('resize', () => positionIframe(iframe));
-    window.addEventListener('scroll', () => positionIframe(iframe));
+    window.addEventListener('resize', scheduleIframePosition);
+    window.addEventListener('scroll', scheduleIframePosition, { passive: true });
 
     iframe.addEventListener('load', () => console.info('nav-loader: iframe loaded', iframe.src));
 

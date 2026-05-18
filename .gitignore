@@ -1,0 +1,9 @@
+# Generated export artifacts (root-level)
+/event-item-tags.html
+/Untitled_Adventure_loot*.html
+/*_loot.html
+/*_Cantrips.html
+
+# Keep intentional snapshot fixtures trackable
+!/Test Files/
+!/Test Files/*.html

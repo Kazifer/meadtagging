@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adventure Levelling</title>
+    <link rel="stylesheet" href="theme.css">
+    <style>
+        .container {
+            max-width: 1400px;
+        }
+
+        .intro {
+            color: var(--app-muted);
+            margin-bottom: 12px;
+        }
+
+        .stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .stat-chip {
+            background: #111827;
+            border: 1px solid var(--app-border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: var(--app-text);
+            font-size: 0.92rem;
+        }
+
+        .stat-chip-apl {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .apl-fields {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .apl-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .apl-label {
+            color: #d1d5db;
+            font-size: 0.88rem;
+            font-weight: 600;
+            min-width: 110px;
+        }
+
+        .apl-field {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            color: var(--app-muted);
+            padding: 2px 6px;
+            border-radius: 6px;
+            border: 1px solid transparent;
+        }
+
+        .apl-field-active {
+            background: rgba(0, 188, 212, 0.2);
+            border-color: rgba(0, 188, 212, 0.55);
+            color: #dff8fc;
+        }
+
+        .apl-input {
+            width: 72px;
+            padding: 4px 6px;
+            border-radius: 6px;
+            border: 1px solid var(--app-border);
+            background: #0b1220;
+            color: var(--app-text);
+            font-size: 0.88rem;
+        }
+
+        .apl-input:focus {
+            outline: 2px solid #00bcd4;
+            outline-offset: 1px;
+        }
+
+        .apl-input[readonly] {
+            opacity: 0.9;
+            cursor: default;
+        }
+
+        .apl-value {
+            min-width: 72px;
+            padding: 4px 6px;
+            border-radius: 6px;
+            border: 1px solid var(--app-border);
+            background: #0b1220;
+            color: var(--app-text);
+            font-size: 0.88rem;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            display: inline-block;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .summary-wrap {
+            margin-bottom: 14px;
+            overflow-x: auto;
+            border: 1px solid var(--app-border);
+            border-radius: 10px;
+            background: #111827;
+        }
+
+        .summary-table {
+            width: 100%;
+            min-width: 420px;
+            border-collapse: collapse;
+        }
+
+        .summary-table th,
+        .summary-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--app-border);
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        .summary-table th {
+            background: #0f172a;
+            color: #d1d5db;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .summary-table tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .metrics-wrap {
+            margin-bottom: 14px;
+            overflow-x: auto;
+            border: 1px solid var(--app-border);
+            border-radius: 10px;
+            background: #111827;
+        }
+
+        .metrics-table {
+            width: 100%;
+            min-width: 420px;
+            border-collapse: collapse;
+        }
+
+        .metrics-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--app-border);
+            font-size: 0.9rem;
+        }
+
+        .metrics-table tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .metrics-table td:first-child {
+            color: #d1d5db;
+            font-weight: 700;
+            width: 70%;
+        }
+
+        .metrics-table td:last-child {
+            text-align: right;
+            color: var(--app-text);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .metric-input {
+            width: 96px;
+            padding: 4px 6px;
+            border-radius: 6px;
+            border: 1px solid var(--app-border);
+            background: #0b1220;
+            color: var(--app-text);
+            font-size: 0.88rem;
+            text-align: right;
+        }
+
+        .metric-input:focus {
+            outline: 2px solid #00bcd4;
+            outline-offset: 1px;
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: filter 0.2s ease;
+        }
+
+        .btn:hover {
+            filter: brightness(1.06);
+        }
+
+        .btn-secondary {
+            background: #4a5568;
+            color: #edf2f7;
+        }
+
+        .status {
+            margin-top: 12px;
+            color: var(--app-muted);
+            min-height: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>Adventure Levelling</h1>
+        <p class="intro">Rows are automatically matched to <strong>Total Adventures</strong> from Event Variables.</p>
+
+        <div class="stats">
+            <div class="stat-chip">Event: <span id="eventTitle">-</span></div>
+            <div class="stat-chip">Expected Adventures: <span id="expectedCount">0</span></div>
+            <div class="stat-chip">Event Level: <span id="eventLevel">-</span></div>
+            <div class="stat-chip stat-chip-apl">
+                <div class="apl-row">
+                    <span class="apl-label">Total Event APL:</span>
+                    <div class="apl-fields" aria-label="Total Event APL values">
+                        <label id="totalEventAplEasyField" class="apl-field" for="totalEventAplEasy">Easy
+                            <input id="totalEventAplEasy" class="apl-input" type="number" min="0" step="1" inputmode="numeric" readonly />
+                        </label>
+                        <label id="totalEventAplMediumField" class="apl-field" for="totalEventAplMedium">Medium
+                            <input id="totalEventAplMedium" class="apl-input" type="number" min="0" step="1" inputmode="numeric" readonly />
+                        </label>
+                        <label id="totalEventAplHardField" class="apl-field" for="totalEventAplHard">Hard
+                            <input id="totalEventAplHard" class="apl-input" type="number" min="0" step="1" inputmode="numeric" readonly />
+                        </label>
+                    </div>
+                </div>
+                <div class="apl-row">
+                    <span class="apl-label">APL per Adventure:</span>
+                    <div class="apl-fields" aria-label="APL per Adventure values">
+                        <label class="apl-field">Easy
+                            <span id="aplPerAdventureEasy" class="apl-value">0</span>
+                        </label>
+                        <label class="apl-field">Medium
+                            <span id="aplPerAdventureMedium" class="apl-value">0</span>
+                        </label>
+                        <label class="apl-field">Hard
+                            <span id="aplPerAdventureHard" class="apl-value">0</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button id="resetPageBtn" class="btn btn-secondary" type="button">Clear Adventure Levelling Data</button>
+        </div>
+
+        <div class="summary-wrap">
+            <table class="summary-table" aria-label="Adventure difficulty totals">
+                <thead>
+                    <tr>
+                        <th>None</th>
+                        <th>Easy</th>
+                        <th>Medium</th>
+                        <th>Hard</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td id="difficultyCountNone">0</td>
+                        <td id="difficultyCountEasy">0</td>
+                        <td id="difficultyCountMedium">0</td>
+                        <td id="difficultyCountHard">0</td>
+                        <td id="difficultyCountTotal">0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="metrics-wrap">
+            <table class="metrics-table" aria-label="Adventure levelling metrics">
+                <tbody>
+                    <tr>
+                        <td>Levelled Adventures</td>
+                        <td id="metricLevelledAdventures">0</td>
+                    </tr>
+                    <tr>
+                        <td>Total Build</td>
+                        <td id="metricTotalBuild">0</td>
+                    </tr>
+                    <tr>
+                        <td>Silver/APL</td>
+                        <td id="metricSilverPerApl">0</td>
+                    </tr>
+                    <tr>
+                        <td>Production/APL</td>
+                        <td id="metricProductionPerApl">0</td>
+                    </tr>
+                    <tr>
+                        <td>Players</td>
+                        <td id="metricPlayers">0</td>
+                    </tr>
+                    <tr>
+                        <td>Players/Adventure</td>
+                        <td>
+                            <input id="metricPlayersPerAdventureInput" class="metric-input" type="number" min="0" step="1" inputmode="numeric" value="0" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Average Build</td>
+                        <td id="metricAverageBuild">0</td>
+                    </tr>
+                    <tr>
+                        <td>Average Level</td>
+                        <td id="metricAverageLevel">0</td>
+                    </tr>
+                    <tr>
+                        <td>Levels per Adventure</td>
+                        <td id="metricLevelsPerAdventure">0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <p id="statusMessage" class="status"></p>
+    </main>
+
+    <script src="event-variables.js"></script>
+    <script>
+        const STORAGE_KEY = 'adventureLevelling.v1';
+
+        const eventTitleEl = document.getElementById('eventTitle');
+        const expectedCountEl = document.getElementById('expectedCount');
+        const eventLevelEl = document.getElementById('eventLevel');
+        const resetPageBtn = document.getElementById('resetPageBtn');
+        const statusMessage = document.getElementById('statusMessage');
+        const totalEventAplEasyEl = document.getElementById('totalEventAplEasy');
+        const totalEventAplMediumEl = document.getElementById('totalEventAplMedium');
+        const totalEventAplHardEl = document.getElementById('totalEventAplHard');
+        const totalEventAplEasyFieldEl = document.getElementById('totalEventAplEasyField');
+        const totalEventAplMediumFieldEl = document.getElementById('totalEventAplMediumField');
+        const totalEventAplHardFieldEl = document.getElementById('totalEventAplHardField');
+        const aplPerAdventureEasyEl = document.getElementById('aplPerAdventureEasy');
+        const aplPerAdventureMediumEl = document.getElementById('aplPerAdventureMedium');
+        const aplPerAdventureHardEl = document.getElementById('aplPerAdventureHard');
+        const difficultyCountNoneEl = document.getElementById('difficultyCountNone');
+        const difficultyCountEasyEl = document.getElementById('difficultyCountEasy');
+        const difficultyCountMediumEl = document.getElementById('difficultyCountMedium');
+        const difficultyCountHardEl = document.getElementById('difficultyCountHard');
+        const difficultyCountTotalEl = document.getElementById('difficultyCountTotal');
+        const metricLevelledAdventuresEl = document.getElementById('metricLevelledAdventures');
+        const metricTotalBuildEl = document.getElementById('metricTotalBuild');
+        const metricSilverPerAplEl = document.getElementById('metricSilverPerApl');
+        const metricProductionPerAplEl = document.getElementById('metricProductionPerApl');
+        const metricPlayersEl = document.getElementById('metricPlayers');
+        const metricPlayersPerAdventureInputEl = document.getElementById('metricPlayersPerAdventureInput');
+        const metricAverageBuildEl = document.getElementById('metricAverageBuild');
+        const metricAverageLevelEl = document.getElementById('metricAverageLevel');
+        const metricLevelsPerAdventureEl = document.getElementById('metricLevelsPerAdventure');
+
+        let rows = [];
+
+        function showStatus(message) {
+            statusMessage.textContent = message;
+        }
+
+        function parseAdventureCount(value) {
+            const parsed = Number(value);
+            if (!Number.isFinite(parsed)) return 0;
+            return Math.max(0, Math.floor(parsed));
+        }
+
+        function defaultRow(index) {
+            return {
+                no: String(index + 1),
+                title: '',
+                type: '',
+                author: '',
+                npcs: '',
+                difficulty: '',
+                apl: '',
+                silver: '',
+                production: '',
+                notes: '',
+                received: false,
+                processed: false,
+                tagged: false
+            };
+        }
+
+        function normalizeRow(row, index) {
+            const src = row || {};
+            return {
+                no: src.no ?? String(index + 1),
+                title: src.title ?? '',
+                type: src.type ?? '',
+                author: src.author ?? '',
+                npcs: src.npcs ?? '',
+                difficulty: src.difficulty ?? '',
+                apl: src.apl ?? '',
+                silver: src.silver ?? '',
+                production: src.production ?? '',
+                notes: src.notes ?? '',
+                received: Boolean(src.received),
+                processed: Boolean(src.processed),
+                tagged: Boolean(src.tagged)
+            };
+        }
+
+        function loadRows() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : { rows: [] };
+                const loadedRows = Array.isArray(parsed?.rows) ? parsed.rows : [];
+                rows = loadedRows.map((row, i) => normalizeRow(row, i));
+            } catch (error) {
+                console.error('AdventureLevelling: failed to load data', error);
+                rows = [];
+            }
+        }
+
+        function saveRows() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({ rows }));
+            } catch (error) {
+                console.error('AdventureLevelling: failed to save data', error);
+            }
+        }
+
+        function parseNumber(value) {
+            const parsed = Number(value);
+            return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function roundInt(value) {
+            return Math.round(value || 0);
+        }
+
+        function formatDecimal(value) {
+            const rounded = Math.round((value || 0) * 100) / 100;
+            return String(rounded);
+        }
+
+        function normalizeEventLevel(value) {
+            const level = (value || '').toString().trim().toLowerCase();
+            if (level === 'min' || level === 'easy') return 'easy';
+            if (level === 'max' || level === 'hard') return 'hard';
+            return 'medium';
+        }
+
+        function updateSelectedEventLevelHighlight(level) {
+            const normalizedLevel = normalizeEventLevel(level);
+            totalEventAplEasyFieldEl.classList.remove('apl-field-active');
+            totalEventAplMediumFieldEl.classList.remove('apl-field-active');
+            totalEventAplHardFieldEl.classList.remove('apl-field-active');
+
+            if (normalizedLevel === 'easy') {
+                totalEventAplEasyFieldEl.classList.add('apl-field-active');
+            } else if (normalizedLevel === 'hard') {
+                totalEventAplHardFieldEl.classList.add('apl-field-active');
+            } else {
+                totalEventAplMediumFieldEl.classList.add('apl-field-active');
+            }
+        }
+
+        function updateDerivedMetrics(levelledCount, difficultyCounts) {
+            const vars = window.EventVariables?.get?.() || {};
+            const totalBuild = Math.max(0, parseNumber(vars.totalEventBuild));
+            const players = Math.max(0, parseNumber(vars.players));
+            const eventDays = Math.max(0, parseNumber(vars.eventDays));
+            const totalAdventures = parseAdventureCount(vars.totalAdventures);
+            const playersPerAdventure = Math.max(0, parseNumber(metricPlayersPerAdventureInputEl.value));
+            const eventLevel = normalizeEventLevel(vars.eventDifficulty || 'medium');
+            updateSelectedEventLevelHighlight(eventLevel);
+
+            const averageBuild = players > 0 ? (totalBuild / players) : 0;
+            const averageLevel = Math.floor((averageBuild / 10) - 4);
+            const levelsPerAdventure = averageLevel * playersPerAdventure;
+            const totalEventAplEasy = levelsPerAdventure * totalAdventures;
+            const totalEventAplMedium = totalEventAplEasy * 1.2;
+            const totalEventAplHard = totalEventAplEasy * 1.5;
+
+            let selectedTotalGoal = totalEventAplMedium;
+            if (eventLevel === 'hard') selectedTotalGoal = totalEventAplHard;
+            else if (eventLevel === 'easy') selectedTotalGoal = totalEventAplEasy;
+
+            const totalSilver = Math.ceil(totalBuild * 1.5);
+            const silverPerApl = selectedTotalGoal > 0 ? (totalSilver / selectedTotalGoal) : 0;
+
+            const productionMax = Math.ceil((totalBuild * eventDays) / 5);
+            const productionMin = Math.floor(productionMax / 2);
+            const productionMid = Math.floor((productionMax + productionMin) / 2);
+            let selectedProductionGoal = productionMid;
+            if (eventLevel === 'hard') selectedProductionGoal = productionMax;
+            else if (eventLevel === 'easy') selectedProductionGoal = productionMin;
+
+            const productionPerApl = selectedTotalGoal > 0 ? (selectedProductionGoal / selectedTotalGoal) : 0;
+
+            const easyCount = difficultyCounts?.Easy || 0;
+            const mediumCount = difficultyCounts?.Medium || 0;
+            const hardCount = difficultyCounts?.Hard || 0;
+            const easyScore = easyCount * 1;
+            const mediumScore = mediumCount * 2;
+            const hardScore = hardCount * 3;
+            const totalScore = easyScore + mediumScore + hardScore;
+
+            const easyGoal = totalScore > 0 ? (selectedTotalGoal * easyScore / totalScore) : 0;
+            const mediumGoal = totalScore > 0 ? (selectedTotalGoal * mediumScore / totalScore) : 0;
+            const hardGoal = totalScore > 0 ? (selectedTotalGoal * hardScore / totalScore) : 0;
+
+            const aplPerAdventureEasy = easyCount > 0 ? (easyGoal / easyCount) : 0;
+            const aplPerAdventureMedium = mediumCount > 0 ? (mediumGoal / mediumCount) : 0;
+            const aplPerAdventureHard = hardCount > 0 ? (hardGoal / hardCount) : 0;
+
+            totalEventAplEasyEl.value = String(roundInt(totalEventAplEasy));
+            totalEventAplMediumEl.value = String(roundInt(totalEventAplMedium));
+            totalEventAplHardEl.value = String(roundInt(totalEventAplHard));
+
+            metricLevelledAdventuresEl.textContent = String(levelledCount);
+            metricTotalBuildEl.textContent = String(roundInt(totalBuild));
+            metricSilverPerAplEl.textContent = formatDecimal(silverPerApl);
+            metricProductionPerAplEl.textContent = formatDecimal(productionPerApl);
+            metricPlayersEl.textContent = String(roundInt(players));
+            metricAverageBuildEl.textContent = String(roundInt(averageBuild));
+            metricAverageLevelEl.textContent = String(roundInt(averageLevel));
+            metricLevelsPerAdventureEl.textContent = String(roundInt(levelsPerAdventure));
+
+            aplPerAdventureEasyEl.textContent = formatDecimal(aplPerAdventureEasy);
+            aplPerAdventureMediumEl.textContent = formatDecimal(aplPerAdventureMedium);
+            aplPerAdventureHardEl.textContent = formatDecimal(aplPerAdventureHard);
+        }
+
+        function syncTotalEventAplFields(vars) {
+            metricPlayersPerAdventureInputEl.value = vars.playersPerAdventure || '';
+        }
+
+        function savePlayersPerAdventureValue() {
+            try {
+                window.EventVariables?.set?.({
+                    playersPerAdventure: metricPlayersPerAdventureInputEl.value
+                });
+                updateDifficultySummary();
+            } catch (error) {
+                console.error('AdventureLevelling: failed to save players per adventure value', error);
+            }
+        }
+
+        function updateDifficultySummary() {
+            const counts = {
+                None: 0,
+                Easy: 0,
+                Medium: 0,
+                Hard: 0
+            };
+
+            rows.forEach((row) => {
+                const value = (row?.difficulty || '').toString().trim().toLowerCase();
+                if (value === 'easy') counts.Easy += 1;
+                else if (value === 'medium') counts.Medium += 1;
+                else if (value === 'hard') counts.Hard += 1;
+                else counts.None += 1;
+            });
+
+            difficultyCountNoneEl.textContent = String(counts.None);
+            difficultyCountEasyEl.textContent = String(counts.Easy);
+            difficultyCountMediumEl.textContent = String(counts.Medium);
+            difficultyCountHardEl.textContent = String(counts.Hard);
+            difficultyCountTotalEl.textContent = String(rows.length);
+
+            updateDerivedMetrics(counts.Easy + counts.Medium + counts.Hard, counts);
+        }
+
+        function syncRowCountToEventVariables() {
+            const vars = window.EventVariables?.get?.() || {};
+            const targetCount = parseAdventureCount(vars.totalAdventures);
+            const title = window.EventVariables?.buildTitle?.(vars) || '';
+            const levelMap = {
+                easy: 'Easy',
+                medium: 'Medium',
+                hard: 'Hard'
+            };
+            const rawDifficulty = normalizeEventLevel(vars.eventDifficulty || 'medium');
+
+            eventTitleEl.textContent = title || '-';
+            expectedCountEl.textContent = String(targetCount);
+            eventLevelEl.textContent = levelMap[rawDifficulty] || '-';
+            syncTotalEventAplFields(vars);
+
+            if (rows.length < targetCount) {
+                for (let i = rows.length; i < targetCount; i++) {
+                    rows.push(defaultRow(i));
+                }
+                saveRows();
+            } else if (rows.length > targetCount) {
+                rows = rows.slice(0, targetCount);
+                saveRows();
+            }
+        }
+
+        function initialize() {
+            loadRows();
+            syncRowCountToEventVariables();
+            updateDifficultySummary();
+            showStatus('Adventure levelling data loaded.');
+        }
+
+        resetPageBtn.addEventListener('click', () => {
+            rows = [];
+            saveRows();
+            syncRowCountToEventVariables();
+            updateDifficultySummary();
+            showStatus('Adventure levelling data cleared.');
+        });
+
+        metricPlayersPerAdventureInputEl.addEventListener('input', savePlayersPerAdventureValue);
+
+        window.EventVariables?.onChange?.(() => {
+            syncRowCountToEventVariables();
+            loadRows();
+            updateDifficultySummary();
+            showStatus('Adventure count synced from Event Variables.');
+        });
+
+        initialize();
+    </script>
+</body>
+</html>

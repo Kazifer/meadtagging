@@ -357,6 +357,7 @@ border: 1px solid #4a5568;
         }
     </script>
     <script src="production-data.js"></script>
+    <script src="runic-tattoos-data.js"></script>
     <script>
         // Initialize jsPDF for PDF export
         const { jsPDF } = window.jspdf;
@@ -381,7 +382,16 @@ border: 1px solid #4a5568;
                 }));
             } catch (error) {
                 console.error('Error loading runic tattoos data:', error);
-                items.runicTattoos = Array.isArray(items.runicTattoos) ? items.runicTattoos : [];
+
+                const fallbackRunicTattoos = Array.isArray(window.runicTattoosData) ? window.runicTattoosData : [];
+                items.runicTattoos = fallbackRunicTattoos.map(item => ({
+                    ...item,
+                    expiryDate: item.expiryDate || getOneYearFromTodayDateString()
+                }));
+
+                if (items.runicTattoos.length === 0) {
+                    items.runicTattoos = Array.isArray(items.runicTattoos) ? items.runicTattoos : [];
+                }
             }
         }
 

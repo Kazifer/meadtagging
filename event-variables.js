@@ -3,6 +3,13 @@
 (function () {
   const STORAGE_KEY = 'eventVariables.v1';
 
+  function normalizeDifficulty(value) {
+    const diff = String(value || '').trim().toLowerCase();
+    if (diff === 'max' || diff === 'hard') return 'hard';
+    if (diff === 'min' || diff === 'easy') return 'easy';
+    return 'medium';
+  }
+
   function safeParse(raw) {
     if (!raw) return null;
     try {
@@ -22,6 +29,11 @@
       players: source.players || '',
       eventDays: source.eventDays || '',
       totalAdventures: source.totalAdventures || '',
+      eventDifficulty: normalizeDifficulty(source.eventDifficulty),
+      totalEventAplEasy: source.totalEventAplEasy || '',
+      totalEventAplMedium: source.totalEventAplMedium || '',
+      totalEventAplHard: source.totalEventAplHard || '',
+      playersPerAdventure: source.playersPerAdventure || '',
       updatedAt: source.updatedAt || ''
     };
   }
@@ -41,10 +53,11 @@
       ...(partialOrFull || {}),
       updatedAt: new Date().toISOString()
     };
+    const payload = normalize(merged);
+    payload.updatedAt = merged.updatedAt;
 
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-      const payload = normalize(merged);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
       window.dispatchEvent(new CustomEvent('event-variables-changed', { detail: payload }));
       return payload;
     } catch (error) {

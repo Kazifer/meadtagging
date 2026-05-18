@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -28,15 +28,7 @@
             font-size: 0.95rem;
         }
 
-        .field input {
-            padding: 10px 12px;
-            border-radius: 8px;
-            border: 1px solid var(--app-border);
-            background: #1f2937;
-            color: var(--app-text);
-            font-size: 0.95rem;
-        }
-
+        .field input,
         .field select {
             padding: 10px 12px;
             border-radius: 8px;
@@ -46,11 +38,7 @@
             font-size: 0.95rem;
         }
 
-        .field input:focus {
-            outline: 2px solid #00bcd4;
-            outline-offset: 1px;
-        }
-
+        .field input:focus,
         .field select:focus {
             outline: 2px solid #00bcd4;
             outline-offset: 1px;
@@ -61,6 +49,48 @@
             flex-wrap: wrap;
             gap: 10px;
             margin-top: 20px;
+        }
+
+        .export-actions {
+            margin-top: 12px;
+        }
+
+        .io-table-wrap {
+            margin-top: 12px;
+            border: 1px solid var(--app-border);
+            border-radius: 10px;
+            overflow: auto;
+            background: #111827;
+        }
+
+        .io-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 640px;
+        }
+
+        .io-table th,
+        .io-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--app-border);
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        .io-table th {
+            background: #0f172a;
+            color: #d1d5db;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .io-table tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .io-table td:nth-child(2),
+        .io-table td:nth-child(3) {
+            width: 30%;
         }
 
         .btn {
@@ -96,131 +126,13 @@
             margin-top: 8px;
             font-size: 0.92rem;
         }
-
-        .loot-calc {
-            margin-top: 26px;
-            border-top: 1px solid var(--app-border);
-            padding-top: 18px;
-        }
-
-        .loot-calc h2 {
-            margin-bottom: 8px;
-        }
-
-        .loot-calc p {
-            color: var(--app-muted);
-            margin-bottom: 12px;
-        }
-
-        .loot-table-wrap {
-            overflow-x: auto;
-            border: 1px solid var(--app-border);
-            border-radius: 10px;
-        }
-
-        .loot-table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 700px;
-            background: #111827;
-        }
-
-        .loot-table th,
-        .loot-table td {
-            border-bottom: 1px solid var(--app-border);
-            padding: 10px 12px;
-            text-align: left;
-            vertical-align: top;
-            font-size: 0.93rem;
-        }
-
-        .loot-table th {
-            background: #0f172a;
-            color: #d1d5db;
-            font-weight: 700;
-            white-space: nowrap;
-        }
-
-        .loot-table tbody tr:last-child td {
-            border-bottom: 0;
-        }
-
-        .loot-row-total td:first-child {
-            font-weight: 700;
-        }
-
-        .loot-level-1 td:first-child {
-            border-left: 4px solid #60a5fa;
-            padding-left: 10px;
-        }
-
-        .loot-level-2 td:first-child {
-            border-left: 4px solid #a78bfa;
-            padding-left: 10px;
-        }
-
-        .loot-level-4 td:first-child {
-            border-left: 4px solid #34d399;
-            padding-left: 10px;
-        }
-
-        .loot-level-1 td {
-            background-color: rgba(96, 165, 250, 0.05);
-        }
-
-        .loot-level-2 td {
-            background-color: rgba(167, 139, 250, 0.05);
-        }
-
-        .loot-level-4 td {
-            background-color: rgba(52, 211, 153, 0.05);
-        }
-
-        .loot-number {
-            font-variant-numeric: tabular-nums;
-            white-space: nowrap;
-        }
-
-        .loot-col-max {
-            background: rgba(34, 197, 94, 0.14);
-        }
-
-        .loot-col-mid {
-            background: rgba(59, 130, 246, 0.14);
-        }
-
-        .loot-col-min {
-            background: rgba(245, 158, 11, 0.16);
-        }
-
-        .loot-table.difficulty-max .loot-col-max,
-        .loot-table.difficulty-mid .loot-col-mid,
-        .loot-table.difficulty-min .loot-col-min {
-            background: rgba(0, 188, 212, 0.28);
-            box-shadow: inset 0 0 0 1px rgba(0, 188, 212, 0.45);
-        }
-
-        .loot-allocated-input {
-            width: 100%;
-            min-width: 120px;
-            padding: 6px 8px;
-            border-radius: 6px;
-            border: 1px solid var(--app-border);
-            background: #0b1220;
-            color: var(--app-text);
-            font-size: 0.9rem;
-        }
-
-        .loot-allocated-input:focus {
-            outline: 2px solid #00bcd4;
-            outline-offset: 1px;
-        }
     </style>
 </head>
 <body>
     <main class="container">
         <h1>Event Variables</h1>
         <p>Set your event-level values once. They are saved in your browser and automatically restored the next time you open this page.</p>
+
 
         <form id="eventVariablesForm" class="event-form" autocomplete="off">
             <div class="field">
@@ -256,9 +168,9 @@
             <div class="field">
                 <label for="eventDifficulty">Event Difficulty</label>
                 <select id="eventDifficulty" name="eventDifficulty">
-                    <option value="max">Max</option>
-                    <option value="mid" selected>Mid</option>
-                    <option value="min">Min</option>
+                    <option value="hard">Hard</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="easy">Easy</option>
                 </select>
             </div>
         </form>
@@ -268,125 +180,416 @@
             <button id="resetBtn" class="btn btn-secondary" type="button">Clear Saved Values</button>
         </div>
 
+        <div class="io-table-wrap">
+            <table class="io-table" aria-label="Import and export options">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Export</th>
+                        <th>Import</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Event Variables</td>
+                        <td><button id="exportEventVarsBtn" class="btn btn-secondary" type="button">Export (.xlsx)</button></td>
+                        <td><button id="importEventVarsBtn" class="btn btn-secondary" type="button">Import (.xlsx)</button></td>
+                    </tr>
+                    <tr>
+                        <td>Loot Calculation</td>
+                        <td><button id="exportLootCalcBtn" class="btn btn-secondary" type="button">Export (.xlsx)</button></td>
+                        <td><button id="importLootCalcBtn" class="btn btn-secondary" type="button">Import (.xlsx)</button></td>
+                    </tr>
+                    <tr>
+                        <td>Adventure Listing</td>
+                        <td><button id="exportAdventureListingBtn" class="btn btn-secondary" type="button">Export (.xlsx)</button></td>
+                        <td><button id="importAdventureListingBtn" class="btn btn-secondary" type="button">Import (.xlsx)</button></td>
+                    </tr>
+                    <tr>
+                        <td>Adventure Levelling</td>
+                        <td><button id="exportAdventureLevellingBtn" class="btn btn-secondary" type="button">Export (.xlsx)</button></td>
+                        <td><button id="importAdventureLevellingBtn" class="btn btn-secondary" type="button">Import (.xlsx)</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
         <p id="statusMessage" class="status"></p>
         <p class="hint">Tip: values also auto-save when you type.</p>
-
-        <section class="loot-calc" aria-labelledby="lootCalcHeading">
-            <h2 id="lootCalcHeading">Loot Calc</h2>
-            <p>Calculated from <strong>Total Event Build</strong>, <strong>Players</strong>, and <strong>Event Days</strong> using the workbook logic.</p>
-
-            <div class="loot-table-wrap">
-                <table id="lootCalcTable" class="loot-table" aria-label="Loot calculation results">
-                    <thead>
-                        <tr>
-                            <th>Item Type</th>
-                            <th class="loot-col-max">Max Drop</th>
-                            <th class="loot-col-mid">Mid</th>
-                            <th class="loot-col-min">Minimum</th>
-                            <th>Allocated Amount</th>
-                            <th>Remaining Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody id="lootCalcBody"></tbody>
-                </table>
-            </div>
-        </section>
     </main>
 
     <script src="event-variables.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
         const eventVarsApi = window.EventVariables;
+        const adventureStorageKey = 'adventureLevelling.v1';
+        const lootAllocationsStorageKey = 'lootCalcAllocated.v1';
 
         const form = document.getElementById('eventVariablesForm');
         const saveBtn = document.getElementById('saveBtn');
         const resetBtn = document.getElementById('resetBtn');
+        const exportEventVarsBtn = document.getElementById('exportEventVarsBtn');
+        const exportLootCalcBtn = document.getElementById('exportLootCalcBtn');
+        const exportAdventureListingBtn = document.getElementById('exportAdventureListingBtn');
+        const exportAdventureLevellingBtn = document.getElementById('exportAdventureLevellingBtn');
+        const importEventVarsBtn = document.getElementById('importEventVarsBtn');
+        const importLootCalcBtn = document.getElementById('importLootCalcBtn');
+        const importAdventureListingBtn = document.getElementById('importAdventureListingBtn');
+        const importAdventureLevellingBtn = document.getElementById('importAdventureLevellingBtn');
         const statusMessage = document.getElementById('statusMessage');
-        const lootCalcBody = document.getElementById('lootCalcBody');
-        const lootCalcTable = document.getElementById('lootCalcTable');
-
-        const lootAllocationsStorageKey = 'lootCalcAllocated.v1';
-        let lootAllocations = {};
 
         function showStatus(message) {
             statusMessage.textContent = message;
         }
 
-        function toNumber(value) {
-            const num = Number(value);
-            return Number.isFinite(num) ? num : 0;
-        }
-
-        function floorInt(value) {
-            return Math.floor(value);
-        }
-
-        function roundInt(value) {
-            return Math.round(value);
-        }
-
-        function ceilInt(value) {
-            return Math.ceil(value);
-        }
-
-        function computeMid(maxDrop, minimum) {
-            return floorInt((maxDrop + minimum) / 2);
-        }
-
-        function formatInt(value) {
-            return value.toLocaleString();
-        }
-
-        function createLootRow(label, maxDrop, minimum, options = {}) {
+        function getFormData() {
             return {
-                label,
-                maxDrop,
-                minimum,
-                mid: computeMid(maxDrop, minimum),
-                isGroupTotal: Boolean(options.isGroupTotal),
-                childLabels: Array.isArray(options.childLabels) ? options.childLabels : []
+                eventName: form.eventName.value.trim(),
+                eventNumber: form.eventNumber.value,
+                totalEventBuild: form.totalEventBuild.value,
+                players: form.players.value,
+                eventDays: form.eventDays.value,
+                totalAdventures: form.totalAdventures.value,
+                eventDifficulty: form.eventDifficulty.value
             };
         }
 
-        function sumByLabels(labels, getValue) {
-            return labels.reduce((sum, label) => sum + getValue(label), 0);
+        function setFormData(data) {
+            form.eventName.value = data.eventName || '';
+            form.eventNumber.value = data.eventNumber || '';
+            form.totalEventBuild.value = data.totalEventBuild || '';
+            form.players.value = data.players || '';
+            form.eventDays.value = data.eventDays || '';
+            form.totalAdventures.value = data.totalAdventures || '';
+                form.eventDifficulty.value = data.eventDifficulty || 'medium';
         }
 
-        function loadLootAllocations() {
+        function saveValues() {
+            try {
+                eventVarsApi?.set(getFormData());
+                showStatus('Saved.');
+            } catch (error) {
+                console.error('Failed to save event variables:', error);
+                showStatus('Could not save values in this browser.');
+            }
+        }
+
+        function loadValues() {
+            try {
+                const data = eventVarsApi?.get?.();
+                const hasValues = data && Object.keys(data).some(key => key !== 'updatedAt' && data[key]);
+
+                if (!hasValues) {
+                    showStatus('No saved values yet.');
+                    return;
+                }
+
+                setFormData(data);
+                showStatus('Saved values loaded.');
+            } catch (error) {
+                console.error('Failed to load event variables:', error);
+                showStatus('Could not load saved values.');
+            }
+        }
+
+        function clearValues() {
+            try {
+                eventVarsApi?.clear?.();
+                form.reset();
+                showStatus('Saved values cleared.');
+            } catch (error) {
+                console.error('Failed to clear event variables:', error);
+                showStatus('Could not clear saved values.');
+            }
+        }
+
+        function parseNumber(value) {
+            const parsed = Number(value);
+            return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function parseAdventureCount(value) {
+            const parsed = Number(value);
+            if (!Number.isFinite(parsed)) return 0;
+            return Math.max(0, Math.floor(parsed));
+        }
+
+        function normalizeEventLevel(value) {
+            const level = String(value || '').trim().toLowerCase();
+            if (level === 'min' || level === 'easy') return 'easy';
+            if (level === 'max' || level === 'hard') return 'hard';
+            return 'medium';
+        }
+
+        function titleCaseLevel(value) {
+            const level = normalizeEventLevel(value);
+            if (level === 'easy') return 'Easy';
+            if (level === 'hard') return 'Hard';
+            return 'Medium';
+        }
+
+        function safeFilePart(value) {
+            return String(value || '')
+                .trim()
+                .replace(/[^a-z0-9-_ ]/gi, '')
+                .replace(/\s+/g, '_')
+                .replace(/_+/g, '_')
+                .replace(/^_+|_+$/g, '') || 'Event';
+        }
+
+        function formatNumber(value) {
+            const rounded = Math.round((value || 0) * 100) / 100;
+            return Number.isFinite(rounded) ? rounded : 0;
+        }
+
+        function readStoredAdventureRows() {
+            try {
+                const raw = localStorage.getItem(adventureStorageKey);
+                const parsed = raw ? JSON.parse(raw) : { rows: [] };
+                return Array.isArray(parsed?.rows) ? parsed.rows : [];
+            } catch (error) {
+                console.error('Failed to read adventure rows:', error);
+                return [];
+            }
+        }
+
+        function readLootAllocations() {
             try {
                 const raw = localStorage.getItem(lootAllocationsStorageKey);
-                lootAllocations = raw ? JSON.parse(raw) : {};
+                const parsed = raw ? JSON.parse(raw) : {};
+                return parsed && typeof parsed === 'object' ? parsed : {};
+            } catch (error) {
+                console.error('Failed to read loot allocations:', error);
+                return {};
+            }
+        }
 
-                if (!lootAllocations || typeof lootAllocations !== 'object') {
-                    lootAllocations = {};
+        function computePerAplRatios(vars) {
+            const totalBuild = Math.max(0, parseNumber(vars.totalEventBuild));
+            const players = Math.max(0, parseNumber(vars.players));
+            const eventDays = Math.max(0, parseNumber(vars.eventDays));
+            const totalAdventures = parseAdventureCount(vars.totalAdventures);
+            const playersPerAdventure = Math.max(0, parseNumber(vars.playersPerAdventure));
+            const eventLevel = normalizeEventLevel(vars.eventDifficulty || 'medium');
+
+            const averageBuild = players > 0 ? (totalBuild / players) : 0;
+            const averageLevel = Math.floor((averageBuild / 10) - 4);
+            const levelsPerAdventure = averageLevel * playersPerAdventure;
+            const totalEventAplEasy = levelsPerAdventure * totalAdventures;
+            const totalEventAplMedium = totalEventAplEasy * 1.2;
+            const totalEventAplHard = totalEventAplEasy * 1.5;
+
+            let selectedTotalGoal = totalEventAplMedium;
+            if (eventLevel === 'hard') selectedTotalGoal = totalEventAplHard;
+            else if (eventLevel === 'easy') selectedTotalGoal = totalEventAplEasy;
+
+            const totalSilver = Math.ceil(totalBuild * 1.5);
+            const silverPerApl = selectedTotalGoal > 0 ? (totalSilver / selectedTotalGoal) : 0;
+
+            const productionMax = Math.ceil((totalBuild * eventDays) / 5);
+            const productionMin = Math.floor(productionMax / 2);
+            const productionMid = Math.floor((productionMax + productionMin) / 2);
+            let selectedProductionGoal = productionMid;
+            if (eventLevel === 'hard') selectedProductionGoal = productionMax;
+            else if (eventLevel === 'easy') selectedProductionGoal = productionMin;
+            const productionPerApl = selectedTotalGoal > 0 ? (selectedProductionGoal / selectedTotalGoal) : 0;
+
+            return {
+                eventLevel,
+                selectedTotalGoal,
+                silverPerApl,
+                productionPerApl,
+                totalEventAplEasy,
+                totalEventAplMedium,
+                totalEventAplHard
+            };
+        }
+
+        function computeTargetAplByDifficulty(rows, selectedTotalGoal) {
+            const counts = { easy: 0, medium: 0, hard: 0 };
+
+            rows.forEach((row) => {
+                const difficulty = String(row?.difficulty || '').trim().toLowerCase();
+                if (difficulty === 'easy' || difficulty === 'medium' || difficulty === 'hard') {
+                    counts[difficulty] += 1;
                 }
-            } catch (error) {
-                console.error('Failed to load loot allocations:', error);
-                lootAllocations = {};
-            }
+            });
+
+            const easyScore = counts.easy * 1;
+            const mediumScore = counts.medium * 2;
+            const hardScore = counts.hard * 3;
+            const totalScore = easyScore + mediumScore + hardScore;
+
+            const easyGoal = totalScore > 0 ? (selectedTotalGoal * easyScore / totalScore) : 0;
+            const mediumGoal = totalScore > 0 ? (selectedTotalGoal * mediumScore / totalScore) : 0;
+            const hardGoal = totalScore > 0 ? (selectedTotalGoal * hardScore / totalScore) : 0;
+
+            return {
+                easy: counts.easy > 0 ? (easyGoal / counts.easy) : 0,
+                medium: counts.medium > 0 ? (mediumGoal / counts.medium) : 0,
+                hard: counts.hard > 0 ? (hardGoal / counts.hard) : 0,
+                counts
+            };
         }
 
-        function saveLootAllocations() {
-            try {
-                localStorage.setItem(lootAllocationsStorageKey, JSON.stringify(lootAllocations));
-            } catch (error) {
-                console.error('Failed to save loot allocations:', error);
-            }
+        function getTargetAplForRow(row, targets) {
+            const difficulty = String(row?.difficulty || '').trim().toLowerCase();
+            if (difficulty === 'easy') return targets.easy;
+            if (difficulty === 'medium') return targets.medium;
+            if (difficulty === 'hard') return targets.hard;
+            return 0;
         }
 
-        function clearLootAllocations() {
-            lootAllocations = {};
-
-            try {
-                localStorage.removeItem(lootAllocationsStorageKey);
-            } catch (error) {
-                console.error('Failed to clear loot allocations:', error);
+        function getXlsx() {
+            if (!window.XLSX) {
+                showStatus('XLSX library failed to load. Please refresh and try again.');
+                return null;
             }
+            return window.XLSX;
         }
 
-        function buildLootRows() {
-            const totalEventBuild = toNumber(form.totalEventBuild.value);
-            const players = toNumber(form.players.value);
-            const eventDays = toNumber(form.eventDays.value);
+        function createWorkbookFromRows(sheetName, rows) {
+            const xlsx = getXlsx();
+            if (!xlsx) return null;
+
+            const workbook = xlsx.utils.book_new();
+            const worksheet = xlsx.utils.json_to_sheet(rows);
+            xlsx.utils.book_append_sheet(workbook, worksheet, sheetName);
+            return { xlsx, workbook };
+        }
+
+        function toYesNoBoolean(value) {
+            const normalized = String(value || '').trim().toLowerCase();
+            return normalized === 'yes' || normalized === 'true' || normalized === '1';
+        }
+
+        function pickWorkbookFile() {
+            return new Promise((resolve) => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                input.style.display = 'none';
+
+                input.addEventListener('change', () => {
+                    const file = input.files && input.files[0] ? input.files[0] : null;
+                    input.remove();
+                    resolve(file);
+                }, { once: true });
+
+                document.body.appendChild(input);
+                input.click();
+            });
+        }
+
+        async function readWorkbookFromPicker() {
+            const xlsx = getXlsx();
+            if (!xlsx) return null;
+
+            const file = await pickWorkbookFile();
+            if (!file) return null;
+
+            const buffer = await file.arrayBuffer();
+            return xlsx.read(buffer, { type: 'array' });
+        }
+
+        function getSheetRows(workbook, preferredName) {
+            const xlsx = getXlsx();
+            if (!xlsx || !workbook) return [];
+
+            const sheetName = (preferredName && workbook.Sheets[preferredName])
+                ? preferredName
+                : workbook.SheetNames[0];
+
+            if (!sheetName || !workbook.Sheets[sheetName]) return [];
+            return xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
+        }
+
+        function parseDisplayDifficulty(value) {
+            const normalized = String(value || '').trim().toLowerCase();
+            if (normalized === 'hard' || normalized === 'max') return 'hard';
+            if (normalized === 'easy' || normalized === 'min') return 'easy';
+            return 'medium';
+        }
+
+        function normalizeAdventureRowFromImport(row, index) {
+            const difficultyRaw = row.Difficulty ?? row.difficulty ?? '';
+            const difficulty = String(difficultyRaw || '').trim();
+            const normalizedDifficulty = normalizeEventLevel(difficulty);
+            const silverRaw = row.Silver ?? row.silver ?? '';
+            const productionRaw = row.Production ?? row.production ?? '';
+
+            const silverManualColumn = row.SilverIsManual ?? row.silverIsManual;
+            const productionManualColumn = row.ProductionIsManual ?? row.productionIsManual;
+
+            const silverManual = String(silverManualColumn || '').trim() !== ''
+                ? toYesNoBoolean(silverManualColumn)
+                : String(silverRaw).trim() !== '';
+
+            const productionManual = String(productionManualColumn || '').trim() !== ''
+                ? toYesNoBoolean(productionManualColumn)
+                : String(productionRaw).trim() !== '';
+
+            return {
+                no: String(row.No ?? row.no ?? index + 1),
+                title: String(row.Title ?? row.title ?? ''),
+                type: String(row.Type ?? row.type ?? ''),
+                author: String(row.Author ?? row.author ?? ''),
+                npcs: String(row.NPCs ?? row.npcs ?? ''),
+                difficulty: difficulty ? titleCaseLevel(normalizedDifficulty) : '',
+                apl: String(row.Apl ?? row.APL ?? row.apl ?? ''),
+                silver: String(silverRaw),
+                production: String(productionRaw),
+                silverManual,
+                productionManual,
+                notes: String(row.Notes ?? row.notes ?? ''),
+                received: toYesNoBoolean(row.Received ?? row.received),
+                processed: toYesNoBoolean(row.Processed ?? row.processed),
+                tagged: toYesNoBoolean(row.Tagged ?? row.tagged)
+            };
+        }
+
+        function exportEventVariables() {
+            const vars = eventVarsApi?.get?.() || {};
+            const row = {
+                EventName: vars.eventName || '',
+                EventNumber: vars.eventNumber || '',
+                TotalEventBuild: vars.totalEventBuild || '',
+                Players: vars.players || '',
+                EventDays: vars.eventDays || '',
+                TotalAdventures: vars.totalAdventures || '',
+                EventDifficulty: titleCaseLevel(vars.eventDifficulty || 'medium'),
+                PlayersPerAdventure: vars.playersPerAdventure || '',
+                UpdatedAt: vars.updatedAt || ''
+            };
+
+            const prepared = createWorkbookFromRows('Event Variables', [row]);
+            if (!prepared) return;
+
+            const fileName = `${safeFilePart(vars.eventName)}_Event_Variables.xlsx`;
+            prepared.xlsx.writeFile(prepared.workbook, fileName);
+            showStatus(`Exported ${fileName}`);
+        }
+
+        function buildLootRows(vars) {
+            const totalEventBuild = parseNumber(vars.totalEventBuild);
+            const players = parseNumber(vars.players);
+            const eventDays = parseNumber(vars.eventDays);
+
+            const floorInt = (value) => Math.floor(value);
+            const roundInt = (value) => Math.round(value);
+            const ceilInt = (value) => Math.ceil(value);
+            const computeMid = (maxDrop, minimum) => floorInt((maxDrop + minimum) / 2);
+
+            function createLootRow(label, maxDrop, minimum, options = {}) {
+                return {
+                    label,
+                    maxDrop,
+                    minimum,
+                    mid: computeMid(maxDrop, minimum),
+                    isGroupTotal: Boolean(options.isGroupTotal),
+                    childLabels: Array.isArray(options.childLabels) ? options.childLabels : []
+                };
+            }
 
             const totalSilver = ceilInt(totalEventBuild * 1.5);
             const type2MagicItems = floorInt((players * eventDays) / 25);
@@ -422,7 +625,7 @@
             const t4 = roundInt(totalLevel4 * 0.05);
             const d4 = roundInt(totalLevel4 * 0.05);
 
-            const rows = [
+            return [
                 createLootRow('Total Silver', totalSilver, totalSilver),
                 createLootRow('Type 2 Magic Items', type2MagicItems, floorInt(type2MagicItems / 2)),
                 createLootRow('Type 1 Magic Items', type1MagicItems, floorInt(type1MagicItems / 2)),
@@ -463,218 +666,285 @@
                 createLootRow('T4', t4, floorInt(t4 / 3)),
                 createLootRow('D4', d4, floorInt(d4 / 3))
             ];
-
-            const rowMap = new Map(rows.map((row) => [row.label, row]));
-
-            for (const row of rows) {
-                if (!row.isGroupTotal || row.childLabels.length === 0) {
-                    continue;
-                }
-
-                row.maxDrop = sumByLabels(row.childLabels, (label) => rowMap.get(label)?.maxDrop || 0);
-                row.minimum = sumByLabels(row.childLabels, (label) => rowMap.get(label)?.minimum || 0);
-                row.mid = computeMid(row.maxDrop, row.minimum);
-            }
-
-            return rows;
         }
 
-        function getSelectedDifficulty() {
-            const difficulty = String(form.eventDifficulty.value || 'mid').toLowerCase();
-            if (difficulty === 'max' || difficulty === 'min') {
-                return difficulty;
-            }
+        function exportLootCalculation() {
+            const vars = eventVarsApi?.get?.() || {};
+            const rows = buildLootRows(vars);
+            const allocations = readLootAllocations();
+            const selectedDifficulty = normalizeEventLevel(vars.eventDifficulty || 'medium');
 
-            return 'mid';
-        }
-
-        function getSelectedValueForRow(row, difficulty) {
-            if (difficulty === 'max') return row.maxDrop;
-            if (difficulty === 'min') return row.minimum;
-            return row.mid;
-        }
-
-        function applyDifficultyHighlight(difficulty) {
-            lootCalcTable.classList.remove('difficulty-max', 'difficulty-mid', 'difficulty-min');
-            lootCalcTable.classList.add(`difficulty-${difficulty}`);
-        }
-
-        function getComponentLevel(row) {
-            const label = String(row.label || '').trim();
-
-            if (label.endsWith('1') || label.includes('Level 1')) {
-                return '1';
-            }
-
-            if (label.endsWith('2') || label.includes('Level 2')) {
-                return '2';
-            }
-
-            if (label.endsWith('4') || label.includes('Level 4')) {
-                return '4';
-            }
-
-            return '';
-        }
-
-        function renderLootCalc() {
-            const rows = buildLootRows();
-            const selectedDifficulty = getSelectedDifficulty();
-            lootCalcBody.innerHTML = '';
-            applyDifficultyHighlight(selectedDifficulty);
-
-            for (const row of rows) {
-                const tr = document.createElement('tr');
-                const componentLevel = getComponentLevel(row);
-
-                if (componentLevel) {
-                    tr.classList.add(`loot-level-${componentLevel}`);
-                }
-
-                if (row.isGroupTotal) {
-                    tr.classList.add('loot-row-total');
-                }
-
-                const labelTd = document.createElement('td');
-                labelTd.textContent = row.label;
-                tr.appendChild(labelTd);
-
-                const maxTd = document.createElement('td');
-                maxTd.className = 'loot-number loot-col-max';
-                maxTd.textContent = formatInt(row.maxDrop);
-                tr.appendChild(maxTd);
-
-                const midTd = document.createElement('td');
-                midTd.className = 'loot-number loot-col-mid';
-                midTd.textContent = formatInt(row.mid);
-                tr.appendChild(midTd);
-
-                const minTd = document.createElement('td');
-                minTd.className = 'loot-number loot-col-min';
-                minTd.textContent = formatInt(row.minimum);
-                tr.appendChild(minTd);
-
-                const allocatedTd = document.createElement('td');
-                let allocatedValue = 0;
-
-                if (row.isGroupTotal) {
-                    allocatedValue = sumByLabels(row.childLabels, (label) => toNumber(lootAllocations[label]));
-                    allocatedTd.className = 'loot-number';
-                    allocatedTd.textContent = formatInt(allocatedValue);
-                } else {
-                    const allocatedInput = document.createElement('input');
-                    allocatedInput.className = 'loot-allocated-input';
-                    allocatedInput.type = 'number';
-                    allocatedInput.min = '0';
-                    allocatedInput.step = '1';
-                    allocatedInput.placeholder = '0';
-                    allocatedInput.value = lootAllocations[row.label] ?? '';
-                    allocatedInput.setAttribute('aria-label', `Allocated amount for ${row.label}`);
-
-                    allocatedInput.addEventListener('input', () => {
-                        const value = allocatedInput.value.trim();
-
-                        if (!value) {
-                            delete lootAllocations[row.label];
-                        } else {
-                            lootAllocations[row.label] = value;
-                        }
-
-                        saveLootAllocations();
-                        renderLootCalc();
-                    });
-
-                    allocatedTd.appendChild(allocatedInput);
-                    allocatedValue = toNumber(lootAllocations[row.label]);
-                }
-
-                tr.appendChild(allocatedTd);
-
-                const selectedValue = getSelectedValueForRow(row, selectedDifficulty);
-                const remainingValue = selectedValue - allocatedValue;
-
-                const remainingTd = document.createElement('td');
-                remainingTd.className = 'loot-number';
-                remainingTd.textContent = formatInt(remainingValue);
-                tr.appendChild(remainingTd);
-
-                lootCalcBody.appendChild(tr);
-            }
-        }
-
-        function getFormData() {
-            return {
-                eventName: form.eventName.value.trim(),
-                eventNumber: form.eventNumber.value,
-                totalEventBuild: form.totalEventBuild.value,
-                players: form.players.value,
-                eventDays: form.eventDays.value,
-                totalAdventures: form.totalAdventures.value,
-                eventDifficulty: form.eventDifficulty.value
+            const getSelectedValue = (row) => {
+                if (selectedDifficulty === 'hard') return row.maxDrop;
+                if (selectedDifficulty === 'easy') return row.minimum;
+                return row.mid;
             };
+
+            const output = rows.map((row) => {
+                let allocated = 0;
+                if (row.isGroupTotal) {
+                    allocated = row.childLabels.reduce((sum, label) => sum + parseNumber(allocations[label]), 0);
+                } else {
+                    allocated = parseNumber(allocations[row.label]);
+                }
+
+                const selectedAmount = getSelectedValue(row);
+                return {
+                    ItemType: row.label,
+                    Hard: row.maxDrop,
+                    Medium: row.mid,
+                    Easy: row.minimum,
+                    SelectedDifficulty: titleCaseLevel(selectedDifficulty),
+                    SelectedAmount: selectedAmount,
+                    AllocatedAmount: allocated,
+                    RemainingAmount: selectedAmount - allocated,
+                    IsGroupTotal: row.isGroupTotal ? 'Yes' : 'No'
+                };
+            });
+
+            const prepared = createWorkbookFromRows('Loot Calculation', output);
+            if (!prepared) return;
+
+            const fileName = `${safeFilePart(vars.eventName)}_Loot_Calculation.xlsx`;
+            prepared.xlsx.writeFile(prepared.workbook, fileName);
+            showStatus(`Exported ${fileName}`);
         }
 
-        function setFormData(data) {
-            form.eventName.value = data.eventName || '';
-            form.eventNumber.value = data.eventNumber || '';
-            form.totalEventBuild.value = data.totalEventBuild || '';
-            form.players.value = data.players || '';
-            form.eventDays.value = data.eventDays || '';
-            form.totalAdventures.value = data.totalAdventures || '';
-            form.eventDifficulty.value = data.eventDifficulty || 'mid';
+        function buildAdventureExportRows() {
+            const vars = eventVarsApi?.get?.() || {};
+            const sourceRows = readStoredAdventureRows();
+            const ratios = computePerAplRatios(vars);
+            const targets = computeTargetAplByDifficulty(sourceRows, ratios.selectedTotalGoal);
+
+            return sourceRows.map((row) => {
+                const difficulty = String(row?.difficulty || '').trim();
+                const normalizedDifficulty = difficulty.toLowerCase();
+                const targetApl = getTargetAplForRow(row, targets);
+                const aplValue = parseNumber(row?.apl);
+
+                const silverManual = Boolean(row?.silverManual);
+                const productionManual = Boolean(row?.productionManual);
+                const silverValue = silverManual ? parseNumber(row?.silver) : aplValue * ratios.silverPerApl;
+                const productionValue = productionManual ? parseNumber(row?.production) : aplValue * ratios.productionPerApl;
+
+                return {
+                    No: row?.no ?? '',
+                    Title: row?.title ?? '',
+                    Type: row?.type ?? '',
+                    Author: row?.author ?? '',
+                    NPCs: row?.npcs ?? '',
+                    Difficulty: difficulty,
+                    TargetApl: formatNumber(targetApl),
+                    Apl: row?.apl ?? '',
+                    Silver: formatNumber(silverValue),
+                    SilverIsManual: silverManual ? 'Yes' : 'No',
+                    Production: formatNumber(productionValue),
+                    ProductionIsManual: productionManual ? 'Yes' : 'No',
+                    Notes: row?.notes ?? '',
+                    Received: row?.received ? 'Yes' : 'No',
+                    Processed: row?.processed ? 'Yes' : 'No',
+                    Tagged: row?.tagged ? 'Yes' : 'No',
+                    DifficultyNormalized: normalizedDifficulty
+                };
+            });
         }
 
-        function saveValues() {
+        function exportAdventureListing() {
+            const vars = eventVarsApi?.get?.() || {};
+            const output = buildAdventureExportRows();
+
+            const prepared = createWorkbookFromRows('Adventure Listing', output);
+            if (!prepared) return;
+
+            const fileName = `${safeFilePart(vars.eventName)}_Adventure_Listing.xlsx`;
+            prepared.xlsx.writeFile(prepared.workbook, fileName);
+            showStatus(`Exported ${fileName}`);
+        }
+
+        function exportAdventureLevelling() {
+            const vars = eventVarsApi?.get?.() || {};
+            const output = buildAdventureExportRows();
+            const ratios = computePerAplRatios(vars);
+
+            const summaryRows = [{
+                EventName: vars.eventName || '',
+                EventNumber: vars.eventNumber || '',
+                EventLevel: titleCaseLevel(vars.eventDifficulty || 'medium'),
+                PlayersPerAdventure: vars.playersPerAdventure || '',
+                TotalEventAplEasy: formatNumber(ratios.totalEventAplEasy),
+                TotalEventAplMedium: formatNumber(ratios.totalEventAplMedium),
+                TotalEventAplHard: formatNumber(ratios.totalEventAplHard),
+                SilverPerApl: formatNumber(ratios.silverPerApl),
+                ProductionPerApl: formatNumber(ratios.productionPerApl)
+            }];
+
+            const xlsx = getXlsx();
+            if (!xlsx) return;
+            const workbook = xlsx.utils.book_new();
+            xlsx.utils.book_append_sheet(workbook, xlsx.utils.json_to_sheet(summaryRows), 'Summary');
+            xlsx.utils.book_append_sheet(workbook, xlsx.utils.json_to_sheet(output), 'Adventures');
+
+            const fileName = `${safeFilePart(vars.eventName)}_Adventure_Levelling.xlsx`;
+            xlsx.writeFile(workbook, fileName);
+            showStatus(`Exported ${fileName}`);
+        }
+
+        async function importEventVariables() {
             try {
-                eventVarsApi?.set(getFormData());
-                showStatus('Saved.');
-                renderLootCalc();
-            } catch (error) {
-                console.error('Failed to save event variables:', error);
-                showStatus('Could not save values in this browser.');
-            }
-        }
-
-        function loadValues() {
-            try {
-                const data = eventVarsApi?.get?.();
-                const hasValues = data && Object.keys(data).some(key => key !== 'updatedAt' && data[key]);
-
-                if (!hasValues) {
-                    showStatus('No saved values yet.');
+                const workbook = await readWorkbookFromPicker();
+                if (!workbook) {
+                    showStatus('Import cancelled.');
                     return;
                 }
 
-                setFormData(data);
-                showStatus('Saved values loaded.');
-                renderLootCalc();
+                const rows = getSheetRows(workbook, 'Event Variables');
+                if (!rows.length) {
+                    showStatus('No Event Variables rows found in workbook.');
+                    return;
+                }
+
+                const row = rows[0] || {};
+                const payload = {
+                    eventName: row.EventName ?? row.eventName ?? '',
+                    eventNumber: row.EventNumber ?? row.eventNumber ?? '',
+                    totalEventBuild: row.TotalEventBuild ?? row.totalEventBuild ?? '',
+                    players: row.Players ?? row.players ?? '',
+                    eventDays: row.EventDays ?? row.eventDays ?? '',
+                    totalAdventures: row.TotalAdventures ?? row.totalAdventures ?? '',
+                    eventDifficulty: parseDisplayDifficulty(row.EventDifficulty ?? row.eventDifficulty ?? 'medium'),
+                    playersPerAdventure: row.PlayersPerAdventure ?? row.playersPerAdventure ?? ''
+                };
+
+                eventVarsApi?.set?.(payload);
+                setFormData(eventVarsApi?.get?.() || payload);
+                showStatus('Imported Event Variables workbook.');
             } catch (error) {
-                console.error('Failed to load event variables:', error);
-                showStatus('Could not load saved values.');
+                console.error('Failed to import Event Variables workbook:', error);
+                showStatus('Could not import Event Variables workbook.');
             }
         }
 
-        function clearValues() {
+        async function importLootCalculation() {
             try {
-                eventVarsApi?.clear?.();
-                form.reset();
-                clearLootAllocations();
-                showStatus('Saved values cleared.');
-                renderLootCalc();
+                const workbook = await readWorkbookFromPicker();
+                if (!workbook) {
+                    showStatus('Import cancelled.');
+                    return;
+                }
+
+                const rows = getSheetRows(workbook, 'Loot Calculation');
+                if (!rows.length) {
+                    showStatus('No Loot Calculation rows found in workbook.');
+                    return;
+                }
+
+                const allocations = {};
+                rows.forEach((row) => {
+                    const label = String(row.ItemType ?? row.itemType ?? '').trim();
+                    if (!label) return;
+
+                    const isGroup = toYesNoBoolean(row.IsGroupTotal ?? row.isGroupTotal);
+                    if (isGroup) return;
+
+                    const amount = parseNumber(row.AllocatedAmount ?? row.allocatedAmount ?? 0);
+                    if (amount > 0) {
+                        allocations[label] = String(amount);
+                    }
+                });
+
+                localStorage.setItem(lootAllocationsStorageKey, JSON.stringify(allocations));
+
+                const first = rows[0] || {};
+                const selectedDifficulty = first.SelectedDifficulty ?? first.selectedDifficulty;
+                if (selectedDifficulty) {
+                    eventVarsApi?.set?.({ eventDifficulty: parseDisplayDifficulty(selectedDifficulty) });
+                    setFormData(eventVarsApi?.get?.());
+                }
+
+                showStatus('Imported Loot Calculation workbook.');
             } catch (error) {
-                console.error('Failed to clear event variables:', error);
-                showStatus('Could not clear saved values.');
+                console.error('Failed to import Loot Calculation workbook:', error);
+                showStatus('Could not import Loot Calculation workbook.');
+            }
+        }
+
+        async function importAdventureListing() {
+            try {
+                const workbook = await readWorkbookFromPicker();
+                if (!workbook) {
+                    showStatus('Import cancelled.');
+                    return;
+                }
+
+                const rows = getSheetRows(workbook, 'Adventure Listing');
+                if (!rows.length) {
+                    showStatus('No Adventure Listing rows found in workbook.');
+                    return;
+                }
+
+                const mappedRows = rows.map((row, index) => normalizeAdventureRowFromImport(row, index));
+                localStorage.setItem(adventureStorageKey, JSON.stringify({ rows: mappedRows }));
+                showStatus('Imported Adventure Listing workbook.');
+            } catch (error) {
+                console.error('Failed to import Adventure Listing workbook:', error);
+                showStatus('Could not import Adventure Listing workbook.');
+            }
+        }
+
+        async function importAdventureLevelling() {
+            try {
+                const workbook = await readWorkbookFromPicker();
+                if (!workbook) {
+                    showStatus('Import cancelled.');
+                    return;
+                }
+
+                const summaryRows = getSheetRows(workbook, 'Summary');
+                const adventureRows = getSheetRows(workbook, 'Adventures');
+
+                if (summaryRows.length) {
+                    const row = summaryRows[0] || {};
+                    const payload = {
+                        eventName: row.EventName ?? row.eventName ?? '',
+                        eventNumber: row.EventNumber ?? row.eventNumber ?? '',
+                        eventDifficulty: parseDisplayDifficulty(row.EventLevel ?? row.eventLevel ?? 'medium'),
+                        playersPerAdventure: row.PlayersPerAdventure ?? row.playersPerAdventure ?? ''
+                    };
+                    eventVarsApi?.set?.(payload);
+                    setFormData(eventVarsApi?.get?.() || payload);
+                }
+
+                if (adventureRows.length) {
+                    const mappedRows = adventureRows.map((row, index) => normalizeAdventureRowFromImport(row, index));
+                    localStorage.setItem(adventureStorageKey, JSON.stringify({ rows: mappedRows }));
+                }
+
+                if (!summaryRows.length && !adventureRows.length) {
+                    showStatus('No Summary or Adventures sheets found in workbook.');
+                    return;
+                }
+
+                showStatus('Imported Adventure Levelling workbook.');
+            } catch (error) {
+                console.error('Failed to import Adventure Levelling workbook:', error);
+                showStatus('Could not import Adventure Levelling workbook.');
             }
         }
 
         saveBtn.addEventListener('click', saveValues);
         resetBtn.addEventListener('click', clearValues);
+        exportEventVarsBtn.addEventListener('click', exportEventVariables);
+        exportLootCalcBtn.addEventListener('click', exportLootCalculation);
+        exportAdventureListingBtn.addEventListener('click', exportAdventureListing);
+        exportAdventureLevellingBtn.addEventListener('click', exportAdventureLevelling);
+        importEventVarsBtn.addEventListener('click', importEventVariables);
+        importLootCalcBtn.addEventListener('click', importLootCalculation);
+        importAdventureListingBtn.addEventListener('click', importAdventureListing);
+        importAdventureLevellingBtn.addEventListener('click', importAdventureLevelling);
         form.addEventListener('input', saveValues);
-    form.addEventListener('change', saveValues);
+        form.addEventListener('change', saveValues);
 
-        loadLootAllocations();
         loadValues();
-        renderLootCalc();
     </script>
 </body>
 </html>
