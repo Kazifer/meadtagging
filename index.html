@@ -7,16 +7,39 @@
 </head>
 <body>
     <nav class="app-nav">
-        <ul class="menu app-menu">
+        <div class="app-nav-head">
+            <span class="app-nav-title">Adventure Manager</span>
+            <button id="menuToggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="appMenu" aria-label="Toggle menu">
+                <span class="menu-toggle-bar"></span>
+                <span class="menu-toggle-bar"></span>
+                <span class="menu-toggle-bar"></span>
+            </button>
+        </div>
+        <ul id="appMenu" class="menu app-menu">
             <li><a href="Event Variables.html">Event Variables</a></li>
             <li><a href="Loot Calculation.html">Loot Calculation</a></li>
-            <li><a href="Adventure Listing.html">Adventure Listing</a></li>
-            <li><a href="Adventure Levelling.html">Adventure Levelling</a></li>
-            <li><a href="Item Tags.html">Items</a></li>
-            <li><a href="Cantrips.html">Cantrips</a></li>
+
+            <li class="menu-group">
+                <details>
+                    <summary>Tags</summary>
+                    <ul class="app-submenu">
+                        <li><a href="Item Tags.html">Item Tags</a></li>
+                        <li><a href="Cantrips.html">Cantrips</a></li>
+                        <li><a href="Production.html">Production</a></li>
+                        <li><a href="Formal Scrolls.html">Formal Scrolls</a></li>
+                    </ul>
+                </details>
+            </li>
+                         <li class="menu-group">
+                <details>
+                    <summary>Adventures</summary>
+                    <ul class="app-submenu">
+                        <li><a href="Adventure Listing.html">Adventure Listing</a></li>
+                        <li><a href="Adventure Levelling.html">Adventure Levelling</a></li>
+                    </ul>
+                </details>
+            </li>
             <li><a href="Monsters.html">Monsters</a></li>
-            <li><a href="Production.html">Production Items</a></li>
-            <li><a href="Formal Scrolls.html">Formal Scrolls</a></li>
 
         </ul>
     </nav>

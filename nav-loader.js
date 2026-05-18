@@ -3,7 +3,9 @@
 (function () {
     const nav = document.querySelector('nav');
     const content = document.getElementById('content');
+    const menuToggle = document.getElementById('menuToggle');
     const links = Array.from(document.querySelectorAll('ul.menu a'));
+    const dropdowns = Array.from(document.querySelectorAll('.menu-group details'));
 
     if (!nav || !content) return;
 
@@ -44,6 +46,57 @@
     positionIframe(iframe);
     window.addEventListener('resize', scheduleIframePosition);
     window.addEventListener('scroll', scheduleIframePosition, { passive: true });
+
+    function setMenuOpen(isOpen) {
+        if (!menuToggle) return;
+        nav.classList.toggle('menu-open', Boolean(isOpen));
+        menuToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        scheduleIframePosition();
+    }
+
+    function closeAllDropdowns() {
+        dropdowns.forEach((dropdown) => {
+            dropdown.open = false;
+        });
+    }
+
+    if (menuToggle) {
+        menuToggle.addEventListener('click', () => {
+            const isOpen = !nav.classList.contains('menu-open');
+            setMenuOpen(isOpen);
+        });
+
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 900 && nav.classList.contains('menu-open')) {
+                setMenuOpen(false);
+            }
+        });
+    }
+
+    dropdowns.forEach((dropdown) => {
+        dropdown.addEventListener('toggle', () => {
+            if (!dropdown.open) return;
+
+            dropdowns.forEach((other) => {
+                if (other !== dropdown) {
+                    other.open = false;
+                }
+            });
+        });
+
+        dropdown.addEventListener('focusout', (event) => {
+            const nextFocused = event.relatedTarget;
+            if (!dropdown.contains(nextFocused)) {
+                dropdown.open = false;
+            }
+        });
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!nav.contains(event.target)) {
+            closeAllDropdowns();
+        }
+    });
 
     iframe.addEventListener('load', () => console.info('nav-loader: iframe loaded', iframe.src));
 
@@ -118,6 +171,10 @@
         if (target.origin === location.origin && target.pathname.toLowerCase().endsWith('.html')) {
             e.preventDefault();
             setActive(a);
+            closeAllDropdowns();
+            if (window.innerWidth <= 900) {
+                setMenuOpen(false);
+            }
             loadUrl(target.href, true).catch(err => console.error('nav-loader: iframe navigation failed', err));
         }
     });
