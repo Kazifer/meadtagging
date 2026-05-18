@@ -79,9 +79,17 @@
             <div class="lg:col-span-3 bg-slate-800 p-4 rounded-lg shadow-lg">
                 <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
                     <h2 class="text-2xl font-bold text-amber-500 mb-2 sm:mb-0">Monster Library</h2>
-                    <button id="add-new-monster-btn" class="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                        Add New Monster
-                    </button>
+                    <div class="w-full sm:w-auto flex flex-col sm:flex-row gap-2">
+                        <button id="export-all-monsters-xlsx-btn" class="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                            Export All Monsters XLSX
+                        </button>
+                        <button id="import-monsters-xlsx-btn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                            Import Monsters XLSX
+                        </button>
+                        <button id="add-new-monster-btn" class="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                            Add New Monster
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="mb-4 flex flex-col sm:flex-row gap-2">
@@ -301,6 +309,8 @@
         const searchInput = document.getElementById('search-input');
         const typeFilter = document.getElementById('type-filter'); 
         const noResultsMsg = document.getElementById('no-results-msg');
+        const exportAllMonstersBtn = document.getElementById('export-all-monsters-xlsx-btn');
+        const importMonstersBtn = document.getElementById('import-monsters-xlsx-btn');
         const rosterList = document.getElementById('adventure-roster-list');
         const rosterPlaceholder = document.getElementById('roster-placeholder');
         const adventureTitleInput = document.getElementById('adventure-title');
@@ -318,6 +328,85 @@
         const monsterIdInput = document.getElementById('monster-id');
         const deleteBtn = document.getElementById('delete-monster-btn');
         const clearAdventureBtn = document.getElementById('clear-adventure-btn'); 
+        let monsterDatabase = [];
+
+        const getColumnValue = (row, key) => {
+            if (!row || typeof row !== 'object') return '';
+            if (key in row) return row[key];
+            const loweredKey = key.toLowerCase();
+            const match = Object.keys(row).find((k) => String(k).toLowerCase() === loweredKey);
+            return match ? row[match] : '';
+        };
+
+        const normalizeMonsterFromRow = (row) => {
+            const numOrZero = (value) => {
+                const n = parseInt(value, 10);
+                return Number.isFinite(n) ? n : 0;
+            };
+
+            return {
+                id: String(getColumnValue(row, 'id') || '').trim() || crypto.randomUUID(),
+                Name: String(getColumnValue(row, 'Name') || '').trim(),
+                Type: String(getColumnValue(row, 'Type') || '').trim(),
+                Power: String(getColumnValue(row, 'Power') || '').trim(),
+                APL: numOrZero(getColumnValue(row, 'APL')),
+                Body: numOrZero(getColumnValue(row, 'Body')),
+                Armour: String(getColumnValue(row, 'Armour') || '').trim(),
+                Strength: numOrZero(getColumnValue(row, 'Strength')),
+                Threshhold: numOrZero(getColumnValue(row, 'Threshhold')),
+                PCLevels: String(getColumnValue(row, 'PCLevels') || '').trim(),
+                Protectives: String(getColumnValue(row, 'Protectives') || '').trim(),
+                OnDeath: String(getColumnValue(row, 'OnDeath') || '').trim(),
+                Rips: String(getColumnValue(row, 'Rips') || '').trim(),
+                Description: String(getColumnValue(row, 'Description') || '').trim(),
+                Motive: String(getColumnValue(row, 'Motive') || '').trim(),
+                EarthSpells: String(getColumnValue(row, 'EarthSpells') || '').trim(),
+                CelestialSpells: String(getColumnValue(row, 'CelestialSpells') || '').trim(),
+                Weapons: String(getColumnValue(row, 'Weapons') || '').trim(),
+                Claws: String(getColumnValue(row, 'Claws') || '').trim(),
+                WeaponTag: String(getColumnValue(row, 'WeaponTag') || '').trim(),
+                ClawTag: String(getColumnValue(row, 'ClawTag') || '').trim(),
+                HealedBy: String(getColumnValue(row, 'HealedBy') || '').trim(),
+                SpecialAbilities: String(getColumnValue(row, 'SpecialAbilities') || '').trim(),
+                CLIMATE: String(getColumnValue(row, 'CLIMATE') || getColumnValue(row, 'Climate') || '').trim()
+            };
+        };
+
+        const rebuildTypeControls = () => {
+            const mergedTypes = new Set(
+                monsterTypesData
+                    .map((t) => (t && t.Type ? String(t.Type).trim() : ''))
+                    .filter(Boolean)
+            );
+
+            monsterDatabase.forEach((m) => {
+                const type = String(m.Type || '').trim();
+                if (type) mergedTypes.add(type);
+            });
+
+            const sortedTypes = Array.from(mergedTypes).sort((a, b) => a.localeCompare(b));
+
+            const typeSelect = document.getElementById('type');
+            typeSelect.innerHTML = '';
+            sortedTypes.forEach((type) => {
+                const option = document.createElement('option');
+                option.value = type;
+                option.textContent = type;
+                typeSelect.appendChild(option);
+            });
+
+            const prevFilter = typeFilter.value;
+            typeFilter.innerHTML = '<option value="">All Types</option>';
+            sortedTypes.forEach((type) => {
+                const option = document.createElement('option');
+                option.value = type;
+                option.textContent = type;
+                typeFilter.appendChild(option);
+            });
+            if (prevFilter && sortedTypes.includes(prevFilter)) {
+                typeFilter.value = prevFilter;
+            }
+        };
 
         // --- RENDER FUNCTIONS ---
         const renderMonsterTable = () => {
@@ -691,6 +780,65 @@
             });
         });
 
+        exportAllMonstersBtn.addEventListener('click', () => {
+            if (!monsterDatabase.length) {
+                showCustomConfirm('Monster library is empty. Nothing to export.', () => {});
+                return;
+            }
+
+            const exportRows = monsterDatabase.map((monster) => ({ ...monster }));
+            const worksheet = XLSX.utils.json_to_sheet(exportRows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Monsters');
+            XLSX.writeFile(workbook, 'monster-library.xlsx');
+        });
+
+        importMonstersBtn.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.xlsx';
+
+            input.addEventListener('change', async (event) => {
+                const file = event.target.files && event.target.files[0];
+                if (!file) return;
+
+                try {
+                    const buffer = await file.arrayBuffer();
+                    const workbook = XLSX.read(buffer, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    if (!firstSheetName) {
+                        showCustomConfirm('Selected file has no sheets to import.', () => {});
+                        return;
+                    }
+
+                    const sheet = workbook.Sheets[firstSheetName];
+                    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                    const importedMonsters = rows
+                        .map(normalizeMonsterFromRow)
+                        .filter((m) => m.Name);
+
+                    if (!importedMonsters.length) {
+                        showCustomConfirm('No valid monster rows found. Ensure the sheet has a Name column.', () => {});
+                        return;
+                    }
+
+                    monsterDatabase = importedMonsters;
+
+                    const validIds = new Set(monsterDatabase.map((m) => m.id));
+                    currentAdventure.monsters = currentAdventure.monsters.filter((m) => validIds.has(m.baseMonsterId));
+
+                    rebuildTypeControls();
+                    renderMonsterTable();
+                    renderAdventureRoster();
+                } catch (error) {
+                    console.error('Failed to import monsters XLSX:', error);
+                    showCustomConfirm('Could not import monsters from this XLSX file.', () => {});
+                }
+            }, { once: true });
+
+            input.click();
+        });
+
 
         // --- CUSTOM CONFIRMATION DIALOG ---
         function showCustomConfirm(message, onConfirm) {
@@ -1062,27 +1210,9 @@
 
         // --- INITIALIZATION ---
         const init = async () => { 
-            const typeSelect = document.getElementById('type');
-            typeSelect.innerHTML = ''; 
-            monsterTypesData.forEach(t => {
-                const option = document.createElement('option');
-                option.value = t.Type;
-                option.textContent = t.Type;
-                typeSelect.appendChild(option);
-            });
-
-            // Populate type filter dropdown
-            const typeFilterSelect = document.getElementById('type-filter');
-            typeFilterSelect.innerHTML = '<option value="">All Types</option>'; 
-            monsterTypesData.forEach(t => {
-                const option = document.createElement('option');
-                option.value = t.Type;
-                option.textContent = t.Type;
-                typeFilterSelect.appendChild(option);
-            });
-
             // Populate monsterDatabase directly from the embedded data
             monsterDatabase = initialMonsterData.map(monster => ({ ...monster, id: crypto.randomUUID() })); 
+            rebuildTypeControls();
             
             renderMonsterTable();
             renderAdventureRoster();
