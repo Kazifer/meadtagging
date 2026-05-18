@@ -63,52 +63,6 @@
             margin-top: 20px;
         }
 
-        .sync-panel {
-            margin-top: 14px;
-            padding: 14px;
-            border: 1px solid var(--app-border);
-            border-radius: 10px;
-            background: #111827;
-        }
-
-        .sync-panel p {
-            margin: 0 0 10px;
-            color: var(--app-muted);
-            font-size: 0.92rem;
-        }
-
-        .sync-row {
-            display: grid;
-            grid-template-columns: minmax(220px, 1fr) auto auto auto;
-            gap: 8px;
-            align-items: center;
-        }
-
-        .sync-row input {
-            padding: 10px 12px;
-            border-radius: 8px;
-            border: 1px solid var(--app-border);
-            background: #1f2937;
-            color: var(--app-text);
-            font-size: 0.9rem;
-        }
-
-        .sync-row input:focus {
-            outline: 2px solid #00bcd4;
-            outline-offset: 1px;
-        }
-
-        .btn-tertiary {
-            background: #2d3748;
-            color: #edf2f7;
-        }
-
-        @media (max-width: 900px) {
-            .sync-row {
-                grid-template-columns: 1fr;
-            }
-        }
-
         .btn {
             border: 0;
             border-radius: 8px;
@@ -266,7 +220,7 @@
 <body>
     <main class="container">
         <h1>Event Variables</h1>
-        <p>Set your event-level values once. Save to Cloud Sync to use the same values across browsers, sessions, and machines.</p>
+        <p>Set your event-level values once. They are saved in your browser and automatically restored the next time you open this page.</p>
 
         <form id="eventVariablesForm" class="event-form" autocomplete="off">
             <div class="field">
@@ -310,23 +264,12 @@
         </form>
 
         <div class="actions">
-            <button id="saveBtn" class="btn btn-primary" type="button">Save + Cloud Sync</button>
+            <button id="saveBtn" class="btn btn-primary" type="button">Save</button>
             <button id="resetBtn" class="btn btn-secondary" type="button">Clear Saved Values</button>
         </div>
 
-        <section class="sync-panel" aria-labelledby="syncPanelHeading">
-            <h2 id="syncPanelHeading">Cloud Sync</h2>
-            <p>Use a Sync ID to access the same event variables from any browser or machine.</p>
-            <div class="sync-row">
-                <input id="cloudSyncIdInput" type="text" placeholder="Paste existing Sync ID or click Save + Cloud Sync" autocomplete="off" />
-                <button id="connectSyncBtn" class="btn btn-tertiary" type="button">Connect Sync ID</button>
-                <button id="copySyncBtn" class="btn btn-tertiary" type="button">Copy Sync ID</button>
-                <button id="disableSyncBtn" class="btn btn-secondary" type="button">Disconnect</button>
-            </div>
-        </section>
-
         <p id="statusMessage" class="status"></p>
-        <p class="hint">Tip: values auto-save locally while you type. Cloud writes are debounced to reduce network traffic.</p>
+        <p class="hint">Tip: values also auto-save when you type.</p>
 
         <section class="loot-calc" aria-labelledby="lootCalcHeading">
             <h2 id="lootCalcHeading">Loot Calc</h2>
@@ -357,28 +300,15 @@
         const form = document.getElementById('eventVariablesForm');
         const saveBtn = document.getElementById('saveBtn');
         const resetBtn = document.getElementById('resetBtn');
-        const cloudSyncIdInput = document.getElementById('cloudSyncIdInput');
-        const connectSyncBtn = document.getElementById('connectSyncBtn');
-        const copySyncBtn = document.getElementById('copySyncBtn');
-        const disableSyncBtn = document.getElementById('disableSyncBtn');
         const statusMessage = document.getElementById('statusMessage');
         const lootCalcBody = document.getElementById('lootCalcBody');
         const lootCalcTable = document.getElementById('lootCalcTable');
 
         const lootAllocationsStorageKey = 'lootCalcAllocated.v1';
         let lootAllocations = {};
-        let cloudSaveTimer = null;
 
         function showStatus(message) {
             statusMessage.textContent = message;
-        }
-
-        function getCloudSyncIdFromInput() {
-            return String(cloudSyncIdInput.value || '').trim();
-        }
-
-        function syncCloudInputFromState() {
-            cloudSyncIdInput.value = eventVarsApi?.getCloudSyncId?.() || '';
         }
 
         function toNumber(value) {
@@ -694,56 +624,20 @@
             form.eventDifficulty.value = data.eventDifficulty || 'mid';
         }
 
-        async function saveValues(options = {}) {
+        function saveValues() {
             try {
-                const shouldCreateCloud = Boolean(options.forceCloudCreate);
-                const cloudSyncIdFromInput = getCloudSyncIdFromInput();
-
-                if (cloudSyncIdFromInput && eventVarsApi?.setCloudSyncId) {
-                    eventVarsApi.setCloudSyncId(cloudSyncIdFromInput);
-                }
-
-                if (eventVarsApi?.saveWithCloud) {
-                    const result = await eventVarsApi.saveWithCloud(getFormData(), {
-                        forceCreateCloud: shouldCreateCloud
-                    });
-
-                    syncCloudInputFromState();
-
-                    if (result?.cloudSyncId) {
-                        showStatus(`Saved and synced to cloud (${result.cloudSyncId}).`);
-                    } else {
-                        showStatus('Saved locally. Click Save + Cloud Sync to enable cross-machine sync.');
-                    }
-                } else {
-                    eventVarsApi?.set(getFormData());
-                    showStatus('Saved.');
-                }
-
+                eventVarsApi?.set(getFormData());
+                showStatus('Saved.');
                 renderLootCalc();
             } catch (error) {
                 console.error('Failed to save event variables:', error);
-                showStatus('Could not save values. Check your connection and Sync ID.');
+                showStatus('Could not save values in this browser.');
             }
         }
 
-        async function loadValues() {
+        function loadValues() {
             try {
-                let data = null;
-
-                const cloudSyncId = getCloudSyncIdFromInput() || eventVarsApi?.getCloudSyncId?.();
-                if (cloudSyncId && eventVarsApi?.setCloudSyncId) {
-                    eventVarsApi.setCloudSyncId(cloudSyncId);
-                }
-
-                if (cloudSyncId && eventVarsApi?.loadFromCloud) {
-                    data = await eventVarsApi.loadFromCloud(cloudSyncId);
-                }
-
-                if (!data) {
-                    data = eventVarsApi?.get?.();
-                }
-
+                const data = eventVarsApi?.get?.();
                 const hasValues = data && Object.keys(data).some(key => key !== 'updatedAt' && data[key]);
 
                 if (!hasValues) {
@@ -752,7 +646,7 @@
                 }
 
                 setFormData(data);
-                showStatus(cloudSyncId ? 'Saved values loaded from cloud sync.' : 'Saved values loaded.');
+                showStatus('Saved values loaded.');
                 renderLootCalc();
             } catch (error) {
                 console.error('Failed to load event variables:', error);
@@ -763,9 +657,7 @@
         function clearValues() {
             try {
                 eventVarsApi?.clear?.();
-                eventVarsApi?.clearCloudSyncId?.();
                 form.reset();
-                syncCloudInputFromState();
                 clearLootAllocations();
                 showStatus('Saved values cleared.');
                 renderLootCalc();
@@ -775,56 +667,14 @@
             }
         }
 
-        function scheduleAutoSave() {
-            window.clearTimeout(cloudSaveTimer);
-            cloudSaveTimer = window.setTimeout(() => {
-                saveValues();
-            }, 500);
-        }
-
-        saveBtn.addEventListener('click', () => saveValues({ forceCloudCreate: true }));
+        saveBtn.addEventListener('click', saveValues);
         resetBtn.addEventListener('click', clearValues);
-        connectSyncBtn.addEventListener('click', async () => {
-            try {
-                const syncId = getCloudSyncIdFromInput();
-                eventVarsApi?.setCloudSyncId?.(syncId);
-                await loadValues();
-            } catch (error) {
-                console.error('Failed to connect sync ID:', error);
-                showStatus('Invalid Sync ID format.');
-            }
-        });
-
-        copySyncBtn.addEventListener('click', async () => {
-            const syncId = eventVarsApi?.getCloudSyncId?.();
-            if (!syncId) {
-                showStatus('No Sync ID to copy yet.');
-                return;
-            }
-
-            try {
-                await navigator.clipboard.writeText(syncId);
-                showStatus('Sync ID copied. Use it on another machine to connect.');
-            } catch (error) {
-                console.error('Failed to copy Sync ID:', error);
-                showStatus('Copy failed. Select and copy the Sync ID manually.');
-            }
-        });
-
-        disableSyncBtn.addEventListener('click', () => {
-            eventVarsApi?.clearCloudSyncId?.();
-            syncCloudInputFromState();
-            showStatus('Cloud sync disconnected on this browser.');
-        });
-
-        form.addEventListener('input', scheduleAutoSave);
-        form.addEventListener('change', scheduleAutoSave);
+        form.addEventListener('input', saveValues);
+    form.addEventListener('change', saveValues);
 
         loadLootAllocations();
-        syncCloudInputFromState();
-        loadValues().finally(() => {
-            renderLootCalc();
-        });
+        loadValues();
+        renderLootCalc();
     </script>
 </body>
 </html>
