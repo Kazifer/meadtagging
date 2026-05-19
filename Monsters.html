@@ -63,6 +63,14 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .modifiers-table th,
+        .modifiers-table td {
+            border-bottom: 1px solid #334155;
+            vertical-align: top;
+        }
+        .modifiers-table tbody tr:last-child td {
+            border-bottom: 0;
+        }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-200">
@@ -72,6 +80,23 @@
             <h1 class="text-4xl font-bold text-amber-400">Monster Encounter Builder</h1>
             <p class="text-slate-400 mt-1">Browse the library, build your adventure, and export your encounter sheet.</p>
         </header>
+
+        <section class="bg-slate-800 p-4 rounded-lg shadow-lg mb-6">
+            <h2 class="text-xl font-bold text-amber-500 mb-2">Monster Modifiers</h2>
+            <p class="text-sm text-slate-400 mb-3">Select modifiers to include as a separate table in exported output files.</p>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left text-slate-300 modifiers-table">
+                    <thead class="text-xs text-amber-400 uppercase bg-slate-700">
+                        <tr>
+                            <th class="p-3">Modifier</th>
+                            <th class="p-3">Description</th>
+                            <th class="p-3 text-center">Include</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modifier-table-body"></tbody>
+                </table>
+            </div>
+        </section>
 
         <main class="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
@@ -311,6 +336,7 @@
         const noResultsMsg = document.getElementById('no-results-msg');
         const exportAllMonstersBtn = document.getElementById('export-all-monsters-xlsx-btn');
         const importMonstersBtn = document.getElementById('import-monsters-xlsx-btn');
+        const modifierTableBody = document.getElementById('modifier-table-body');
         const rosterList = document.getElementById('adventure-roster-list');
         const rosterPlaceholder = document.getElementById('roster-placeholder');
         const adventureTitleInput = document.getElementById('adventure-title');
@@ -329,6 +355,15 @@
         const deleteBtn = document.getElementById('delete-monster-btn');
         const clearAdventureBtn = document.getElementById('clear-adventure-btn'); 
         let monsterDatabase = [];
+        const modifiersStorageKey = 'monsterModifiersSelected.v1';
+        const modifierCatalog = [
+            { id: 'elite', name: 'Elite', description: 'Increase Body by 25% and APL by 2.' },
+            { id: 'berserk', name: 'Berserk', description: 'Monster gains +2 Strength and cannot retreat.' },
+            { id: 'armored', name: 'Armored', description: 'Add +4 Armour or improve natural defenses.' },
+            { id: 'arcane', name: 'Arcane Surge', description: 'Monster gains one additional spell use per encounter.' },
+            { id: 'swift', name: 'Swift', description: 'Monster can take one extra movement action each round.' }
+        ];
+        let selectedModifierIds = new Set();
 
         const getColumnValue = (row, key) => {
             if (!row || typeof row !== 'object') return '';
@@ -406,6 +441,65 @@
             if (prevFilter && sortedTypes.includes(prevFilter)) {
                 typeFilter.value = prevFilter;
             }
+        };
+
+        const saveSelectedModifiers = () => {
+            localStorage.setItem(modifiersStorageKey, JSON.stringify(Array.from(selectedModifierIds)));
+        };
+
+        const loadSelectedModifiers = () => {
+            try {
+                const raw = localStorage.getItem(modifiersStorageKey);
+                const parsed = raw ? JSON.parse(raw) : [];
+                if (Array.isArray(parsed)) {
+                    const validIds = new Set(modifierCatalog.map((m) => m.id));
+                    selectedModifierIds = new Set(parsed.filter((id) => validIds.has(id)));
+                }
+            } catch (error) {
+                console.error('Failed to load selected modifiers:', error);
+                selectedModifierIds = new Set();
+            }
+        };
+
+        const getSelectedModifiers = () => modifierCatalog.filter((m) => selectedModifierIds.has(m.id));
+
+        const renderModifierTable = () => {
+            modifierTableBody.innerHTML = '';
+
+            modifierCatalog.forEach((modifier) => {
+                const tr = document.createElement('tr');
+                tr.className = 'bg-slate-800';
+
+                const nameTd = document.createElement('td');
+                nameTd.className = 'p-3 font-semibold text-white';
+                nameTd.textContent = modifier.name;
+
+                const descriptionTd = document.createElement('td');
+                descriptionTd.className = 'p-3 text-slate-300';
+                descriptionTd.textContent = modifier.description;
+
+                const includeTd = document.createElement('td');
+                includeTd.className = 'p-3 text-center';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = selectedModifierIds.has(modifier.id);
+                checkbox.className = 'h-4 w-4 accent-amber-500';
+                checkbox.setAttribute('aria-label', `Include modifier ${modifier.name}`);
+                checkbox.addEventListener('change', () => {
+                    if (checkbox.checked) {
+                        selectedModifierIds.add(modifier.id);
+                    } else {
+                        selectedModifierIds.delete(modifier.id);
+                    }
+                    saveSelectedModifiers();
+                });
+
+                includeTd.appendChild(checkbox);
+                tr.appendChild(nameTd);
+                tr.appendChild(descriptionTd);
+                tr.appendChild(includeTd);
+                modifierTableBody.appendChild(tr);
+            });
         };
 
         // --- RENDER FUNCTIONS ---
@@ -880,6 +974,8 @@
                 totalAPL: totalAPL
             };
 
+            const selectedModifiers = getSelectedModifiers();
+
             // Define the order of fields for export and their display names, mapping to internal keys
             const exportFields = [
                 { key: 'Type', display: 'Type' },
@@ -928,7 +1024,7 @@
 
                 return details;
             });
-            return { monsterDetails, summary, exportFields }; 
+            return { monsterDetails, summary, exportFields, selectedModifiers }; 
         }
 
         document.getElementById('export-pdf-btn').addEventListener('click', () => {
@@ -938,7 +1034,7 @@
             }
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF(); 
-            const { monsterDetails, summary } = getExportData(); 
+            const { monsterDetails, summary, selectedModifiers } = getExportData(); 
             
             // --- Summary Section ---
             const summaryStartX = 10;
@@ -968,7 +1064,26 @@
             doc.setFont(undefined, 'normal'); 
             doc.text(`${String(summary.totalMonsters)}`, summaryStartX + summaryPadding + 80 + doc.getTextWidth(`Total Monsters:   `), currentSummaryY + summaryLineHeight);
             
-            currentSummaryY += summaryLineHeight + summaryPadding + 5; 
+            currentSummaryY += summaryLineHeight + summaryPadding + 5;
+
+            if (selectedModifiers.length > 0) {
+                doc.setFont(undefined, 'bold');
+                doc.setFontSize(9);
+                doc.text('Selected Modifiers', summaryStartX + summaryPadding, currentSummaryY + summaryLineHeight);
+                currentSummaryY += summaryLineHeight + 2;
+
+                doc.autoTable({
+                    startY: currentSummaryY + 2,
+                    margin: { left: summaryStartX + summaryPadding, right: summaryStartX + summaryPadding },
+                    head: [['Name', 'Description']],
+                    body: selectedModifiers.map((modifier) => [modifier.name, modifier.description]),
+                    theme: 'grid',
+                    styles: { fontSize: 8, cellPadding: 2 },
+                    headStyles: { fillColor: [45, 55, 72], textColor: [237, 242, 247] }
+                });
+                currentSummaryY = doc.lastAutoTable.finalY + 4;
+            }
+
             const topMarginStart = currentSummaryY;
 
 
@@ -1083,7 +1198,7 @@
                 showCustomConfirm('Roster is empty. Add monsters to export.', () => {});
                 return;
             }
-            const { monsterDetails, summary, exportFields } = getExportData();
+            const { monsterDetails, summary, exportFields, selectedModifiers } = getExportData();
             
             const worksheetData = [];
 
@@ -1091,6 +1206,16 @@
             worksheetData.push(['Adventure:', summary.adventureName]);
             worksheetData.push(['Total APL:', summary.totalAPL, 'Total Monsters:', summary.totalMonsters]);
             worksheetData.push([]); 
+
+            worksheetData.push(['Selected Modifiers']);
+            if (selectedModifiers.length > 0) {
+                worksheetData.push(['Name', 'Description']);
+                selectedModifiers.forEach((modifier) => {
+                    worksheetData.push([modifier.name, modifier.description]);
+                });
+            } else {
+                worksheetData.push(['(None selected)']);
+            }
             worksheetData.push([]); 
 
             // Add monster details
@@ -1113,7 +1238,7 @@
                 showCustomConfirm('Roster is empty. Add monsters to export.', () => {});
                 return;
             }
-            const { monsterDetails, summary } = getExportData();
+            const { monsterDetails, summary, selectedModifiers } = getExportData();
 
             let htmlContent = `
                 <!DOCTYPE html>
@@ -1174,6 +1299,27 @@
                             <div class="summary-item">Total Monsters: <strong>${summary.totalMonsters}</strong></div>
                         </div>
                         <h2>Monsters</h2>
+                        <h2>Selected Modifiers</h2>
+                        ${selectedModifiers.length > 0 ? `
+                        <table style="width:100%; border-collapse: collapse; margin-bottom: 20px;">
+                            <thead>
+                                <tr>
+                                    <th style="border: 1px solid #475569; padding: 8px; text-align: left; color: #fcd34d;">Name</th>
+                                    <th style="border: 1px solid #475569; padding: 8px; text-align: left; color: #fcd34d;">Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${selectedModifiers.map(modifier => `
+                                <tr>
+                                    <td style="border: 1px solid #475569; padding: 8px;">${modifier.name}</td>
+                                    <td style="border: 1px solid #475569; padding: 8px;">${modifier.description}</td>
+                                </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        ` : `<p style="margin-bottom: 20px; color: #94a3b8;">No modifiers selected.</p>`}
+
+                        <h2>Monsters</h2>
                         <div class="monster-grid"> 
             `;
 
@@ -1212,7 +1358,9 @@
         const init = async () => { 
             // Populate monsterDatabase directly from the embedded data
             monsterDatabase = initialMonsterData.map(monster => ({ ...monster, id: crypto.randomUUID() })); 
+            loadSelectedModifiers();
             rebuildTypeControls();
+            renderModifierTable();
             
             renderMonsterTable();
             renderAdventureRoster();
