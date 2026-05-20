@@ -41,9 +41,9 @@
             <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div class="w-full md:w-1/2">
                     <label for="adventureTitle" class="block text-sm font-normal text-gray-200 mb-1">Adventure </label>
-                    <input type="text" id="adventureTitle" value=""
-                           class="w-full px-4 py-2 border border-gray-600 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-lg bg-gray-700 text-gray-100"
-                           oninput="updateExportData()">
+                    <select id="adventureTitle"
+                            class="w-full px-4 py-2 border border-gray-600 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-lg bg-gray-700 text-gray-100"
+                            onchange="updateExportData()"></select>
                 </div>
                 <div class="w-full md:w-1/4">
                     <div class="bg-indigo-900/50 p-4 rounded-lg text-center shadow-inner">
@@ -505,12 +505,42 @@
 
         // --- Export Functions ---
 
+        function getAdventureSelectionParts() {
+            const adventureSelect = document.getElementById('adventureTitle');
+            const selectedLabel = adventureSelect?.selectedOptions?.[0]?.textContent?.trim() || '';
+            const selectedValue = adventureSelect?.value?.trim() || '';
+            const rawAdventure = selectedLabel || selectedValue || 'Untitled Adventure';
+            const match = rawAdventure.match(/^A\s*(\d+)\s*-\s*(.+)$/i);
+            if (match) {
+                return {
+                    no: match[1].trim(),
+                    title: match[2].trim() || 'Untitled Adventure'
+                };
+            }
+
+            return {
+                no: '',
+                title: rawAdventure.trim() || 'Untitled Adventure'
+            };
+        }
+
+        function getExportAdventureString() {
+            const eventVars = window.EventVariables?.get?.() || {};
+            const eventNo = String(eventVars.eventNumber || '').trim();
+            const eventTitle = String(eventVars.eventName || '').trim();
+            const adventure = getAdventureSelectionParts();
+
+            const eventPart = ['E' + (eventNo || '')];
+            const adventurePart = ['A' + (adventure.no || ''), ' - ',adventure.title].filter(Boolean).join(' ').trim();
+            return `${eventPart} - ${adventurePart}`;
+        }
+
         /**
          * Updates the hidden export container with current data in the card format.
          */
         function updateExportData() {
             const selectedCantrips = cantrips.filter(c => c.isSelected);
-            const adventureTitle = document.getElementById('adventureTitle').value;
+            const adventureTitle = getExportAdventureString();
 
             // 1. Update Header
             document.getElementById('exportTitle').textContent = adventureTitle;
@@ -612,7 +642,7 @@
                 return;
             }
 
-            const title = document.getElementById('adventureTitle').value;
+            const title = getExportAdventureString();
             const filename = `${title.replace(/\s/g, '_')}_Cantrips`;
 
             // Prepare the export content HTML structure (already done by updateExportData)
@@ -747,10 +777,11 @@
          */
         function exportAsCSV(filename, data) {
             const headers = ['Name', 'Celestial', 'Earth', 'Nature', 'Type', 'Duration', 'Cost', 'Tag', 'Verbal', 'Description'];
+            const exportAdventureString = getExportAdventureString();
             
             // Header for CSV
             let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += `Adventure: "${document.getElementById('adventureTitle').value}"\n\n`;
+            csvContent += `Adventure: "${exportAdventureString}"\n\n`;
             // Removed: Total Production Cost line from CSV
             csvContent += headers.join(',') + '\n';
 
@@ -786,11 +817,52 @@
 
         // --- Initial Load ---
         document.addEventListener('DOMContentLoaded', () => {
+            const getAdventureOptions = () => {
+                try {
+                    const raw = localStorage.getItem('adventureLevelling.v1');
+                    const parsed = raw ? JSON.parse(raw) : { rows: [] };
+                    const rows = Array.isArray(parsed?.rows) ? parsed.rows : [];
+
+                    return rows
+                        .map((row, index) => {
+                            const no = String(row?.no || '').trim();
+                            const title = String(row?.title || '').trim();
+                            if (!no && !title) return null;
+                            const label = no && title ? `A${no} - ${title}` : (title || `Adventure ${index + 1}`);
+                            const value = no || title || String(index + 1);
+                            return { value, label };
+                        })
+                        .filter(Boolean);
+                } catch (error) {
+                    console.error('Cantrips: failed to read adventure listing data', error);
+                    return [];
+                }
+            };
+
             const eventVars = window.EventVariables?.get?.();
             const eventTitle = window.EventVariables?.buildTitle?.(eventVars);
             const adventureTitleInput = document.getElementById('adventureTitle');
-            if (adventureTitleInput && !adventureTitleInput.value.trim() && eventTitle) {
-                adventureTitleInput.value = eventTitle;
+
+            if (adventureTitleInput) {
+                const adventureOptions = getAdventureOptions();
+                adventureTitleInput.innerHTML = '<option value="">Select Adventure</option>';
+
+                adventureOptions.forEach((option) => {
+                    const optionEl = document.createElement('option');
+                    optionEl.value = option.value;
+                    optionEl.textContent = option.label;
+                    adventureTitleInput.appendChild(optionEl);
+                });
+
+                if (eventTitle && !adventureOptions.some((option) => option.value === eventTitle)) {
+                    const fallback = document.createElement('option');
+                    fallback.value = eventTitle;
+                    fallback.textContent = eventTitle;
+                    adventureTitleInput.appendChild(fallback);
+                    adventureTitleInput.value = eventTitle;
+                } else if (adventureOptions.length > 0) {
+                    adventureTitleInput.value = adventureOptions[0].value;
+                }
             }
 
             applyFilters(); // Call applyFilters to initially render the list

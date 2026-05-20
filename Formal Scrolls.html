@@ -22,11 +22,32 @@
     <script type="text/babel">
         const formalScrolls = window.formalScrollsData
         const initialEventVariables = window.EventVariables?.get?.() || {};
+        const adventureOptions = (() => {
+          try {
+            const raw = localStorage.getItem('adventureLevelling.v1');
+            const parsed = raw ? JSON.parse(raw) : { rows: [] };
+            const rows = Array.isArray(parsed?.rows) ? parsed.rows : [];
+
+            return rows
+              .map((row, index) => {
+                const no = String(row?.no || '').trim();
+                const title = String(row?.title || '').trim();
+                if (!no && !title) return null;
+                const value = no || title || String(index + 1);
+                const label = no && title ? `A${no} - ${title}` : (title || `Adventure ${index + 1}`);
+                return { value, label };
+              })
+              .filter(Boolean);
+          } catch (error) {
+            console.error('Formal Scrolls: failed to read adventure listing data', error);
+            return [];
+          }
+        })();
 
         const App = () => {
           // State variables for input fields
           const [eventNumber, setEventNumber] = React.useState(initialEventVariables.eventNumber || '');
-          const [adventureNumber, setAdventureNumber] = React.useState('');
+          const [adventureNumber, setAdventureNumber] = React.useState(adventureOptions[0]?.value || '');
           const [sequenceNumber, setSequenceNumber] = React.useState('');
           const [dateCreated, setDateCreated] = React.useState(new Date().toISOString().split('T')[0]); // Default to today's date
 
@@ -49,6 +70,31 @@
           // State for search and sort
           const [searchTerm, setSearchTerm] = React.useState('');
           const [sortConfig, setSortConfig] = React.useState({ key: null, direction: 'ascending' });
+
+          const getAdventureSelectionParts = React.useCallback(() => {
+            const selected = adventureOptions.find((option) => option.value === adventureNumber);
+            const rawAdventure = (selected?.label || adventureNumber || '').trim();
+            const match = rawAdventure.match(/^A\s*(\d+)\s*-\s*(.+)$/i);
+            if (match) {
+              return {
+                no: match[1].trim(),
+                title: match[2].trim() || 'Untitled Adventure'
+              };
+            }
+
+            return {
+              no: '',
+              title: rawAdventure || 'Untitled Adventure'
+            };
+          }, [adventureNumber]);
+
+          const getFormattedAdventureTitle = React.useCallback(() => {
+            const eventTitle = String(initialEventVariables.eventName || '').trim();
+            const eventPart = ['E' + (eventNumber || ''), eventTitle].filter(Boolean).join(' ').trim() || 'E';
+            const adventure = getAdventureSelectionParts();
+            const adventurePart = ['A' + (adventure.no || ''), adventure.title].filter(Boolean).join(' ').trim();
+            return `${eventPart} - ${adventurePart}`;
+          }, [eventNumber, getAdventureSelectionParts]);
 
           // Effect to clean up object URLs when component unmounts or files change
           React.useEffect(() => {
@@ -265,7 +311,9 @@ doc.setFont('helvetica', 'normal');
               doc.text(splitDescription, textMargin, currentY + 15); // Add more padding before description
 
               doc.setFontSize(10);
-              const itemCode = `Item Code: E${eventNumber || 'XX'}A${adventureNumber || 'YY'}S${sequenceNumber || 'ZZ'}`;
+              const adventure = getAdventureSelectionParts();
+              const exportCode = `E${eventNumber || 'XX'}A${adventure.no || 'YY'}S${sequenceNumber || 'ZZ'}`;
+              const itemCode = `Item Code: ${exportCode}`;
               doc.text(itemCode, 25, pageHeight - 25);
 
               doc.text(`Signed:`, pageWidth - 70, pageHeight - 25);
@@ -275,7 +323,7 @@ doc.setFont('helvetica', 'normal');
                 doc.addImage(signatureImageData, 'PNG', pageWidth - 70, pageHeight - 35, imgWidth, imgHeight);
               }
 
-              doc.save('Formal_Scroll.pdf');
+              doc.save(`${exportCode}_Formal_Scroll_.pdf`);
               setMessage('PDF generated successfully!');
 
             } catch (error) {
@@ -306,14 +354,17 @@ doc.setFont('helvetica', 'normal');
                   </div>
                   <div>
                     <label htmlFor="adventureNumber" className="block text-sm font-medium text-gray-200 mb-1">Adventure Number</label>
-                    <input
-                      type="text"
+                    <select
                       id="adventureNumber"
                       value={adventureNumber}
                       onChange={(e) => setAdventureNumber(e.target.value)}
                       className="mt-1 block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm bg-gray-700 text-gray-100"
-                      placeholder="e.g., 002"
-                    />
+                    >
+                      {adventureOptions.length === 0 && <option value="">No adventures found</option>}
+                      {adventureOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label htmlFor="sequenceNumber" className="block text-sm font-medium text-gray-200 mb-1">Sequence Number</label>

@@ -15,6 +15,30 @@
             margin-bottom: 12px;
         }
 
+        .page-header {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 360px;
+            gap: 14px;
+            align-items: start;
+            margin-bottom: 12px;
+        }
+
+        .page-header h1 {
+            margin: 0 0 8px;
+        }
+
+        .page-header .intro {
+            margin: 0;
+        }
+
+        .metric-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            justify-self: end;
+            width: 100%;
+        }
+
         .stats {
             display: flex;
             flex-wrap: wrap;
@@ -29,6 +53,54 @@
             padding: 8px 12px;
             color: var(--app-text);
             font-size: 0.92rem;
+        }
+
+        .stat-chip-metric {
+            width: 100%;
+            max-width: 360px;
+        }
+
+        .metric-title {
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .metric-value {
+            color: #cbd5e1;
+            font-variant-numeric: tabular-nums;
+            margin-bottom: 6px;
+        }
+
+        .metric-bar {
+            width: 100%;
+            height: 10px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: #1f2937;
+            border: 1px solid #334155;
+        }
+
+        .metric-bar-fill {
+            display: block;
+            height: 100%;
+            width: 0%;
+            transition: width 0.18s ease, background-color 0.18s ease;
+        }
+
+        .metric-bar-low {
+            background: #ef4444;
+        }
+
+        .metric-bar-mid {
+            background: #f59e0b;
+        }
+
+        .metric-bar-good {
+            background: #22c55e;
+        }
+
+        .metric-bar-over {
+            background: #38bdf8;
         }
 
         .actions {
@@ -90,12 +162,12 @@
             box-shadow: 0 1px 0 var(--app-border);
         }
 
-        th:nth-child(12),
         th:nth-child(13),
         th:nth-child(14),
-        td:nth-child(12),
+        th:nth-child(15),
         td:nth-child(13),
-        td:nth-child(14) {
+        td:nth-child(14),
+        td:nth-child(15) {
             width: 92px;
             min-width: 92px;
             max-width: 92px;
@@ -105,14 +177,62 @@
             padding-right: 6px;
         }
 
-        th:nth-child(12),
         th:nth-child(13),
-        th:nth-child(14) {
+        th:nth-child(14),
+        th:nth-child(15) {
             border-left: 1px solid var(--app-border);
         }
 
         tbody tr:last-child td {
             border-bottom: 0;
+        }
+
+        tbody tr.diff-none td {
+            background: rgba(37, 99, 235, 0.14);
+        }
+
+        tbody tr.diff-easy td {
+            background: rgba(34, 197, 94, 0.14);
+        }
+
+        tbody tr.diff-medium td {
+            background: rgba(234, 179, 8, 0.2);
+        }
+
+        tbody tr.diff-hard td {
+            background: rgba(249, 115, 22, 0.2);
+        }
+
+        tbody tr.diff-none .cell-input,
+        tbody tr.diff-none .cell-select,
+        tbody tr.diff-none .cell-textarea,
+        tbody tr.diff-none .cell-checkbox {
+            background: #0b2a4d;
+            border-color: #1d4ed8;
+        }
+
+        tbody tr.diff-easy .cell-input,
+        tbody tr.diff-easy .cell-select,
+        tbody tr.diff-easy .cell-textarea,
+        tbody tr.diff-easy .cell-checkbox {
+            background: #0a3a24;
+            border-color: #16a34a;
+        }
+
+        tbody tr.diff-medium .cell-input,
+        tbody tr.diff-medium .cell-select,
+        tbody tr.diff-medium .cell-textarea,
+        tbody tr.diff-medium .cell-checkbox {
+            background: #4a3b00;
+            border-color: #ca8a04;
+        }
+
+        tbody tr.diff-hard .cell-input,
+        tbody tr.diff-hard .cell-select,
+        tbody tr.diff-hard .cell-textarea,
+        tbody tr.diff-hard .cell-checkbox {
+            background: #4a2500;
+            border-color: #ea580c;
         }
 
         .cell-input,
@@ -189,12 +309,123 @@
             color: var(--app-muted);
             min-height: 1.2em;
         }
+
+        .btn-small {
+            padding: 6px 10px;
+            font-size: 0.82rem;
+            border-radius: 6px;
+            background: #334155;
+            color: #e2e8f0;
+        }
+
+        .edit-cell {
+            white-space: nowrap;
+            text-align: center;
+        }
+
+        .details-dialog {
+            border: 1px solid var(--app-border);
+            border-radius: 12px;
+            background: #0f172a;
+            color: var(--app-text);
+            width: min(680px, calc(100vw - 32px));
+            padding: 0;
+        }
+
+        .details-dialog::backdrop {
+            background: rgba(2, 6, 23, 0.7);
+        }
+
+        .dialog-body {
+            padding: 16px;
+        }
+
+        .dialog-title {
+            margin: 0 0 12px;
+            font-size: 1.06rem;
+        }
+
+        .dialog-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .dialog-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .dialog-field label {
+            color: #cbd5e1;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .dialog-input,
+        .dialog-textarea {
+            border: 1px solid var(--app-border);
+            border-radius: 8px;
+            background: #111827;
+            color: var(--app-text);
+            padding: 8px 10px;
+            font-size: 0.9rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .dialog-textarea {
+            min-height: 86px;
+            resize: vertical;
+        }
+
+        .dialog-actions {
+            margin-top: 14px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        @media (max-width: 980px) {
+            .page-header {
+                grid-template-columns: 1fr;
+            }
+
+            .metric-stack {
+                justify-self: stretch;
+            }
+
+            .stat-chip-metric {
+                max-width: none;
+            }
+        }
     </style>
 </head>
 <body>
     <main class="container">
-        <h1>Adventure Listing</h1>
-        <p class="intro">Manage adventure rows here. This table is shared with Adventure Levelling metrics.</p>
+        <section class="page-header">
+            <div>
+                <h1>Adventure Listing</h1>
+                <p class="intro">Manage adventure rows here. This table is shared with Adventure Levelling metrics.</p>
+            </div>
+            <div class="metric-stack">
+                <div class="stat-chip stat-chip-metric">
+                    <div class="metric-title">Total APL vs Goal</div>
+                    <div id="totalApl" class="metric-value">0 / 0 (0%)</div>
+                    <div class="metric-bar" aria-hidden="true"><span id="totalAplBar" class="metric-bar-fill metric-bar-low"></span></div>
+                </div>
+                <div class="stat-chip stat-chip-metric">
+                    <div class="metric-title">Total Silver vs Goal</div>
+                    <div id="totalSilver" class="metric-value">0 / 0 (0%)</div>
+                    <div class="metric-bar" aria-hidden="true"><span id="totalSilverBar" class="metric-bar-fill metric-bar-low"></span></div>
+                </div>
+                <div class="stat-chip stat-chip-metric">
+                    <div class="metric-title">Total Production vs Goal</div>
+                    <div id="totalProduction" class="metric-value">0 / 0 (0%)</div>
+                    <div class="metric-bar" aria-hidden="true"><span id="totalProductionBar" class="metric-bar-fill metric-bar-low"></span></div>
+                </div>
+            </div>
+        </section>
 
         <div class="stats">
             <div class="stat-chip">Event: <span id="eventTitle">-</span></div>
@@ -210,6 +441,7 @@
             <table aria-label="Adventure listing table">
                 <thead>
                     <tr>
+                        <th>Edit</th>
                         <th>No</th>
                         <th>Title</th>
                         <th>Type</th>
@@ -231,6 +463,34 @@
         </div>
 
         <p id="statusMessage" class="status"></p>
+
+        <dialog id="adventureDetailsDialog" class="details-dialog">
+            <div class="dialog-body">
+                <h2 id="dialogTitle" class="dialog-title">Edit Adventure Details</h2>
+                <div class="dialog-grid">
+                    <div class="dialog-field">
+                        <label for="dialogWc">WC</label>
+                        <input id="dialogWc" class="dialog-input" type="number" min="0" step="1" placeholder="e.g. 1200" />
+                    </div>
+                    <div class="dialog-field">
+                        <label for="dialogSchedulingNotes">Scheduling Notes</label>
+                        <textarea id="dialogSchedulingNotes" class="dialog-textarea" placeholder="Scheduling notes"></textarea>
+                    </div>
+                    <div class="dialog-field">
+                        <label for="dialogDescription">Description</label>
+                        <textarea id="dialogDescription" class="dialog-textarea" placeholder="Adventure description"></textarea>
+                    </div>
+                    <div class="dialog-field">
+                        <label for="dialogSpecialRequirements">Special Requirements</label>
+                        <textarea id="dialogSpecialRequirements" class="dialog-textarea" placeholder="Special requirements"></textarea>
+                    </div>
+                </div>
+                <div class="dialog-actions">
+                    <button id="dialogCancelBtn" class="btn btn-secondary" type="button">Cancel</button>
+                    <button id="dialogSaveBtn" class="btn btn-secondary" type="button">Save Details</button>
+                </div>
+            </div>
+        </dialog>
     </main>
 
     <script src="event-variables.js"></script>
@@ -241,10 +501,25 @@
         const eventTitleEl = document.getElementById('eventTitle');
         const expectedCountEl = document.getElementById('expectedCount');
         const eventLevelEl = document.getElementById('eventLevel');
+        const totalAplEl = document.getElementById('totalApl');
+        const totalSilverEl = document.getElementById('totalSilver');
+        const totalProductionEl = document.getElementById('totalProduction');
+        const totalAplBarEl = document.getElementById('totalAplBar');
+        const totalSilverBarEl = document.getElementById('totalSilverBar');
+        const totalProductionBarEl = document.getElementById('totalProductionBar');
         const resetPageBtn = document.getElementById('resetPageBtn');
         const statusMessage = document.getElementById('statusMessage');
+        const detailsDialog = document.getElementById('adventureDetailsDialog');
+        const dialogTitleEl = document.getElementById('dialogTitle');
+        const dialogWcEl = document.getElementById('dialogWc');
+        const dialogSchedulingNotesEl = document.getElementById('dialogSchedulingNotes');
+        const dialogDescriptionEl = document.getElementById('dialogDescription');
+        const dialogSpecialRequirementsEl = document.getElementById('dialogSpecialRequirements');
+        const dialogCancelBtn = document.getElementById('dialogCancelBtn');
+        const dialogSaveBtn = document.getElementById('dialogSaveBtn');
 
         let rows = [];
+        let activeDetailsIndex = -1;
 
         function showStatus(message) {
             statusMessage.textContent = message;
@@ -277,6 +552,10 @@
                 silverManual: false,
                 productionManual: false,
                 notes: '',
+                wc: '',
+                schedulingNotes: '',
+                description: '',
+                specialRequirements: '',
                 received: false,
                 processed: false,
                 tagged: false
@@ -298,10 +577,44 @@
                 silverManual: Boolean(src.silverManual),
                 productionManual: Boolean(src.productionManual),
                 notes: src.notes ?? '',
+                wc: src.wc ?? '',
+                schedulingNotes: src.schedulingNotes ?? '',
+                description: src.description ?? '',
+                specialRequirements: src.specialRequirements ?? '',
                 received: Boolean(src.received),
                 processed: Boolean(src.processed),
                 tagged: Boolean(src.tagged)
             };
+        }
+
+        function openDetailsDialog(index) {
+            const row = rows[index];
+            if (!row || !detailsDialog) return;
+
+            activeDetailsIndex = index;
+            dialogTitleEl.textContent = `Edit Details - A${row.no || (index + 1)} ${row.title || ''}`.trim();
+            dialogWcEl.value = row.wc ?? '';
+            dialogSchedulingNotesEl.value = row.schedulingNotes ?? '';
+            dialogDescriptionEl.value = row.description ?? '';
+            dialogSpecialRequirementsEl.value = row.specialRequirements ?? '';
+            detailsDialog.showModal();
+        }
+
+        function saveDetailsDialog() {
+            if (activeDetailsIndex < 0 || activeDetailsIndex >= rows.length) return;
+            const row = rows[activeDetailsIndex];
+            row.wc = dialogWcEl.value;
+            row.schedulingNotes = dialogSchedulingNotesEl.value;
+            row.description = dialogDescriptionEl.value;
+            row.specialRequirements = dialogSpecialRequirementsEl.value;
+
+            saveRows();
+            showStatus('Adventure details saved.');
+            detailsDialog.close();
+        }
+
+        function closeDetailsDialog() {
+            detailsDialog.close();
         }
 
         function loadRows() {
@@ -365,7 +678,38 @@
             return Number.isFinite(rounded) ? String(rounded) : '0';
         }
 
-        function computePerAplRatios() {
+        function formatPercent(current, goal) {
+            const safeGoal = Math.max(0, parseNumber(goal));
+            if (safeGoal <= 0) return '0%';
+            const percentage = (parseNumber(current) / safeGoal) * 100;
+            return `${formatAutoAmount(percentage)}%`;
+        }
+
+        function calculatePercent(current, goal) {
+            const safeGoal = Math.max(0, parseNumber(goal));
+            if (safeGoal <= 0) return 0;
+            return (parseNumber(current) / safeGoal) * 100;
+        }
+
+        function getProgressClass(percent) {
+            if (percent >= 100) return 'metric-bar-over';
+            if (percent >= 80) return 'metric-bar-good';
+            if (percent >= 50) return 'metric-bar-mid';
+            return 'metric-bar-low';
+        }
+
+        function updateMetricDisplay(valueEl, barEl, current, goal) {
+            const percent = calculatePercent(current, goal);
+            const clampedWidth = Math.max(0, Math.min(100, percent));
+            const colorClass = getProgressClass(percent);
+
+            valueEl.textContent = `${formatAutoAmount(current)} / ${formatAutoAmount(goal)} (${formatPercent(current, goal)})`;
+            barEl.className = `metric-bar-fill ${colorClass}`;
+            barEl.style.width = `${clampedWidth}%`;
+            barEl.title = `${formatPercent(current, goal)} complete`;
+        }
+
+        function computeGoalTotals() {
             const vars = window.EventVariables?.get?.() || {};
             const totalBuild = Math.max(0, parseNumber(vars.totalEventBuild));
             const players = Math.max(0, parseNumber(vars.players));
@@ -381,12 +725,11 @@
             const totalEventAplMedium = totalEventAplEasy * 1.2;
             const totalEventAplHard = totalEventAplEasy * 1.5;
 
-            let selectedTotalGoal = totalEventAplMedium;
-            if (eventLevel === 'hard') selectedTotalGoal = totalEventAplHard;
-            else if (eventLevel === 'easy') selectedTotalGoal = totalEventAplEasy;
+            let selectedAplGoal = totalEventAplMedium;
+            if (eventLevel === 'hard') selectedAplGoal = totalEventAplHard;
+            else if (eventLevel === 'easy') selectedAplGoal = totalEventAplEasy;
 
-            const totalSilver = Math.ceil(totalBuild * 1.5);
-            const silverPerApl = selectedTotalGoal > 0 ? (totalSilver / selectedTotalGoal) : 0;
+            const silverGoal = Math.ceil(totalBuild * 1.5);
 
             const productionMax = Math.ceil((totalBuild * eventDays) / 5);
             const productionMin = Math.floor(productionMax / 2);
@@ -395,7 +738,35 @@
             if (eventLevel === 'hard') selectedProductionGoal = productionMax;
             else if (eventLevel === 'easy') selectedProductionGoal = productionMin;
 
-            const productionPerApl = selectedTotalGoal > 0 ? (selectedProductionGoal / selectedTotalGoal) : 0;
+            return {
+                aplGoal: Math.max(0, selectedAplGoal),
+                silverGoal: Math.max(0, silverGoal),
+                productionGoal: Math.max(0, selectedProductionGoal)
+            };
+        }
+
+        function updateSummaryTotals() {
+            let totalApl = 0;
+            let totalSilver = 0;
+            let totalProduction = 0;
+
+            rows.forEach((row) => {
+                totalApl += parseNumber(row.apl);
+                totalSilver += parseNumber(row.silver);
+                totalProduction += parseNumber(row.production);
+            });
+
+            const goals = computeGoalTotals();
+
+            updateMetricDisplay(totalAplEl, totalAplBarEl, totalApl, goals.aplGoal);
+            updateMetricDisplay(totalSilverEl, totalSilverBarEl, totalSilver, goals.silverGoal);
+            updateMetricDisplay(totalProductionEl, totalProductionBarEl, totalProduction, goals.productionGoal);
+        }
+
+        function computePerAplRatios() {
+            const goals = computeGoalTotals();
+            const silverPerApl = goals.aplGoal > 0 ? (goals.silverGoal / goals.aplGoal) : 0;
+            const productionPerApl = goals.aplGoal > 0 ? (goals.productionGoal / goals.aplGoal) : 0;
 
             return {
                 silverPerApl,
@@ -470,6 +841,14 @@
             return '-';
         }
 
+        function getDifficultyClass(value) {
+            const difficulty = String(value || 'none').trim().toLowerCase();
+            if (difficulty === 'easy') return 'diff-easy';
+            if (difficulty === 'medium') return 'diff-medium';
+            if (difficulty === 'hard') return 'diff-hard';
+            return 'diff-none';
+        }
+
         function makeInputCell(type, value, onInput, className = 'cell-input') {
             const td = document.createElement('td');
             const input = document.createElement('input');
@@ -537,9 +916,21 @@
             body.innerHTML = '';
             const targetAplByDifficulty = computeAplPerAdventureTargets();
             applyAutoCalculatedAmounts();
+            updateSummaryTotals();
 
             rows.forEach((row, index) => {
                 const tr = document.createElement('tr');
+                tr.classList.add(getDifficultyClass(row.difficulty));
+
+                const editTd = document.createElement('td');
+                editTd.className = 'edit-cell';
+                const editBtn = document.createElement('button');
+                editBtn.type = 'button';
+                editBtn.className = 'btn btn-small';
+                editBtn.textContent = 'Edit';
+                editBtn.addEventListener('click', () => openDetailsDialog(index));
+                editTd.appendChild(editBtn);
+                tr.appendChild(editTd);
 
                 tr.appendChild(makeInputCell('text', row.no, (e) => {
                     rows[index].no = e.target.value;
@@ -587,19 +978,33 @@
 
                 tr.appendChild(makeInputCell('number', row.apl, (e) => {
                     rows[index].apl = e.target.value;
+                    applyAutoCalculatedAmounts();
+                    updateSummaryTotals();
                     saveRows();
-                    renderRows();
+
+                    const silverInput = tr.children[9]?.querySelector('input');
+                    const productionInput = tr.children[10]?.querySelector('input');
+
+                    if (silverInput && !rows[index].silverManual) {
+                        silverInput.value = rows[index].silver;
+                    }
+
+                    if (productionInput && !rows[index].productionManual) {
+                        productionInput.value = rows[index].production;
+                    }
                 }));
 
                 tr.appendChild(makeInputCell('number', row.silver, (e) => {
                     rows[index].silver = e.target.value;
                     rows[index].silverManual = e.target.value.trim() !== '';
+                    updateSummaryTotals();
                     saveRows();
                 }));
 
                 tr.appendChild(makeInputCell('number', row.production, (e) => {
                     rows[index].production = e.target.value;
                     rows[index].productionManual = e.target.value.trim() !== '';
+                    updateSummaryTotals();
                     saveRows();
                 }));
 
@@ -640,6 +1045,13 @@
             syncRowCountToEventVariables();
             renderRows();
             showStatus('Adventure listing data cleared.');
+        });
+
+        dialogCancelBtn.addEventListener('click', closeDetailsDialog);
+        dialogSaveBtn.addEventListener('click', saveDetailsDialog);
+        detailsDialog.addEventListener('cancel', (event) => {
+            event.preventDefault();
+            closeDetailsDialog();
         });
 
         window.EventVariables?.onChange?.(() => {

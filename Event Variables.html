@@ -210,6 +210,11 @@
                         <td><button id="exportAdventureLevellingBtn" class="btn btn-secondary" type="button">Export (.xlsx)</button></td>
                         <td><button id="importAdventureLevellingBtn" class="btn btn-secondary" type="button">Import (.xlsx)</button></td>
                     </tr>
+                    <tr>
+                        <td>Adventure Special Requirements</td>
+                        <td><button id="exportAdventureSpecialReqsBtn" class="btn btn-secondary" type="button">Export (.xlsx)</button></td>
+                        <td><button id="importAdventureSpecialReqsBtn" class="btn btn-secondary" type="button">Import (.xlsx)</button></td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -232,10 +237,12 @@
         const exportLootCalcBtn = document.getElementById('exportLootCalcBtn');
         const exportAdventureListingBtn = document.getElementById('exportAdventureListingBtn');
         const exportAdventureLevellingBtn = document.getElementById('exportAdventureLevellingBtn');
+        const exportAdventureSpecialReqsBtn = document.getElementById('exportAdventureSpecialReqsBtn');
         const importEventVarsBtn = document.getElementById('importEventVarsBtn');
         const importLootCalcBtn = document.getElementById('importLootCalcBtn');
         const importAdventureListingBtn = document.getElementById('importAdventureListingBtn');
         const importAdventureLevellingBtn = document.getElementById('importAdventureLevellingBtn');
+        const importAdventureSpecialReqsBtn = document.getElementById('importAdventureSpecialReqsBtn');
         const statusMessage = document.getElementById('statusMessage');
 
         function showStatus(message) {
@@ -534,6 +541,7 @@
                 title: String(row.Title ?? row.title ?? ''),
                 type: String(row.Type ?? row.type ?? ''),
                 author: String(row.Author ?? row.author ?? ''),
+                wc: String(row.WC ?? row.wc ?? ''),
                 npcs: String(row.NPCs ?? row.npcs ?? ''),
                 difficulty: difficulty ? titleCaseLevel(normalizedDifficulty) : '',
                 apl: String(row.Apl ?? row.APL ?? row.apl ?? ''),
@@ -542,6 +550,9 @@
                 silverManual,
                 productionManual,
                 notes: String(row.Notes ?? row.notes ?? ''),
+                schedulingNotes: String(row.SchedulingNotes ?? row['Scheduling Notes'] ?? row.schedulingNotes ?? ''),
+                description: String(row.Description ?? row.description ?? ''),
+                specialRequirements: String(row.SpecialRequirements ?? row['Special Requirements'] ?? row.specialRequirements ?? ''),
                 received: toYesNoBoolean(row.Received ?? row.received),
                 processed: toYesNoBoolean(row.Processed ?? row.processed),
                 tagged: toYesNoBoolean(row.Tagged ?? row.tagged)
@@ -732,6 +743,7 @@
                     Title: row?.title ?? '',
                     Type: row?.type ?? '',
                     Author: row?.author ?? '',
+                    WC: row?.wc ?? '',
                     NPCs: row?.npcs ?? '',
                     Difficulty: difficulty,
                     TargetApl: formatNumber(targetApl),
@@ -741,6 +753,9 @@
                     Production: formatNumber(productionValue),
                     ProductionIsManual: productionManual ? 'Yes' : 'No',
                     Notes: row?.notes ?? '',
+                    SchedulingNotes: row?.schedulingNotes ?? '',
+                    Description: row?.description ?? '',
+                    SpecialRequirements: row?.specialRequirements ?? '',
                     Received: row?.received ? 'Yes' : 'No',
                     Processed: row?.processed ? 'Yes' : 'No',
                     Tagged: row?.tagged ? 'Yes' : 'No',
@@ -786,6 +801,74 @@
 
             const fileName = `${safeFilePart(vars.eventName)}_Adventure_Levelling.xlsx`;
             xlsx.writeFile(workbook, fileName);
+            showStatus(`Exported ${fileName}`);
+        }
+
+        function buildAdventureSpecialRequirementsRows() {
+            const sourceRows = readStoredAdventureRows();
+            return sourceRows
+                .filter((row) => String(row?.specialRequirements || '').trim() !== '')
+                .map((row) => ({
+                    No: row?.no ?? '',
+                    Title: row?.title ?? '',
+                    Author: row?.author ?? '',
+                    SpecialRequirements: row?.specialRequirements ?? ''
+                }));
+        }
+
+        function normalizeMultilineText(value) {
+            // Excel on Windows is most reliable with CRLF line endings for visible in-cell breaks.
+            return String(value ?? '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '\r\n');
+        }
+
+        function exportAdventureSpecialRequirements() {
+            const vars = eventVarsApi?.get?.() || {};
+            const output = buildAdventureSpecialRequirementsRows();
+
+            if (!output.length) {
+                showStatus('No adventures with Special Requirements to export.');
+                return;
+            }
+
+            const xlsx = getXlsx();
+            if (!xlsx) return;
+
+            const workbook = xlsx.utils.book_new();
+            const worksheet = xlsx.utils.json_to_sheet(output);
+
+            // Ensure line breaks are preserved and wrapped in the SpecialRequirements column.
+            output.forEach((row, index) => {
+                const cellRef = `D${index + 2}`;
+                if (!worksheet[cellRef]) return;
+                const text = normalizeMultilineText(row.SpecialRequirements);
+                worksheet[cellRef].v = text;
+                worksheet[cellRef].t = 's';
+                worksheet[cellRef].s = {
+                    alignment: {
+                        wrapText: true,
+                        vertical: 'top'
+                    }
+                };
+            });
+
+            // Increase row height based on detected line count so wrapped lines are actually visible.
+            worksheet['!rows'] = [{ hpt: 20 }].concat(output.map((row) => {
+                const text = normalizeMultilineText(row.SpecialRequirements);
+                const lineCount = Math.max(1, text.split('\r\n').length);
+                return { hpt: Math.min(220, 16 * lineCount) };
+            }));
+
+            worksheet['!cols'] = [
+                { wch: 10 },
+                { wch: 26 },
+                { wch: 20 },
+                { wch: 72 }
+            ];
+
+            xlsx.utils.book_append_sheet(workbook, worksheet, 'Adventure Special Requirements');
+
+            const fileName = `${safeFilePart(vars.eventName)}_Adventure_Special_Requirements.xlsx`;
+            xlsx.writeFile(workbook, fileName, { cellStyles: true });
             showStatus(`Exported ${fileName}`);
         }
 
@@ -931,16 +1014,99 @@
             }
         }
 
+        function findAdventureRowIndex(existingRows, candidate) {
+            const candidateNo = String(candidate?.no ?? '').trim().toLowerCase();
+            const candidateTitle = String(candidate?.title ?? '').trim().toLowerCase();
+            const candidateAuthor = String(candidate?.author ?? '').trim().toLowerCase();
+
+            return existingRows.findIndex((row) => {
+                const rowNo = String(row?.no ?? '').trim().toLowerCase();
+                const rowTitle = String(row?.title ?? '').trim().toLowerCase();
+                const rowAuthor = String(row?.author ?? '').trim().toLowerCase();
+                return rowNo === candidateNo && rowTitle === candidateTitle && rowAuthor === candidateAuthor;
+            });
+        }
+
+        async function importAdventureSpecialRequirements() {
+            try {
+                const workbook = await readWorkbookFromPicker();
+                if (!workbook) {
+                    showStatus('Import cancelled.');
+                    return;
+                }
+
+                const importedRows = getSheetRows(workbook, 'Adventure Special Requirements');
+                if (!importedRows.length) {
+                    showStatus('No Adventure Special Requirements rows found in workbook.');
+                    return;
+                }
+
+                const normalizedRows = importedRows
+                    .map((row, index) => ({
+                        no: String(row.No ?? row.no ?? index + 1),
+                        title: String(row.Title ?? row.title ?? ''),
+                        author: String(row.Author ?? row.author ?? ''),
+                        specialRequirements: String(row.SpecialRequirements ?? row['Special Requirements'] ?? row.specialRequirements ?? '').trim()
+                    }))
+                    .filter((row) => row.specialRequirements !== '');
+
+                if (!normalizedRows.length) {
+                    showStatus('No rows had Special Requirements, nothing was imported.');
+                    return;
+                }
+
+                const existingRows = readStoredAdventureRows();
+                const updatedRows = existingRows.map((row) => ({ ...row }));
+
+                normalizedRows.forEach((row) => {
+                    const matchIndex = findAdventureRowIndex(updatedRows, row);
+                    if (matchIndex >= 0) {
+                        updatedRows[matchIndex].specialRequirements = row.specialRequirements;
+                    } else {
+                        updatedRows.push({
+                            no: row.no,
+                            title: row.title,
+                            author: row.author,
+                            specialRequirements: row.specialRequirements,
+                            type: '',
+                            npcs: '',
+                            difficulty: '',
+                            apl: '',
+                            silver: '',
+                            production: '',
+                            silverManual: false,
+                            productionManual: false,
+                            notes: '',
+                            wc: '',
+                            schedulingNotes: '',
+                            description: '',
+                            received: false,
+                            processed: false,
+                            tagged: false
+                        });
+                    }
+                });
+
+                localStorage.setItem(adventureStorageKey, JSON.stringify({ rows: updatedRows }));
+                showStatus(`Imported ${normalizedRows.length} Special Requirements rows.`);
+            } catch (error) {
+                console.error('Failed to import Adventure Special Requirements workbook:', error);
+                showStatus('Could not import Adventure Special Requirements workbook.');
+            }
+        }
+
         saveBtn.addEventListener('click', saveValues);
         resetBtn.addEventListener('click', clearValues);
         exportEventVarsBtn.addEventListener('click', exportEventVariables);
         exportLootCalcBtn.addEventListener('click', exportLootCalculation);
         exportAdventureListingBtn.addEventListener('click', exportAdventureListing);
         exportAdventureLevellingBtn.addEventListener('click', exportAdventureLevelling);
+        exportAdventureSpecialReqsBtn.addEventListener('click', exportAdventureSpecialRequirements);
         importEventVarsBtn.addEventListener('click', importEventVariables);
         importLootCalcBtn.addEventListener('click', importLootCalculation);
         importAdventureListingBtn.addEventListener('click', importAdventureListing);
         importAdventureLevellingBtn.addEventListener('click', importAdventureLevelling);
+        importAdventureSpecialReqsBtn.addEventListener('click', importAdventureSpecialRequirements);
         form.addEventListener('input', saveValues);
         form.addEventListener('change', saveValues);
 

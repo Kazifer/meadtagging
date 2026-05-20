@@ -74,6 +74,17 @@
             border-color: #667eea; /* Indigo focus border */
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3); /* Indigo focus shadow */
         }
+
+        #adventureTitle {
+            background-color: #1f2937;
+            color: #f9fafb;
+            border: 1px solid #4b5563;
+        }
+
+        #adventureTitle option {
+            background-color: #1f2937;
+            color: #f9fafb;
+        }
         .btn-primary {
             background-color: #667eea; /* Indigo primary button */
             color: white;
@@ -260,8 +271,8 @@ border: 1px solid #4a5568;
                         <label for="adventureTitle" class="block text-lg font-medium mr-2">Adventure Title:</label>
                         <button id="clearTitleBtn" class="btn-secondary text-xs px-2 py-1 rounded-md">Clear Title</button>
                     </div>
-                    <input type="text" id="adventureTitle" placeholder="Enter adventure title"
-                           class="w-full p-3 rounded-md bg-white bg-opacity-20 text-white placeholder-gray-200 focus:outline-none focus:ring-2 focus:ring-white">
+                    <select id="adventureTitle"
+                            class="w-full p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-white"></select>
                 </div>
                 <div class="w-full md:w-1/2 md:text-right">
                     <p class="text-lg font-medium mb-2">Total Production Cost:</p>
@@ -522,6 +533,42 @@ border: 1px solid #4a5568;
                     </div>
                 `;
                 categoryContent.innerHTML += itemHtml;
+            });
+        }
+
+        function getAdventureOptionsFromListing() {
+            try {
+                const raw = localStorage.getItem('adventureLevelling.v1');
+                const parsed = raw ? JSON.parse(raw) : { rows: [] };
+                const rows = Array.isArray(parsed?.rows) ? parsed.rows : [];
+
+                return rows
+                    .map((row, index) => {
+                        const no = String(row?.no || '').trim();
+                        const title = String(row?.title || '').trim();
+                        if (!no && !title) return null;
+                        const label = no && title ? `A${no} - ${title}` : (title || `Adventure ${index + 1}`);
+                        const value = label;
+                        return { value, label };
+                    })
+                    .filter(Boolean);
+            } catch (error) {
+                console.error('Production: failed to read adventure listing data', error);
+                return [];
+            }
+        }
+
+        function populateAdventureSelector() {
+            if (!adventureTitleInput) return;
+
+            const options = getAdventureOptionsFromListing();
+            adventureTitleInput.innerHTML = '<option value="">Select Adventure</option>';
+
+            options.forEach((option) => {
+                const optionEl = document.createElement('option');
+                optionEl.value = option.value;
+                optionEl.textContent = option.label;
+                adventureTitleInput.appendChild(optionEl);
             });
         }
 
@@ -1072,8 +1119,37 @@ border: 1px solid #4a5568;
         const EXPORT_COLUMNS_PER_ROW_NORMAL = 4; // Number of item detail cells side-by-side per row for non-scrolls
         const EXPORT_COLUMNS_PER_ROW_SCROLLS = 2; // Changed to 2 for side-by-side scrolls
 
+        function getAdventureSelectionParts() {
+            const selectedLabel = adventureTitleInput?.selectedOptions?.[0]?.textContent?.trim() || '';
+            const selectedValue = adventureTitleInput?.value?.trim() || '';
+            const rawAdventure = selectedLabel || selectedValue || 'Untitled Adventure';
+            const match = rawAdventure.match(/^A\s*(\d+)\s*-\s*(.+)$/i);
+            if (match) {
+                return {
+                    no: match[1].trim(),
+                    title: match[2].trim() || 'Untitled Adventure'
+                };
+            }
+
+            return {
+                no: '',
+                title: rawAdventure.trim() || 'Untitled Adventure'
+            };
+        }
+
+        function getFormattedAdventureTitle() {
+            const eventVars = window.EventVariables?.get?.() || {};
+            const eventNo = String(eventVars.eventNumber || '').trim();
+            const eventTitle = String(eventVars.eventName || '').trim();
+            const adventure = getAdventureSelectionParts();
+
+            const eventPart = ['E' + (eventNo || ''), ' - ', eventTitle].filter(Boolean).join(' ').trim() || 'E';
+            const adventurePart = ['A' + (adventure.no || ''), ' - ', adventure.title].filter(Boolean).join(' ').trim();
+            return `${eventPart} - ${adventurePart}`;
+        }
+
         function getExportData() {
-            const adventureTitle = adventureTitleInput.value || 'Untitled Adventure';
+            const adventureTitle = getFormattedAdventureTitle();
             const totalCost = totalProductionCostDisplay.textContent;
 
             const allOtherItems = []; // For all non-scroll items, as strings
@@ -1542,11 +1618,20 @@ border: 2px solid #4a5568;
         // Initial render
         document.addEventListener('DOMContentLoaded', async () => {
             await loadRunicTattoosData();
+            populateAdventureSelector();
 
             const eventVars = window.EventVariables?.get?.();
             const eventTitle = window.EventVariables?.buildTitle?.(eventVars);
-            if (adventureTitleInput && !adventureTitleInput.value.trim() && eventTitle) {
-                adventureTitleInput.value = eventTitle;
+            if (adventureTitleInput) {
+                if (eventTitle && !Array.from(adventureTitleInput.options).some((opt) => opt.value === eventTitle)) {
+                    const fallbackOption = document.createElement('option');
+                    fallbackOption.value = eventTitle;
+                    fallbackOption.textContent = eventTitle;
+                    adventureTitleInput.appendChild(fallbackOption);
+                    adventureTitleInput.value = eventTitle;
+                } else if (adventureTitleInput.options.length > 1) {
+                    adventureTitleInput.value = adventureTitleInput.options[1].value;
+                }
             }
 
             // Update "Desctruction" to "Destruction" in formalComponents

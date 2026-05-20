@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scheduling</title>
+    <link rel="stylesheet" href="theme.css">
+    <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/jspdf-autotable@3.5.14/dist/jspdf.plugin.autotable.js"></script>
+    <script src="https://unpkg.com/xlsx@0.17.0/dist/xlsx.full.min.js"></script>
+    <style>
+        .container {
+            max-width: 1280px;
+        }
+
+        .intro {
+            color: var(--app-muted);
+            margin-bottom: 14px;
+        }
+
+        .summary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .chip {
+            background: #111827;
+            border: 1px solid var(--app-border);
+            border-radius: 999px;
+            padding: 6px 12px;
+            color: var(--app-text);
+            font-size: 0.9rem;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 14px;
+        }
+
+        .panel {
+            border: 1px solid var(--app-border);
+            background: #111827;
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        .panel-sticky {
+            position: sticky;
+            top: 12px;
+            align-self: start;
+        }
+
+        .panel-title {
+            margin: 0 0 10px;
+            color: #e5e7eb;
+            font-size: 1.02rem;
+        }
+
+        .adventure-pool {
+            min-height: 420px;
+            max-height: 72vh;
+            overflow: auto;
+            border: 1px dashed #334155;
+            border-radius: 10px;
+            padding: 10px;
+            background: #0b1220;
+        }
+
+        .slots-grid {
+            display: grid;
+            gap: 10px;
+        }
+
+        .slot-group {
+            border: 1px solid #1f2937;
+            border-radius: 10px;
+            background: #0f172a;
+            padding: 10px;
+            position: relative;
+        }
+
+        .slot-group::after {
+            content: "";
+            position: absolute;
+            left: 10px;
+            right: 10px;
+            bottom: -8px;
+            border-bottom: 1px solid #334155;
+            opacity: 0.9;
+            pointer-events: none;
+        }
+
+        .slots-grid .slot-group:last-child::after {
+            display: none;
+        }
+
+        .slot-group-title {
+            margin: 0 0 8px;
+            color: #cbd5e1;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .slot-group-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .slot-group--friday {
+            background: #172554;
+            border-color: #1d4ed8;
+        }
+
+        .slot-group--friday .slot-group-title {
+            color: #bfdbfe;
+        }
+
+        .slot-group--saturday {
+            background: #0f3d3e;
+            border-color: #0ea5a6;
+        }
+
+        .slot-group--saturday .slot-group-title {
+            color: #99f6e4;
+        }
+
+        .slot-group--sunday {
+            background: #3f2b10;
+            border-color: #a16207;
+        }
+
+        .slot-group--sunday .slot-group-title {
+            color: #fde68a;
+        }
+
+        .slot-group--floating {
+            background: #3b0764;
+            border-color: #9333ea;
+        }
+
+        .slot-group--floating .slot-group-title {
+            color: #e9d5ff;
+        }
+
+        .slot {
+            min-height: 128px;
+            border: 1px dashed #334155;
+            border-radius: 10px;
+            background: #0b1220;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .slot-title {
+            font-size: 0.82rem;
+            color: #93a4bf;
+            margin: 0;
+        }
+
+        .slot-count {
+            font-size: 0.76rem;
+            color: #64748b;
+            margin: 0;
+        }
+
+        .slot-summary {
+            font-size: 0.76rem;
+            color: #cbd5e1;
+            margin: 0;
+        }
+
+        .drop-hint {
+            color: #64748b;
+            font-size: 0.8rem;
+            margin-top: 6px;
+        }
+
+        .adventure-card {
+            border: 1px solid #1f2937;
+            border-radius: 8px;
+            background: #1f2937;
+            color: #e5e7eb;
+            padding: 8px;
+            cursor: grab;
+            user-select: none;
+        }
+
+        .adventure-card:active {
+            cursor: grabbing;
+        }
+
+        .adventure-name {
+            margin: 0;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .adventure-meta {
+            margin: 4px 0 0;
+            color: #94a3b8;
+            font-size: 0.78rem;
+        }
+
+        .adventure-card.diff-none {
+            background: #0b2a4d;
+            border-color: #2563eb;
+        }
+
+        .adventure-card.diff-easy {
+            background: #0a3a24;
+            border-color: #22c55e;
+        }
+
+        .adventure-card.diff-medium {
+            background: #4a3b00;
+            border-color: #eab308;
+            color: #fef9c3;
+        }
+
+        .adventure-card.diff-hard {
+            background: #4a2500;
+            border-color: #f97316;
+            color: #ffedd5;
+        }
+
+        .slot.is-over,
+        .adventure-pool.is-over {
+            border-color: #00bcd4;
+            box-shadow: 0 0 0 2px rgba(0, 188, 212, 0.2) inset;
+        }
+
+        .actions {
+            margin-top: 12px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 8px;
+            padding: 9px 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: filter 0.2s ease;
+        }
+
+        .btn:hover {
+            filter: brightness(1.06);
+        }
+
+        .btn-secondary {
+            background: #4a5568;
+            color: #edf2f7;
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            color: #fff;
+        }
+
+        .status {
+            margin-top: 10px;
+            min-height: 1.2em;
+            color: var(--app-muted);
+        }
+
+        @media (max-width: 980px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .panel-sticky {
+                position: static;
+            }
+
+            .slot-group-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 640px) {
+            .slot-group-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>Scheduling</h1>
+        <p class="intro">Drag adventures from the pool into any slot (up to 4 per slot). Drag a slotted adventure back to the pool to unschedule it.</p>
+
+        <div class="summary">
+            <div class="chip">Total Adventures: <span id="totalCount">0</span></div>
+            <div class="chip">Scheduled: <span id="scheduledCount">0</span></div>
+            <div class="chip">Unscheduled: <span id="unscheduledCount">0</span></div>
+        </div>
+
+        <div class="actions">
+            <button id="exportPdfBtn" class="btn btn-secondary" type="button">Export Schedule PDF</button>
+            <button id="exportXlsxBtn" class="btn btn-secondary" type="button">Export Schedule XLSX</button>
+        </div>
+
+        <div class="layout">
+            <section class="panel panel-sticky">
+                <h2 class="panel-title">Adventure Pool</h2>
+                <div id="adventurePool" class="adventure-pool" aria-label="Adventure pool drop zone"></div>
+            </section>
+
+            <section class="panel">
+                <h2 class="panel-title">Adventure Slots</h2>
+                <div id="slotsGrid" class="slots-grid"></div>
+            </section>
+        </div>
+
+        <div class="actions">
+            <button id="clearScheduleBtn" class="btn btn-danger" type="button">Clear Schedule</button>
+            <button id="autoFillBtn" class="btn btn-secondary" type="button">Auto Fill Main Slots</button>
+        </div>
+
+        <p id="statusMessage" class="status"></p>
+    </main>
+
+    <script src="event-variables.js"></script>
+    <script>
+        const ADVENTURE_STORAGE_KEY = 'adventureLevelling.v1';
+        const SCHEDULE_STORAGE_KEY = 'adventureScheduling.v1';
+        const DEFAULT_SLOT_CAPACITY = 4;
+        const FLOATING_SLOT_CAPACITY = 5;
+        const SLOT_DEFS = [
+            { label: 'Friday 22 - 24', isFloating: false },
+            { label: 'Saturday 8 - 10', isFloating: false },
+            { label: 'Saturday 10 - 12', isFloating: false },
+            { label: 'Saturday 13 - 15', isFloating: false },
+            { label: 'Saturday 15 - 17', isFloating: false },
+            { label: 'Saturday 19 - 21', isFloating: false },
+            { label: 'Saturday 21 - 23', isFloating: false },
+            { label: 'Sunday 8 - 10', isFloating: false },
+            { label: 'Sunday 10 - 12', isFloating: false },
+            { label: 'Floating', isFloating: true }
+        ];
+        const SLOT_COUNT = SLOT_DEFS.length;
+
+        function getSlotCapacity(index) {
+            return SLOT_DEFS[index]?.isFloating ? FLOATING_SLOT_CAPACITY : DEFAULT_SLOT_CAPACITY;
+        }
+
+        const adventurePoolEl = document.getElementById('adventurePool');
+        const slotsGridEl = document.getElementById('slotsGrid');
+        const totalCountEl = document.getElementById('totalCount');
+        const scheduledCountEl = document.getElementById('scheduledCount');
+        const unscheduledCountEl = document.getElementById('unscheduledCount');
+        const clearScheduleBtn = document.getElementById('clearScheduleBtn');
+        const autoFillBtn = document.getElementById('autoFillBtn');
+        const exportPdfBtn = document.getElementById('exportPdfBtn');
+        const exportXlsxBtn = document.getElementById('exportXlsxBtn');
+        const statusMessageEl = document.getElementById('statusMessage');
+
+        let adventures = [];
+        let slotAssignments = Array.from({ length: SLOT_COUNT }, () => []);
+
+        function showStatus(message) {
+            statusMessageEl.textContent = message;
+        }
+
+        function makeAdventureKey(row, index) {
+            const no = String(row.no || '').trim();
+            const title = String(row.title || '').trim();
+            return `${no}|${title}|${index}`;
+        }
+
+        function normalizeDifficulty(value) {
+            const difficulty = String(value || '').trim().toLowerCase();
+            if (difficulty === 'easy') return 'easy';
+            if (difficulty === 'medium') return 'medium';
+            if (difficulty === 'hard') return 'hard';
+            return 'none';
+        }
+
+        function loadAdventures() {
+            try {
+                const raw = localStorage.getItem(ADVENTURE_STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : { rows: [] };
+                const rows = Array.isArray(parsed?.rows) ? parsed.rows : [];
+
+                adventures = rows
+                    .map((row, index) => ({
+                        key: makeAdventureKey(row || {}, index),
+                        no: String(row?.no || '').trim(),
+                        title: String(row?.title || '').trim(),
+                        type: String(row?.type || '').trim(),
+                        difficulty: String(row?.difficulty || '').trim(),
+                        apl: String(row?.apl || '').trim(),
+                        npcs: String(row?.npcs || '').trim()
+                    }))
+                    .filter((row) => row.no || row.title);
+            } catch (error) {
+                console.error('Scheduling: failed to load adventures', error);
+                adventures = [];
+            }
+        }
+
+        function loadSchedule() {
+            try {
+                const raw = localStorage.getItem(SCHEDULE_STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : { slots: [] };
+                const slots = Array.isArray(parsed?.slots) ? parsed.slots : [];
+
+                slotAssignments = Array.from({ length: SLOT_COUNT }, (_, i) => {
+                    const value = slots[i];
+                    if (Array.isArray(value)) {
+                        return value.filter((item) => typeof item === 'string').slice(0, getSlotCapacity(i));
+                    }
+
+                    // Backward compatibility with previous single-value slot storage.
+                    if (typeof value === 'string' && value.trim()) {
+                        return [value.trim()];
+                    }
+
+                    return [];
+                });
+            } catch (error) {
+                console.error('Scheduling: failed to load schedule', error);
+                slotAssignments = Array.from({ length: SLOT_COUNT }, () => []);
+            }
+        }
+
+        function saveSchedule() {
+            localStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify({ slots: slotAssignments }));
+        }
+
+        function getAdventureByKey(key) {
+            return adventures.find((a) => a.key === key) || null;
+        }
+
+        function isAdventureScheduled(key) {
+            return slotAssignments.some((slot) => slot.includes(key));
+        }
+
+        function findSlotIndexContainingAdventure(key) {
+            return slotAssignments.findIndex((slot) => slot.includes(key));
+        }
+
+        function getSlotLabelByIndex(index) {
+            return SLOT_DEFS[index]?.label || `Slot ${index + 1}`;
+        }
+
+        function getSlotSummaries() {
+            return slotAssignments.map((slotKeys, index) => {
+                let totalApl = 0;
+                let totalNpcs = 0;
+
+                slotKeys.forEach((key) => {
+                    const adventure = getAdventureByKey(key);
+                    if (!adventure) return;
+                    totalApl += toNumber(adventure.apl);
+                    totalNpcs += toNumber(adventure.npcs);
+                });
+
+                return {
+                    slot: getSlotLabelByIndex(index),
+                    count: slotKeys.length,
+                    totalApl,
+                    totalNpcs
+                };
+            });
+        }
+
+        function getScheduleRowsForExport() {
+            const rows = [];
+
+            slotAssignments.forEach((slotKeys, index) => {
+                if (slotKeys.length === 0) {
+                    rows.push([
+                        getSlotLabelByIndex(index),
+                        '-',
+                        '-',
+                        '-',
+                        '-',
+                        '-',
+                        '-',
+                        '-'
+                    ]);
+                    return;
+                }
+
+                slotKeys.forEach((key) => {
+                    const adventure = getAdventureByKey(key);
+                    if (!adventure) return;
+                    rows.push([
+                        getSlotLabelByIndex(index),
+                        adventure.no || '-',
+                        adventure.title || '-',
+                        adventure.type || '-',
+                        adventure.difficulty || 'None',
+                        adventure.apl || '0',
+                        adventure.npcs || '0',
+                        key
+                    ]);
+                });
+            });
+
+            return rows;
+        }
+
+        function getGroupedScheduleRowsForExport() {
+            const orderedGroups = ['Friday', 'Saturday', 'Sunday', 'Floating', 'Other'];
+            const groupedIndexes = {
+                Friday: [],
+                Saturday: [],
+                Sunday: [],
+                Floating: [],
+                Other: []
+            };
+
+            for (let i = 0; i < SLOT_COUNT; i++) {
+                groupedIndexes[getSlotGroupName(i)].push(i);
+            }
+
+            const rows = [];
+
+            orderedGroups.forEach((groupName) => {
+                const indexes = groupedIndexes[groupName];
+                if (!indexes || indexes.length === 0) return;
+
+                rows.push({
+                    kind: 'day',
+                    group: groupName,
+                    data: [`${groupName}`, '', '', '', '', '', '']
+                });
+
+                indexes.forEach((index) => {
+                    const slotKeys = slotAssignments[index] || [];
+                    let totalApl = 0;
+                    let totalNpcs = 0;
+
+                    slotKeys.forEach((key) => {
+                        const adventure = getAdventureByKey(key);
+                        if (!adventure) return;
+                        totalApl += toNumber(adventure.apl);
+                        totalNpcs += toNumber(adventure.npcs);
+                    });
+
+                    rows.push({
+                        kind: 'slot',
+                        group: groupName,
+                        data: [
+                            getSlotLabelByIndex(index),
+                            `Adventures: ${slotKeys.length}`,
+                            `Total APL: ${totalApl}`,
+                            `Total NPCs: ${totalNpcs}`,
+                            '',
+                            '',
+                            ''
+                        ]
+                    });
+
+                    if (slotKeys.length === 0) {
+                        rows.push({
+                            kind: 'adventure',
+                            group: groupName,
+                            data: ['(empty slot)', '-', '-', '-', '-', '-', '-']
+                        });
+                    } else {
+                        slotKeys.forEach((key) => {
+                            const adventure = getAdventureByKey(key);
+                            if (!adventure) return;
+                            rows.push({
+                                kind: 'adventure',
+                                group: groupName,
+                                data: [
+                                    '',
+                                    adventure.no || '-',
+                                    adventure.title || '-',
+                                    adventure.type || '-',
+                                    adventure.difficulty || 'None',
+                                    adventure.apl || '0',
+                                    adventure.npcs || '0'
+                                ]
+                            });
+                        });
+                    }
+                });
+
+                rows.push({
+                    kind: 'separator',
+                    group: groupName,
+                    data: ['', '', '', '', '', '', '']
+                });
+            });
+
+            return rows;
+        }
+
+        function getExportBaseName() {
+            const now = new Date();
+            const stamp = now.toISOString().slice(0, 10);
+            return `Schedule_${stamp}`;
+        }
+
+        function getScheduleExportTitle() {
+            const eventVarsApi = window.EventVariables;
+            if (!eventVarsApi) {
+                return 'Adventure Schedule';
+            }
+
+            const eventVars = eventVarsApi.get ? eventVarsApi.get() : {};
+            const eventTitle = eventVarsApi.buildTitle ? eventVarsApi.buildTitle(eventVars) : '';
+            const cleanEventTitle = String(eventTitle || '').trim();
+
+            return cleanEventTitle ? `Adventure Schedule - ${cleanEventTitle}` : 'Adventure Schedule';
+        }
+
+        function exportSchedulePdf() {
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                showStatus('PDF export library failed to load.');
+                return;
+            }
+
+            const groupedRows = getGroupedScheduleRowsForExport();
+            const attempts = [
+                { titleFont: 14, bodyFont: 8, cellPadding: 2 },
+                { titleFont: 13, bodyFont: 7, cellPadding: 1.5 },
+                { titleFont: 12, bodyFont: 6, cellPadding: 1.2 },
+                { titleFont: 11, bodyFont: 5, cellPadding: 1 },
+                { titleFont: 10, bodyFont: 4, cellPadding: 0.8 }
+            ];
+
+            let finalDoc = null;
+
+            for (let i = 0; i < attempts.length; i++) {
+                const attempt = attempts[i];
+                const doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+
+                doc.setFontSize(attempt.titleFont);
+                doc.text(getScheduleExportTitle(), 24, 28);
+
+                doc.autoTable({
+                    head: [['Slot', 'No', 'Title', 'Type', 'Difficulty', 'APL', 'NPCs']],
+                    body: groupedRows.map((row) => row.data),
+                    startY: 36,
+                    showHead: 'everyPage',
+                    styles: {
+                        fontSize: attempt.bodyFont,
+                        cellPadding: attempt.cellPadding,
+                        overflow: 'hidden'
+                    },
+                    margin: { top: 36, right: 20, bottom: 20, left: 20 },
+                    headStyles: {
+                        fillColor: [241, 245, 249],
+                        textColor: [30, 41, 59],
+                        fontStyle: 'bold'
+                    },
+                    didParseCell: function (hookData) {
+                        if (hookData.section !== 'body') return;
+                        const rowInfo = groupedRows[hookData.row.index];
+                        if (!rowInfo) return;
+
+                        if (rowInfo.kind === 'day') {
+                            hookData.cell.styles.fillColor = [156, 163, 175];
+                            hookData.cell.styles.textColor = [17, 24, 39];
+                            hookData.cell.styles.fontStyle = 'bold';
+                        } else if (rowInfo.kind === 'slot') {
+                            hookData.cell.styles.fillColor = [241, 245, 249];
+                            hookData.cell.styles.textColor = [30, 41, 59];
+                            hookData.cell.styles.fontStyle = 'bold';
+                        } else if (rowInfo.kind === 'separator') {
+                            hookData.cell.styles.fillColor = [17, 24, 39];
+                            hookData.cell.styles.lineWidth = 0;
+                        }
+                    }
+                });
+
+                finalDoc = doc;
+                if (doc.getNumberOfPages() === 1) {
+                    break;
+                }
+            }
+
+            finalDoc.save(`${getExportBaseName()}.pdf`);
+            showStatus('Schedule exported to PDF.');
+        }
+
+        function exportScheduleXlsx() {
+            if (typeof XLSX === 'undefined') {
+                showStatus('XLSX export library failed to load.');
+                return;
+            }
+
+            const groupedRows = getGroupedScheduleRowsForExport();
+            const exportTitle = getScheduleExportTitle();
+
+            const scheduleAoa = [
+                [exportTitle, '', '', '', '', '', ''],
+                ['', '', '', '', '', '', ''],
+                ['Slot', 'No', 'Title', 'Type', 'Difficulty', 'APL', 'NPCs'],
+                ...groupedRows.map((row) => row.data)
+            ];
+
+            const wb = XLSX.utils.book_new();
+            const scheduleSheet = XLSX.utils.aoa_to_sheet(scheduleAoa);
+            scheduleSheet['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }];
+            XLSX.utils.book_append_sheet(wb, scheduleSheet, 'Schedule');
+            XLSX.writeFile(wb, `${getExportBaseName()}.xlsx`);
+            showStatus('Schedule exported to XLSX.');
+        }
+
+        function toNumber(value) {
+            const parsed = Number(value);
+            return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function renderSummary() {
+            const total = adventures.length;
+            const scheduled = slotAssignments.reduce((sum, slot) => sum + slot.length, 0);
+            const unscheduled = Math.max(0, total - scheduled);
+
+            totalCountEl.textContent = String(total);
+            scheduledCountEl.textContent = String(scheduled);
+            unscheduledCountEl.textContent = String(unscheduled);
+        }
+
+        function createCard(adventure) {
+            const card = document.createElement('article');
+            card.className = 'adventure-card';
+            card.classList.add(`diff-${normalizeDifficulty(adventure.difficulty)}`);
+            card.draggable = true;
+            card.dataset.adventureKey = adventure.key;
+
+            const title = document.createElement('p');
+            title.className = 'adventure-name';
+            title.textContent = `A${adventure.no || '?'} ${adventure.title || 'Untitled Adventure'}`;
+
+            const meta = document.createElement('p');
+            meta.className = 'adventure-meta';
+            const typePart = adventure.type ? `Type: ${adventure.type}` : 'Type: -';
+            const diffPart = adventure.difficulty ? `Difficulty: ${adventure.difficulty}` : 'Difficulty: None';
+            const aplPart = adventure.apl ? `APL: ${adventure.apl}` : 'APL: -';
+            const npcsPart = adventure.npcs ? `NPCs: ${adventure.npcs}` : 'NPCs: -';
+            meta.textContent = `${typePart} | ${diffPart} | ${aplPart} | ${npcsPart}`;
+
+            card.appendChild(title);
+            card.appendChild(meta);
+
+            card.addEventListener('dragstart', (event) => {
+                event.dataTransfer.setData('text/adventure-key', adventure.key);
+                event.dataTransfer.effectAllowed = 'move';
+            });
+
+            return card;
+        }
+
+        function renderPool() {
+            adventurePoolEl.innerHTML = '';
+
+            const unscheduled = adventures.filter((a) => !isAdventureScheduled(a.key));
+            if (unscheduled.length === 0) {
+                const emptyText = document.createElement('p');
+                emptyText.className = 'drop-hint';
+                emptyText.textContent = 'No unscheduled adventures.';
+                adventurePoolEl.appendChild(emptyText);
+                return;
+            }
+
+            unscheduled.forEach((adventure) => {
+                adventurePoolEl.appendChild(createCard(adventure));
+            });
+        }
+
+        function createSlot(index) {
+            const slot = document.createElement('section');
+            slot.className = 'slot';
+            slot.dataset.slotIndex = String(index);
+
+            const title = document.createElement('h3');
+            title.className = 'slot-title';
+            title.textContent = SLOT_DEFS[index].label;
+            slot.appendChild(title);
+
+            const count = document.createElement('p');
+            count.className = 'slot-count';
+            count.textContent = `${slotAssignments[index].length}/${getSlotCapacity(index)} allocated`;
+            slot.appendChild(count);
+
+            const assignedKeys = slotAssignments[index];
+
+            let totalApl = 0;
+            let totalNpcs = 0;
+
+            assignedKeys.forEach((key) => {
+                const assignedAdventure = getAdventureByKey(key);
+                if (!assignedAdventure) return;
+                totalApl += toNumber(assignedAdventure.apl);
+                totalNpcs += toNumber(assignedAdventure.npcs);
+            });
+
+            const summary = document.createElement('p');
+            summary.className = 'slot-summary';
+            summary.textContent = `Total APL: ${totalApl} | Total NPCs: ${totalNpcs}`;
+            slot.appendChild(summary);
+
+            if (assignedKeys.length > 0) {
+                assignedKeys.forEach((key) => {
+                    const assignedAdventure = getAdventureByKey(key);
+                    if (assignedAdventure) {
+                        slot.appendChild(createCard(assignedAdventure));
+                    }
+                });
+            } else {
+                const hint = document.createElement('p');
+                hint.className = 'drop-hint';
+                hint.textContent = 'Drop adventure here';
+                slot.appendChild(hint);
+            }
+
+            slot.addEventListener('dragover', (event) => {
+                event.preventDefault();
+                slot.classList.add('is-over');
+            });
+
+            slot.addEventListener('dragleave', () => {
+                slot.classList.remove('is-over');
+            });
+
+            slot.addEventListener('drop', (event) => {
+                event.preventDefault();
+                slot.classList.remove('is-over');
+
+                const key = event.dataTransfer.getData('text/adventure-key');
+                if (!key) return;
+
+                const fromIndex = findSlotIndexContainingAdventure(key);
+
+                if (fromIndex === index) {
+                    showStatus(`Adventure already in ${SLOT_DEFS[index].label}.`);
+                    return;
+                }
+
+                const slotCapacity = getSlotCapacity(index);
+                if (slotAssignments[index].length >= slotCapacity) {
+                    showStatus(`${SLOT_DEFS[index].label} is full (max ${slotCapacity}).`);
+                    return;
+                }
+
+                if (fromIndex !== -1) {
+                    slotAssignments[fromIndex] = slotAssignments[fromIndex].filter((k) => k !== key);
+                }
+
+                if (!slotAssignments[index].includes(key)) {
+                    slotAssignments[index].push(key);
+                }
+
+                saveSchedule();
+                renderAll();
+                showStatus(`Assigned adventure to ${SLOT_DEFS[index].label}.`);
+            });
+
+            return slot;
+        }
+
+        function getSlotGroupName(index) {
+            const def = SLOT_DEFS[index] || {};
+            if (def.isFloating) return 'Floating';
+            const label = String(def.label || '');
+            if (label.startsWith('Friday')) return 'Friday';
+            if (label.startsWith('Saturday')) return 'Saturday';
+            if (label.startsWith('Sunday')) return 'Sunday';
+            return 'Other';
+        }
+
+        function renderSlots() {
+            slotsGridEl.innerHTML = '';
+
+            const orderedGroups = ['Friday', 'Saturday', 'Sunday', 'Floating'];
+            const groupedIndexes = {
+                Friday: [],
+                Saturday: [],
+                Sunday: [],
+                Floating: [],
+                Other: []
+            };
+
+            for (let i = 0; i < SLOT_COUNT; i++) {
+                groupedIndexes[getSlotGroupName(i)].push(i);
+            }
+
+            [...orderedGroups, 'Other'].forEach((groupName) => {
+                const indexes = groupedIndexes[groupName];
+                if (!indexes || indexes.length === 0) return;
+
+                const groupSection = document.createElement('section');
+                groupSection.className = 'slot-group';
+                groupSection.classList.add(`slot-group--${groupName.toLowerCase()}`);
+
+                const title = document.createElement('h3');
+                title.className = 'slot-group-title';
+                title.textContent = groupName;
+                groupSection.appendChild(title);
+
+                const groupGrid = document.createElement('div');
+                groupGrid.className = 'slot-group-grid';
+                indexes.forEach((index) => {
+                    groupGrid.appendChild(createSlot(index));
+                });
+
+                groupSection.appendChild(groupGrid);
+                slotsGridEl.appendChild(groupSection);
+            });
+        }
+
+        function renderAll() {
+            renderSummary();
+            renderPool();
+            renderSlots();
+        }
+
+        function clearSchedule() {
+            slotAssignments = Array.from({ length: SLOT_COUNT }, () => []);
+            saveSchedule();
+            renderAll();
+            showStatus('Scheduling cleared.');
+        }
+
+        function autoFill() {
+            const unscheduled = adventures.filter((a) => !isAdventureScheduled(a.key));
+            let pointer = 0;
+
+            for (let i = 0; i < SLOT_COUNT; i++) {
+                if (SLOT_DEFS[i].isFloating) continue;
+
+                while (slotAssignments[i].length < getSlotCapacity(i) && pointer < unscheduled.length) {
+                    slotAssignments[i].push(unscheduled[pointer].key);
+                    pointer += 1;
+                }
+
+                if (pointer >= unscheduled.length) break;
+            }
+
+            saveSchedule();
+            renderAll();
+            showStatus('Auto-filled available slots.');
+        }
+
+        adventurePoolEl.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            adventurePoolEl.classList.add('is-over');
+        });
+
+        adventurePoolEl.addEventListener('dragleave', () => {
+            adventurePoolEl.classList.remove('is-over');
+        });
+
+        adventurePoolEl.addEventListener('drop', (event) => {
+            event.preventDefault();
+            adventurePoolEl.classList.remove('is-over');
+
+            const key = event.dataTransfer.getData('text/adventure-key');
+            if (!key) return;
+
+            const fromIndex = findSlotIndexContainingAdventure(key);
+            if (fromIndex !== -1) {
+                slotAssignments[fromIndex] = slotAssignments[fromIndex].filter((k) => k !== key);
+                saveSchedule();
+                renderAll();
+                showStatus('Adventure returned to pool.');
+            }
+        });
+
+        clearScheduleBtn.addEventListener('click', clearSchedule);
+        autoFillBtn.addEventListener('click', autoFill);
+        exportPdfBtn.addEventListener('click', exportSchedulePdf);
+        exportXlsxBtn.addEventListener('click', exportScheduleXlsx);
+
+        function initialize() {
+            loadAdventures();
+            loadSchedule();
+
+            slotAssignments = slotAssignments.map((slotKeys, index) => {
+                const slotCapacity = getSlotCapacity(index);
+                return slotKeys
+                    .filter((key) => Boolean(getAdventureByKey(key)))
+                    .slice(0, slotCapacity);
+            });
+
+            renderAll();
+            showStatus('Scheduling loaded.');
+        }
+
+        initialize();
+    </script>
+ </body>
+ </html>
