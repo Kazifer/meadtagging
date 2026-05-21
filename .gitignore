@@ -7,3 +7,6 @@
 # Keep intentional snapshot fixtures trackable
 !/Test Files/
 !/Test Files/*.html
+.tmp_feedback/analysis.txt
+/.tmp_feedback
+/Test Files
