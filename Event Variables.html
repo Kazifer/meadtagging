@@ -215,6 +215,11 @@
                         <td><button id="exportAdventureSpecialReqsBtn" class="btn btn-secondary" type="button">Export (.xlsx)</button></td>
                         <td><button id="importAdventureSpecialReqsBtn" class="btn btn-secondary" type="button">Import (.xlsx)</button></td>
                     </tr>
+                    <tr>
+                        <td>Feedback Sheet</td>
+                        <td><button id="exportFeedbackSheetBtn" class="btn btn-secondary" type="button">Export (.xlsx)</button></td>
+                        <td>-</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -224,11 +229,13 @@
     </main>
 
     <script src="event-variables.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
         const eventVarsApi = window.EventVariables;
         const adventureStorageKey = 'adventureLevelling.v1';
         const lootAllocationsStorageKey = 'lootCalcAllocated.v1';
+        const scheduleStorageKey = 'adventureScheduling.v1';
 
         const form = document.getElementById('eventVariablesForm');
         const saveBtn = document.getElementById('saveBtn');
@@ -238,6 +245,7 @@
         const exportAdventureListingBtn = document.getElementById('exportAdventureListingBtn');
         const exportAdventureLevellingBtn = document.getElementById('exportAdventureLevellingBtn');
         const exportAdventureSpecialReqsBtn = document.getElementById('exportAdventureSpecialReqsBtn');
+        const exportFeedbackSheetBtn = document.getElementById('exportFeedbackSheetBtn');
         const importEventVarsBtn = document.getElementById('importEventVarsBtn');
         const importLootCalcBtn = document.getElementById('importLootCalcBtn');
         const importAdventureListingBtn = document.getElementById('importAdventureListingBtn');
@@ -369,6 +377,28 @@
                 console.error('Failed to read loot allocations:', error);
                 return {};
             }
+        }
+
+        function readScheduleSlots() {
+            try {
+                const raw = localStorage.getItem(scheduleStorageKey);
+                const parsed = raw ? JSON.parse(raw) : { slots: [] };
+                const slots = Array.isArray(parsed?.slots) ? parsed.slots : [];
+                return slots.map((slot) => {
+                    if (Array.isArray(slot)) return slot.filter((value) => typeof value === 'string');
+                    if (typeof slot === 'string' && slot.trim()) return [slot.trim()];
+                    return [];
+                });
+            } catch (error) {
+                console.error('Failed to read schedule slots:', error);
+                return [];
+            }
+        }
+
+        function makeAdventureKey(row, index) {
+            const no = String(row?.no || '').trim();
+            const title = String(row?.title || '').trim();
+            return `${no}|${title}|${index}`;
         }
 
         function computePerAplRatios(vars) {
@@ -817,16 +847,67 @@
         }
 
         function normalizeMultilineText(value) {
-            // Excel on Windows is most reliable with CRLF line endings for visible in-cell breaks.
-            return String(value ?? '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '\r\n');
+            return String(value ?? '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
         }
 
-        function exportAdventureSpecialRequirements() {
+        function downloadBufferAsFile(buffer, fileName) {
+            const blob = new Blob([
+                buffer
+            ], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        async function exportAdventureSpecialRequirements() {
             const vars = eventVarsApi?.get?.() || {};
             const output = buildAdventureSpecialRequirementsRows();
 
             if (!output.length) {
                 showStatus('No adventures with Special Requirements to export.');
+                return;
+            }
+
+            const fileName = `${safeFilePart(vars.eventName)}_Adventure_Special_Requirements.xlsx`;
+
+            if (window.ExcelJS?.Workbook) {
+                const workbook = new window.ExcelJS.Workbook();
+                const sheet = workbook.addWorksheet('Adventure Special Requirements');
+
+                sheet.columns = [
+                    { header: 'No', key: 'No', width: 10 },
+                    { header: 'Title', key: 'Title', width: 26 },
+                    { header: 'Author', key: 'Author', width: 20 },
+                    { header: 'SpecialRequirements', key: 'SpecialRequirements', width: 72 }
+                ];
+
+                output.forEach((row) => {
+                    sheet.addRow({
+                        No: row.No,
+                        Title: row.Title,
+                        Author: row.Author,
+                        SpecialRequirements: normalizeMultilineText(row.SpecialRequirements)
+                    });
+                });
+
+                sheet.getRow(1).font = { bold: true };
+
+                for (let i = 2; i <= sheet.rowCount; i++) {
+                    const cell = sheet.getCell(`D${i}`);
+                    const text = normalizeMultilineText(cell.value || '');
+                    const lineCount = Math.max(1, String(text).split('\n').length);
+                    cell.alignment = { wrapText: true, vertical: 'top' };
+                    sheet.getRow(i).height = Math.min(220, 16 * lineCount);
+                }
+
+                const buffer = await workbook.xlsx.writeBuffer();
+                downloadBufferAsFile(buffer, fileName);
+                showStatus(`Exported ${fileName}`);
                 return;
             }
 
@@ -867,8 +948,139 @@
 
             xlsx.utils.book_append_sheet(workbook, worksheet, 'Adventure Special Requirements');
 
-            const fileName = `${safeFilePart(vars.eventName)}_Adventure_Special_Requirements.xlsx`;
             xlsx.writeFile(workbook, fileName, { cellStyles: true });
+            showStatus(`Exported ${fileName}`);
+        }
+
+        async function exportFeedbackSheet() {
+            const vars = eventVarsApi?.get?.() || {};
+
+            if (!window.ExcelJS?.Workbook) {
+                showStatus('ExcelJS failed to load. Please refresh and try again.');
+                return;
+            }
+
+            const sourceRows = readStoredAdventureRows();
+            const scheduleSlots = readScheduleSlots();
+            const keyToAdventure = new Map();
+
+            sourceRows.forEach((row, index) => {
+                keyToAdventure.set(makeAdventureKey(row, index), row);
+            });
+
+            const slotDefs = [
+                { day: 'Friday', time: '22:00 - 24:00', slotIndex: 0 },
+                { day: 'Saturday', time: '8:00 - 10:00', slotIndex: 1 },
+                { day: 'Saturday', time: '10:00 - 12:00', slotIndex: 2 },
+                { day: 'Saturday', time: '13:00 - 15:00', slotIndex: 3 },
+                { day: 'Saturday', time: '15:00 - 17:00', slotIndex: 4 },
+                { day: 'Saturday', time: '21:00 - 23:00', slotIndex: 6 },
+                { day: 'Sunday', time: '08:00 - 10:00', slotIndex: 7 },
+                { day: 'Floating', time: '', slotIndex: 9 }
+            ];
+
+            // Include 19:00-21:00 if any adventures were placed there.
+            if ((scheduleSlots[5] || []).length > 0) {
+                slotDefs.splice(5, 0, { day: 'Saturday', time: '19:00 - 21:00', slotIndex: 5 });
+            }
+
+            const workbook = new window.ExcelJS.Workbook();
+            const sheet = workbook.addWorksheet('P - Feedback Sheet');
+            sheet.columns = [
+                { width: 42 },
+                { width: 16 },
+                { width: 44 }
+            ];
+
+            const dayFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E78' } };
+            const timeFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E2F3' } };
+            const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
+            const border = {
+                top: { style: 'thin', color: { argb: 'FF999999' } },
+                left: { style: 'thin', color: { argb: 'FF999999' } },
+                bottom: { style: 'thin', color: { argb: 'FF999999' } },
+                right: { style: 'thin', color: { argb: 'FF999999' } }
+            };
+
+            let rowNo = 1;
+            let currentDay = '';
+
+            const addMergedLabelRow = (text, fill, isDark) => {
+                sheet.mergeCells(`A${rowNo}:C${rowNo}`);
+                const cell = sheet.getCell(`A${rowNo}`);
+                cell.value = text;
+                cell.fill = fill;
+                cell.font = { bold: true, color: { argb: isDark ? 'FFFFFFFF' : 'FF000000' } };
+                cell.alignment = { vertical: 'middle', horizontal: 'left' };
+                cell.border = border;
+                sheet.getRow(rowNo).height = 24;
+                rowNo += 1;
+            };
+
+            const addHeaderRow = () => {
+                const values = ['Adventure', 'Played (Y/N)', 'Results'];
+                for (let col = 1; col <= 3; col++) {
+                    const cell = sheet.getCell(rowNo, col);
+                    cell.value = values[col - 1];
+                    cell.fill = headerFill;
+                    cell.font = { bold: true };
+                    cell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+                    cell.border = border;
+                }
+                sheet.getRow(rowNo).height = 34;
+                rowNo += 1;
+            };
+
+            const addAdventureRow = (value) => {
+                sheet.getCell(rowNo, 1).value = value;
+                sheet.getCell(rowNo, 2).value = '';
+                sheet.getCell(rowNo, 3).value = '';
+
+                for (let col = 1; col <= 3; col++) {
+                    const cell = sheet.getCell(rowNo, col);
+                    cell.border = border;
+                    cell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
+                }
+
+                sheet.getRow(rowNo).height = 50;
+                rowNo += 1;
+            };
+
+            slotDefs.forEach((slotDef) => {
+                if (slotDef.day !== currentDay) {
+                    addMergedLabelRow(slotDef.day, dayFill, true);
+                    currentDay = slotDef.day;
+                }
+
+                if (slotDef.time) {
+                    addMergedLabelRow(slotDef.time, timeFill, false);
+                }
+
+                addHeaderRow();
+
+                const slotKeys = scheduleSlots[slotDef.slotIndex] || [];
+                const adventureNames = slotKeys
+                    .map((key) => keyToAdventure.get(key))
+                    .filter(Boolean)
+                    .map((row) => {
+                        const noPart = String(row.no || '').trim();
+                        const titlePart = String(row.title || '').trim();
+                        if (noPart && titlePart) return `A${noPart} - ${titlePart}`;
+                        if (titlePart) return titlePart;
+                        if (noPart) return `A${noPart}`;
+                        return '<Adventure No - Adventure Title>';
+                    });
+
+                if (!adventureNames.length) {
+                    addAdventureRow('<Adventure No - Adventure Title>');
+                } else {
+                    adventureNames.forEach((name) => addAdventureRow(name));
+                }
+            });
+
+            const fileName = `${safeFilePart(vars.eventName)}_Feedback_Sheet.xlsx`;
+            const buffer = await workbook.xlsx.writeBuffer();
+            downloadBufferAsFile(buffer, fileName);
             showStatus(`Exported ${fileName}`);
         }
 
@@ -1102,6 +1314,7 @@
         exportAdventureListingBtn.addEventListener('click', exportAdventureListing);
         exportAdventureLevellingBtn.addEventListener('click', exportAdventureLevelling);
         exportAdventureSpecialReqsBtn.addEventListener('click', exportAdventureSpecialRequirements);
+        exportFeedbackSheetBtn.addEventListener('click', exportFeedbackSheet);
         importEventVarsBtn.addEventListener('click', importEventVariables);
         importLootCalcBtn.addEventListener('click', importLootCalculation);
         importAdventureListingBtn.addEventListener('click', importAdventureListing);
