@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NPC Listing</title>
+    <link rel="stylesheet" href="theme.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+    <style>
+        .page-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        .card {
+            border: 1px solid var(--app-border);
+            border-radius: 10px;
+            background: #111827;
+            padding: 14px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field label {
+            font-size: 0.86rem;
+            color: var(--app-muted);
+        }
+
+        .field input,
+        .field textarea,
+        .field select {
+            background: #0b1220;
+            border: 1px solid var(--app-border);
+            border-radius: 8px;
+            color: var(--app-text);
+            padding: 8px;
+            font-size: 0.92rem;
+        }
+
+        .field textarea {
+            resize: vertical;
+            min-height: 78px;
+        }
+
+        .field select[multiple] {
+            min-height: 136px;
+        }
+
+        .field textarea.description-lg {
+            min-height: 118px;
+        }
+
+        .field.span-3 {
+            grid-column: span 3;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 8px;
+            padding: 9px 12px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #f8fafc;
+        }
+
+        .btn-primary { background: #0ea5a6; }
+        .btn-secondary { background: #2563eb; }
+        .btn-danger { background: #b91c1c; }
+        .btn-success { background: #166534; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        th,
+        td {
+            border-bottom: 1px solid #334155;
+            text-align: left;
+            padding: 10px 8px;
+            vertical-align: top;
+            font-size: 0.9rem;
+        }
+
+        th {
+            color: #93c5fd;
+            font-weight: 700;
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .small-btn {
+            border: 0;
+            border-radius: 6px;
+            padding: 6px 8px;
+            cursor: pointer;
+            margin-right: 6px;
+        }
+
+        .small-btn.edit {
+            background: #1d4ed8;
+            color: #dbeafe;
+        }
+
+        .small-btn.delete {
+            background: #7f1d1d;
+            color: #fee2e2;
+        }
+
+        .status {
+            min-height: 1.3em;
+            color: #93c5fd;
+            margin-top: 8px;
+            font-size: 0.88rem;
+        }
+
+        @media (max-width: 900px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .field.span-3 {
+                grid-column: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>NPC Listing</h1>
+        <p>Create and maintain a reusable NPC list for your events.</p>
+
+        <div class="page-grid">
+            <section class="card">
+                <h2 id="formTitle">Add NPC</h2>
+                <div class="form-grid">
+                    <div class="field">
+                        <label for="npcName">Name</label>
+                        <input id="npcName" type="text" placeholder="NPC name">
+                    </div>
+                    <div class="field">
+                        <label for="npcDescription">Description</label>
+                        <textarea id="npcDescription" class="description-lg" placeholder="Brief physical or personality description"></textarea>
+                    </div>
+                    <div class="field">
+                        <label for="npcStatus">Status</label>
+                        <input id="npcStatus" type="text" placeholder="Alive, Missing, Hostile, Ally...">
+                    </div>
+                    <div class="field">
+                        <label for="npcNotes">Notes</label>
+                        <textarea id="npcNotes" placeholder="General notes..."></textarea>
+                    </div>
+                    <div class="field">
+                        <label for="npcCostumeNotes">Costume Notes</label>
+                        <textarea id="npcCostumeNotes" placeholder="Costume pieces, colors, props..."></textarea>
+                    </div>
+                    <div class="field">
+                        <label for="npcTemplate">Template</label>
+                        <input id="npcTemplate" type="text" placeholder="Template name/reference">
+                    </div>
+                    <div class="field span-3">
+                        <label for="npcAdventures">Adventures (multi-select)</label>
+                        <select id="npcAdventures" multiple></select>
+                    </div>
+                </div>
+                <div class="actions">
+                    <button id="addNpcBtn" class="btn btn-primary" type="button">Add NPC</button>
+                    <button id="cancelEditBtn" class="btn btn-secondary" type="button">Cancel Edit</button>
+                    <button id="exportXlsxBtn" class="btn btn-success" type="button">Export XLSX</button>
+                    <button id="exportPdfBtn" class="btn btn-success" type="button">Export PDF</button>
+                    <button id="clearFormBtn" class="btn btn-secondary" type="button">Clear Form</button>
+                    <button id="clearAllBtn" class="btn btn-danger" type="button">Clear All NPCs</button>
+                </div>
+                <div id="statusMessage" class="status"></div>
+            </section>
+
+            <section class="card">
+                <h2>NPC Entries</h2>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Status</th>
+                                <th>Notes</th>
+                                <th>Costume Notes</th>
+                                <th>Template</th>
+                                <th>Adventures</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="npcTableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="event-variables.js"></script>
+    <script>
+        const NPC_STORAGE_KEY = 'npcListing.v1';
+        const ADVENTURE_STORAGE_KEY = 'adventureLevelling.v1';
+
+        const formTitleEl = document.getElementById('formTitle');
+        const npcNameEl = document.getElementById('npcName');
+        const npcDescriptionEl = document.getElementById('npcDescription');
+        const npcStatusEl = document.getElementById('npcStatus');
+        const npcNotesEl = document.getElementById('npcNotes');
+        const npcCostumeNotesEl = document.getElementById('npcCostumeNotes');
+        const npcTemplateEl = document.getElementById('npcTemplate');
+        const npcAdventuresEl = document.getElementById('npcAdventures');
+        const addNpcBtn = document.getElementById('addNpcBtn');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+        const exportXlsxBtn = document.getElementById('exportXlsxBtn');
+        const exportPdfBtn = document.getElementById('exportPdfBtn');
+        const clearFormBtn = document.getElementById('clearFormBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const npcTableBody = document.getElementById('npcTableBody');
+        const statusMessage = document.getElementById('statusMessage');
+
+        let npcRows = [];
+        let adventureOptions = [];
+        let editingIndex = -1;
+
+        function showStatus(message) {
+            statusMessage.textContent = message;
+        }
+
+        function loadNpcRows() {
+            try {
+                const raw = localStorage.getItem(NPC_STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : [];
+                const rows = Array.isArray(parsed) ? parsed : [];
+                npcRows = rows.map((row) => ({
+                    name: String(row?.name || '').trim(),
+                    description: String(row?.description || row?.role || '').trim(),
+                    status: String(row?.status || row?.affiliation || '').trim(),
+                    notes: String(row?.notes || '').trim(),
+                    costumeNotes: String(row?.costumeNotes || '').trim(),
+                    template: String(row?.template || '').trim(),
+                    adventures: Array.isArray(row?.adventures)
+                        ? row.adventures.map((item) => String(item || '').trim()).filter(Boolean)
+                        : []
+                }));
+            } catch (error) {
+                console.error('NPC Listing: failed to load NPCs', error);
+                npcRows = [];
+            }
+        }
+
+        function loadAdventureOptions() {
+            try {
+                const raw = localStorage.getItem(ADVENTURE_STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : { rows: [] };
+                const rows = Array.isArray(parsed?.rows) ? parsed.rows : [];
+
+                adventureOptions = rows
+                    .map((row) => {
+                        const no = String(row?.no || '').trim();
+                        const title = String(row?.title || '').trim();
+                        if (no && title) return `A${no} - ${title}`;
+                        if (title) return title;
+                        if (no) return `A${no}`;
+                        return '';
+                    })
+                    .filter(Boolean);
+            } catch (error) {
+                console.error('NPC Listing: failed to load adventure options', error);
+                adventureOptions = [];
+            }
+        }
+
+        function renderAdventureOptions(selected) {
+            const selectedSet = new Set(Array.isArray(selected) ? selected : []);
+            npcAdventuresEl.innerHTML = '';
+
+            const mergedOptions = [...new Set([...(adventureOptions || []), ...selectedSet])];
+
+            if (mergedOptions.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'No adventures available. Add adventures in Adventure Listing.';
+                option.disabled = true;
+                option.selected = true;
+                npcAdventuresEl.appendChild(option);
+                return;
+            }
+
+            mergedOptions.forEach((label) => {
+                const option = document.createElement('option');
+                option.value = label;
+                option.textContent = label;
+                option.selected = selectedSet.has(label);
+                npcAdventuresEl.appendChild(option);
+            });
+        }
+
+        function saveNpcRows() {
+            localStorage.setItem(NPC_STORAGE_KEY, JSON.stringify(npcRows));
+        }
+
+        function setEditingIndex(index) {
+            editingIndex = index;
+            if (editingIndex === -1) {
+                formTitleEl.textContent = 'Add NPC';
+                addNpcBtn.textContent = 'Add NPC';
+                cancelEditBtn.style.display = 'none';
+            } else {
+                formTitleEl.textContent = 'Edit NPC';
+                addNpcBtn.textContent = 'Save Changes';
+                cancelEditBtn.style.display = 'inline-block';
+            }
+        }
+
+        function populateForm(npc) {
+            npcNameEl.value = npc.name || '';
+            npcDescriptionEl.value = npc.description || '';
+            npcStatusEl.value = npc.status || '';
+            npcNotesEl.value = npc.notes || '';
+            npcCostumeNotesEl.value = npc.costumeNotes || '';
+            npcTemplateEl.value = npc.template || '';
+            renderAdventureOptions(npc.adventures || []);
+        }
+
+        function readFormRow() {
+            const selectedAdventures = Array.from(npcAdventuresEl.selectedOptions)
+                .map((opt) => String(opt.value || '').trim())
+                .filter(Boolean);
+
+            return {
+                name: npcNameEl.value.trim(),
+                description: npcDescriptionEl.value.trim(),
+                status: npcStatusEl.value.trim(),
+                notes: npcNotesEl.value.trim(),
+                costumeNotes: npcCostumeNotesEl.value.trim(),
+                template: npcTemplateEl.value.trim(),
+                adventures: selectedAdventures
+            };
+        }
+
+        function renderRows() {
+            npcTableBody.innerHTML = '';
+
+            if (npcRows.length === 0) {
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.colSpan = 8;
+                cell.textContent = 'No NPCs added yet.';
+                cell.style.color = '#94a3b8';
+                row.appendChild(cell);
+                npcTableBody.appendChild(row);
+                return;
+            }
+
+            npcRows.forEach((npc, index) => {
+                const row = document.createElement('tr');
+
+                const nameCell = document.createElement('td');
+                nameCell.textContent = npc.name || '-';
+                row.appendChild(nameCell);
+
+                const descriptionCell = document.createElement('td');
+                descriptionCell.textContent = npc.description || '-';
+                row.appendChild(descriptionCell);
+
+                const statusCell = document.createElement('td');
+                statusCell.textContent = npc.status || '-';
+                row.appendChild(statusCell);
+
+                const notesCell = document.createElement('td');
+                notesCell.textContent = npc.notes || '-';
+                row.appendChild(notesCell);
+
+                const costumeNotesCell = document.createElement('td');
+                costumeNotesCell.textContent = npc.costumeNotes || '-';
+                row.appendChild(costumeNotesCell);
+
+                const templateCell = document.createElement('td');
+                templateCell.textContent = npc.template || '-';
+                row.appendChild(templateCell);
+
+                const adventuresCell = document.createElement('td');
+                adventuresCell.textContent = (npc.adventures || []).length ? npc.adventures.join(', ') : '-';
+                row.appendChild(adventuresCell);
+
+                const actionCell = document.createElement('td');
+
+                const editBtn = document.createElement('button');
+                editBtn.type = 'button';
+                editBtn.className = 'small-btn edit';
+                editBtn.textContent = 'Edit';
+                editBtn.addEventListener('click', () => {
+                    populateForm(npc);
+                    setEditingIndex(index);
+                    showStatus('Editing NPC entry.');
+                    npcNameEl.focus();
+                });
+                actionCell.appendChild(editBtn);
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'small-btn delete';
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.addEventListener('click', () => {
+                    npcRows.splice(index, 1);
+                    if (editingIndex === index) {
+                        clearForm();
+                    } else if (editingIndex > index) {
+                        setEditingIndex(editingIndex - 1);
+                    }
+                    saveNpcRows();
+                    renderRows();
+                    showStatus('NPC removed.');
+                });
+                actionCell.appendChild(deleteBtn);
+                row.appendChild(actionCell);
+
+                npcTableBody.appendChild(row);
+            });
+        }
+
+        function clearForm() {
+            npcNameEl.value = '';
+            npcDescriptionEl.value = '';
+            npcStatusEl.value = '';
+            npcNotesEl.value = '';
+            npcCostumeNotesEl.value = '';
+            npcTemplateEl.value = '';
+            renderAdventureOptions([]);
+            setEditingIndex(-1);
+            npcNameEl.focus();
+        }
+
+        function getEventTitle() {
+            const eventApi = window.EventVariables;
+            if (!eventApi) return 'Event Unknown';
+            const vars = eventApi.get ? eventApi.get() : {};
+            const title = eventApi.buildTitle ? eventApi.buildTitle(vars) : '';
+            return String(title || '').trim() || 'Event Unknown';
+        }
+
+        function getExportRows() {
+            return npcRows.map((npc) => [
+                npc.name || '-',
+                npc.description || '-',
+                npc.status || '-',
+                npc.notes || '-',
+                npc.costumeNotes || '-',
+                npc.template || '-',
+                (npc.adventures || []).length ? npc.adventures.join('\r\n') : '-'
+            ]);
+        }
+
+        async function exportXlsx() {
+            const eventTitle = getEventTitle();
+
+            if (window.ExcelJS && window.ExcelJS.Workbook) {
+                try {
+                    const workbook = new window.ExcelJS.Workbook();
+                    const sheet = workbook.addWorksheet('NPC Listing');
+
+                    sheet.columns = [
+                        { width: 24 },
+                        { width: 28 },
+                        { width: 16 },
+                        { width: 30 },
+                        { width: 30 },
+                        { width: 20 },
+                        { width: 40 }
+                    ];
+
+                    sheet.addRow(['NPC Listing', '', '', '', '', '', '']);
+                    sheet.addRow([`Event: ${eventTitle}`, '', '', '', '', '', '']);
+                    sheet.addRow(['', '', '', '', '', '', '']);
+                    sheet.addRow(['Name', 'Description', 'Status', 'Notes', 'Costume Notes', 'Template', 'Adventures']);
+
+                    sheet.mergeCells('A1:G1');
+                    sheet.mergeCells('A2:G2');
+
+                    sheet.getRow(1).height = 22;
+                    sheet.getRow(2).height = 20;
+                    sheet.getRow(4).height = 20;
+                    sheet.getRow(1).font = { bold: true, size: 13 };
+                    sheet.getRow(2).font = { size: 11 };
+                    sheet.getRow(4).font = { bold: true };
+
+                    for (let i = 0; i < npcRows.length; i++) {
+                        const npc = npcRows[i] || {};
+                        const adventuresText = (npc.adventures || []).length
+                            ? npc.adventures.join('\n')
+                            : '-';
+
+                        const row = sheet.addRow([
+                            npc.name || '-',
+                            npc.description || '-',
+                            npc.status || '-',
+                            npc.notes || '-',
+                            npc.costumeNotes || '-',
+                            npc.template || '-',
+                            adventuresText
+                        ]);
+
+                        const lineCount = Math.max(1, String(adventuresText).split('\n').length);
+                        row.height = Math.min(220, 16 * lineCount);
+                        row.alignment = { vertical: 'top', wrapText: true };
+
+                        // Ensure adventures cell specifically wraps in desktop Excel.
+                        row.getCell(7).alignment = { vertical: 'top', wrapText: true };
+                    }
+
+                    const buffer = await workbook.xlsx.writeBuffer();
+                    const blob = new Blob(
+                        [buffer],
+                        { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+                    );
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'NPC_Listing.xlsx';
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    URL.revokeObjectURL(url);
+
+                    showStatus('NPCs exported to XLSX.');
+                    return;
+                } catch (error) {
+                    console.error('NPC Listing: ExcelJS export failed, falling back to SheetJS', error);
+                }
+            }
+
+            if (typeof XLSX === 'undefined') {
+                showStatus('XLSX export library failed to load.');
+                return;
+            }
+
+            // Fallback export path.
+            const rows = getExportRows();
+            const aoa = [
+                ['NPC Listing'],
+                [`Event: ${eventTitle}`],
+                [''],
+                ['Name', 'Description', 'Status', 'Notes', 'Costume Notes', 'Template', 'Adventures'],
+                ...rows
+            ];
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            ws['!merges'] = [
+                { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } },
+                { s: { r: 1, c: 0 }, e: { r: 1, c: 6 } }
+            ];
+            ws['!cols'] = [
+                { wch: 24 },
+                { wch: 28 },
+                { wch: 16 },
+                { wch: 30 },
+                { wch: 30 },
+                { wch: 20 },
+                { wch: 40 }
+            ];
+            XLSX.utils.book_append_sheet(wb, ws, 'NPC Listing');
+            XLSX.writeFile(wb, 'NPC_Listing.xlsx');
+            showStatus('NPCs exported to XLSX.');
+        }
+
+        function exportPdf() {
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                showStatus('PDF export library failed to load.');
+                return;
+            }
+
+            const eventTitle = getEventTitle();
+            const rows = getExportRows();
+            const doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+
+            doc.setFontSize(14);
+            doc.text('NPC Listing', 24, 28);
+            doc.setFontSize(10);
+            doc.text(`Event: ${eventTitle}`, 24, 44);
+
+            doc.autoTable({
+                head: [['Name', 'Description', 'Status', 'Notes', 'Costume Notes', 'Template', 'Adventures']],
+                body: rows,
+                startY: 54,
+                styles: {
+                    fontSize: 8,
+                    cellPadding: 3,
+                    overflow: 'linebreak'
+                },
+                headStyles: {
+                    fillColor: [241, 245, 249],
+                    textColor: [30, 41, 59],
+                    fontStyle: 'bold'
+                },
+                margin: { left: 20, right: 20 }
+            });
+
+            doc.save('NPC_Listing.pdf');
+            showStatus('NPCs exported to PDF.');
+        }
+
+        addNpcBtn.addEventListener('click', () => {
+            const row = readFormRow();
+
+            if (!row.name) {
+                showStatus('Enter at least a Name for the NPC.');
+                npcNameEl.focus();
+                return;
+            }
+
+            if (editingIndex === -1) {
+                npcRows.push(row);
+                showStatus('NPC added.');
+            } else {
+                npcRows[editingIndex] = row;
+                showStatus('NPC updated.');
+            }
+
+            saveNpcRows();
+            renderRows();
+            clearForm();
+        });
+
+        cancelEditBtn.addEventListener('click', () => {
+            clearForm();
+            showStatus('Edit cancelled.');
+        });
+
+        exportXlsxBtn.addEventListener('click', exportXlsx);
+        exportPdfBtn.addEventListener('click', exportPdf);
+
+        clearFormBtn.addEventListener('click', () => {
+            clearForm();
+            showStatus('Form cleared.');
+        });
+
+        clearAllBtn.addEventListener('click', () => {
+            if (!window.confirm('Clear all NPC entries?')) return;
+            npcRows = [];
+            saveNpcRows();
+            renderRows();
+            showStatus('All NPCs cleared.');
+        });
+
+        loadAdventureOptions();
+        loadNpcRows();
+        renderRows();
+        renderAdventureOptions([]);
+        setEditingIndex(-1);
+    </script>
+</body>
+</html>
