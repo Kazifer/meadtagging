@@ -84,6 +84,11 @@
         <section class="bg-slate-800 p-4 rounded-lg shadow-lg mb-6">
             <h2 class="text-xl font-bold text-amber-500 mb-2">Monster Modifiers</h2>
             <p class="text-sm text-slate-400 mb-3">Select modifiers to include as a separate table in exported output files.</p>
+            <div class="mb-3 grid grid-cols-1 md:grid-cols-5 gap-2">
+                <input id="modifier-name-input" type="text" placeholder="Modifier name" class="md:col-span-1 p-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-100">
+                <input id="modifier-description-input" type="text" placeholder="Modifier description" class="md:col-span-3 p-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-100">
+                <button id="add-modifier-btn" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-lg transition-colors" type="button">Add Modifier</button>
+            </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm text-left text-slate-300 modifiers-table">
                     <thead class="text-xs text-amber-400 uppercase bg-slate-700">
@@ -91,6 +96,7 @@
                             <th class="p-3">Modifier</th>
                             <th class="p-3">Description</th>
                             <th class="p-3 text-center">Include</th>
+                            <th class="p-3 text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="modifier-table-body"></tbody>
@@ -337,6 +343,9 @@
         const exportAllMonstersBtn = document.getElementById('export-all-monsters-xlsx-btn');
         const importMonstersBtn = document.getElementById('import-monsters-xlsx-btn');
         const modifierTableBody = document.getElementById('modifier-table-body');
+        const modifierNameInput = document.getElementById('modifier-name-input');
+        const modifierDescriptionInput = document.getElementById('modifier-description-input');
+        const addModifierBtn = document.getElementById('add-modifier-btn');
         const rosterList = document.getElementById('adventure-roster-list');
         const rosterPlaceholder = document.getElementById('roster-placeholder');
         const adventureTitleInput = document.getElementById('adventure-title');
@@ -356,14 +365,54 @@
         const clearAdventureBtn = document.getElementById('clear-adventure-btn'); 
         let monsterDatabase = [];
         const modifiersStorageKey = 'monsterModifiersSelected.v1';
-        const modifierCatalog = [
+        const modifiersCatalogStorageKey = 'monsterModifiersCatalog.v1';
+        const defaultModifierCatalog = [
             { id: 'elite', name: 'Elite', description: 'Increase Body by 25% and APL by 2.' },
             { id: 'berserk', name: 'Berserk', description: 'Monster gains +2 Strength and cannot retreat.' },
             { id: 'armored', name: 'Armored', description: 'Add +4 Armour or improve natural defenses.' },
             { id: 'arcane', name: 'Arcane Surge', description: 'Monster gains one additional spell use per encounter.' },
             { id: 'swift', name: 'Swift', description: 'Monster can take one extra movement action each round.' }
         ];
+        let modifierCatalog = [...defaultModifierCatalog];
         let selectedModifierIds = new Set();
+
+        const createModifierId = (name) => {
+            const base = String(name || '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+            return `${base || 'modifier'}-${Date.now().toString(36)}`;
+        };
+
+        const saveModifierCatalog = () => {
+            localStorage.setItem(modifiersCatalogStorageKey, JSON.stringify(modifierCatalog));
+        };
+
+        const loadModifierCatalog = () => {
+            try {
+                const raw = localStorage.getItem(modifiersCatalogStorageKey);
+                if (!raw) {
+                    modifierCatalog = [...defaultModifierCatalog];
+                    return;
+                }
+
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    modifierCatalog = parsed
+                        .map((item) => ({
+                            id: String(item?.id || '').trim() || createModifierId(item?.name),
+                            name: String(item?.name || '').trim(),
+                            description: String(item?.description || '').trim()
+                        }))
+                        .filter((item) => item.name && item.description);
+                } else {
+                    modifierCatalog = [...defaultModifierCatalog];
+                }
+            } catch (error) {
+                console.error('Failed to load modifier catalog:', error);
+                modifierCatalog = [...defaultModifierCatalog];
+            }
+        };
 
         const getColumnValue = (row, key) => {
             if (!row || typeof row !== 'object') return '';
@@ -495,12 +544,83 @@
                 });
 
                 includeTd.appendChild(checkbox);
+
+                const actionsTd = document.createElement('td');
+                actionsTd.className = 'p-3 text-center whitespace-nowrap';
+
+                const editBtn = document.createElement('button');
+                editBtn.type = 'button';
+                editBtn.className = 'font-medium text-blue-400 hover:underline mr-3';
+                editBtn.textContent = 'Edit';
+                editBtn.addEventListener('click', () => {
+                    const nextName = window.prompt('Modifier name:', modifier.name);
+                    if (nextName == null) return;
+                    const trimmedName = String(nextName).trim();
+                    if (!trimmedName) {
+                        showCustomConfirm('Modifier name is required.', () => {});
+                        return;
+                    }
+
+                    const nextDescription = window.prompt('Modifier description:', modifier.description);
+                    if (nextDescription == null) return;
+                    const trimmedDescription = String(nextDescription).trim();
+                    if (!trimmedDescription) {
+                        showCustomConfirm('Modifier description is required.', () => {});
+                        return;
+                    }
+
+                    modifier.name = trimmedName;
+                    modifier.description = trimmedDescription;
+                    saveModifierCatalog();
+                    renderModifierTable();
+                });
+
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'font-medium text-red-400 hover:underline';
+                removeBtn.textContent = 'Remove';
+                removeBtn.addEventListener('click', () => {
+                    if (!window.confirm(`Remove modifier "${modifier.name}"?`)) return;
+
+                    modifierCatalog = modifierCatalog.filter((m) => m.id !== modifier.id);
+                    selectedModifierIds.delete(modifier.id);
+                    saveModifierCatalog();
+                    saveSelectedModifiers();
+                    renderModifierTable();
+                });
+
+                actionsTd.appendChild(editBtn);
+                actionsTd.appendChild(removeBtn);
+
                 tr.appendChild(nameTd);
                 tr.appendChild(descriptionTd);
                 tr.appendChild(includeTd);
+                tr.appendChild(actionsTd);
                 modifierTableBody.appendChild(tr);
             });
         };
+
+        addModifierBtn.addEventListener('click', () => {
+            const name = String(modifierNameInput.value || '').trim();
+            const description = String(modifierDescriptionInput.value || '').trim();
+
+            if (!name || !description) {
+                showCustomConfirm('Enter both modifier name and description.', () => {});
+                return;
+            }
+
+            modifierCatalog.push({
+                id: createModifierId(name),
+                name,
+                description
+            });
+
+            saveModifierCatalog();
+            renderModifierTable();
+            modifierNameInput.value = '';
+            modifierDescriptionInput.value = '';
+            modifierNameInput.focus();
+        });
 
         // --- RENDER FUNCTIONS ---
         const renderMonsterTable = () => {
@@ -1358,6 +1478,7 @@
         const init = async () => { 
             // Populate monsterDatabase directly from the embedded data
             monsterDatabase = initialMonsterData.map(monster => ({ ...monster, id: crypto.randomUUID() })); 
+            loadModifierCatalog();
             loadSelectedModifiers();
             rebuildTypeControls();
             renderModifierTable();
