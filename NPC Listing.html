@@ -40,6 +40,11 @@
             color: var(--app-muted);
         }
 
+        .field .field-help {
+            font-size: 0.78rem;
+            color: #94a3b8;
+        }
+
         .field input,
         .field textarea,
         .field select {
@@ -182,7 +187,12 @@
                     </div>
                     <div class="field">
                         <label for="npcTemplate">Template</label>
-                        <input id="npcTemplate" type="text" placeholder="Template name/reference">
+                        <select id="npcTemplateSelect">
+                            <option value="">Select saved template...</option>
+                        </select>
+                        <span class="field-help">Saved templates appear here. You can still type a custom template name below.</span>
+                        <input id="npcTemplate" type="text" list="npcTemplateOptions" placeholder="Template name/reference or custom template">
+                        <datalist id="npcTemplateOptions"></datalist>
                     </div>
                     <div class="field span-3">
                         <label for="npcAdventures">Adventures (multi-select)</label>
@@ -227,6 +237,7 @@
     <script>
         const NPC_STORAGE_KEY = 'npcListing.v1';
         const ADVENTURE_STORAGE_KEY = 'adventureLevelling.v1';
+        const TEMPLATE_BUILD_LOG_STORAGE_KEY = 'templateBuilder.eventLog.v1';
 
         const formTitleEl = document.getElementById('formTitle');
         const npcNameEl = document.getElementById('npcName');
@@ -234,7 +245,9 @@
         const npcStatusEl = document.getElementById('npcStatus');
         const npcNotesEl = document.getElementById('npcNotes');
         const npcCostumeNotesEl = document.getElementById('npcCostumeNotes');
+        const npcTemplateSelectEl = document.getElementById('npcTemplateSelect');
         const npcTemplateEl = document.getElementById('npcTemplate');
+        const npcTemplateOptionsEl = document.getElementById('npcTemplateOptions');
         const npcAdventuresEl = document.getElementById('npcAdventures');
         const addNpcBtn = document.getElementById('addNpcBtn');
         const cancelEditBtn = document.getElementById('cancelEditBtn');
@@ -247,6 +260,7 @@
 
         let npcRows = [];
         let adventureOptions = [];
+        let templateOptions = [];
         let editingIndex = -1;
 
         function showStatus(message) {
@@ -297,6 +311,60 @@
             }
         }
 
+        function loadTemplateOptions() {
+            try {
+                const raw = localStorage.getItem(TEMPLATE_BUILD_LOG_STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : [];
+                const rows = Array.isArray(parsed) ? parsed : [];
+
+                templateOptions = rows
+                    .map((row) => ({
+                        name: String(row?.name || '').trim(),
+                        eventTitle: String(row?.eventTitle || '').trim()
+                    }))
+                    .filter((row) => row.name)
+                    .sort((left, right) => left.name.localeCompare(right.name));
+            } catch (error) {
+                console.error('NPC Listing: failed to load template options', error);
+                templateOptions = [];
+            }
+        }
+
+        function renderTemplateOptions() {
+            if (!npcTemplateOptionsEl) return;
+            npcTemplateOptionsEl.innerHTML = '';
+            npcTemplateSelectEl.innerHTML = '';
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Select saved template...';
+            npcTemplateSelectEl.appendChild(defaultOption);
+
+            const seen = new Set();
+            templateOptions.forEach((option) => {
+                if (seen.has(option.name)) return;
+                seen.add(option.name);
+
+                const item = document.createElement('option');
+                item.value = option.name;
+                item.label = option.eventTitle ? `${option.name} (${option.eventTitle})` : option.name;
+                npcTemplateOptionsEl.appendChild(item);
+
+                const selectOption = document.createElement('option');
+                selectOption.value = option.name;
+                selectOption.textContent = option.eventTitle ? `${option.name} (${option.eventTitle})` : option.name;
+                npcTemplateSelectEl.appendChild(selectOption);
+            });
+        }
+
+        function syncTemplateSelectionFromValue(value) {
+            const templateValue = String(value || '').trim();
+            npcTemplateEl.value = templateValue;
+            npcTemplateSelectEl.value = templateOptions.some((option) => option.name === templateValue)
+                ? templateValue
+                : '';
+        }
+
         function renderAdventureOptions(selected) {
             const selectedSet = new Set(Array.isArray(selected) ? selected : []);
             npcAdventuresEl.innerHTML = '';
@@ -345,7 +413,7 @@
             npcStatusEl.value = npc.status || '';
             npcNotesEl.value = npc.notes || '';
             npcCostumeNotesEl.value = npc.costumeNotes || '';
-            npcTemplateEl.value = npc.template || '';
+            syncTemplateSelectionFromValue(npc.template || '');
             renderAdventureOptions(npc.adventures || []);
         }
 
@@ -452,7 +520,7 @@
             npcStatusEl.value = '';
             npcNotesEl.value = '';
             npcCostumeNotesEl.value = '';
-            npcTemplateEl.value = '';
+            syncTemplateSelectionFromValue('');
             renderAdventureOptions([]);
             setEditingIndex(-1);
             npcNameEl.focus();
@@ -656,6 +724,14 @@
 
         exportXlsxBtn.addEventListener('click', exportXlsx);
         exportPdfBtn.addEventListener('click', exportPdf);
+        npcTemplateSelectEl.addEventListener('change', () => {
+            if (npcTemplateSelectEl.value) {
+                npcTemplateEl.value = npcTemplateSelectEl.value;
+            }
+        });
+        npcTemplateEl.addEventListener('input', () => {
+            syncTemplateSelectionFromValue(npcTemplateEl.value);
+        });
 
         clearFormBtn.addEventListener('click', () => {
             clearForm();
@@ -671,10 +747,18 @@
         });
 
         loadAdventureOptions();
+        loadTemplateOptions();
         loadNpcRows();
         renderRows();
+        renderTemplateOptions();
         renderAdventureOptions([]);
         setEditingIndex(-1);
+
+        window.addEventListener('template-build-log-changed', () => {
+            loadTemplateOptions();
+            renderTemplateOptions();
+            syncTemplateSelectionFromValue(npcTemplateEl.value);
+        });
     </script>
 </body>
 </html>

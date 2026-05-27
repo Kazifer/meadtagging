@@ -89,6 +89,11 @@
                 <input id="modifier-description-input" type="text" placeholder="Modifier description" class="md:col-span-3 p-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-100">
                 <button id="add-modifier-btn" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-lg transition-colors" type="button">Add Modifier</button>
             </div>
+            <div class="mb-3 flex gap-2 flex-wrap">
+                <button id="export-modifiers-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm" type="button">Export Modifiers XLSX</button>
+                <button id="import-modifiers-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm" type="button">Import Modifiers XLSX</button>
+                <input id="modifier-import-file" type="file" accept=".xlsx,.xls" hidden>
+            </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm text-left text-slate-300 modifiers-table">
                     <thead class="text-xs text-amber-400 uppercase bg-slate-700">
@@ -346,6 +351,9 @@
         const modifierNameInput = document.getElementById('modifier-name-input');
         const modifierDescriptionInput = document.getElementById('modifier-description-input');
         const addModifierBtn = document.getElementById('add-modifier-btn');
+        const exportModifiersBtn = document.getElementById('export-modifiers-btn');
+        const importModifiersBtn = document.getElementById('import-modifiers-btn');
+        const modifierImportFile = document.getElementById('modifier-import-file');
         const rosterList = document.getElementById('adventure-roster-list');
         const rosterPlaceholder = document.getElementById('roster-placeholder');
         const adventureTitleInput = document.getElementById('adventure-title');
@@ -599,6 +607,67 @@
                 modifierTableBody.appendChild(tr);
             });
         };
+
+        exportModifiersBtn.addEventListener('click', () => {
+            if (typeof XLSX === 'undefined') {
+                alert('XLSX library not loaded.');
+                return;
+            }
+            const aoa = [
+                ['Modifier', 'Description'],
+                ...modifierCatalog.map((m) => [m.name, m.description])
+            ];
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            ws['!cols'] = [{ wch: 24 }, { wch: 60 }];
+            XLSX.utils.book_append_sheet(wb, ws, 'Monster Modifiers');
+            XLSX.writeFile(wb, 'Monster_Modifiers.xlsx');
+        });
+
+        importModifiersBtn.addEventListener('click', () => {
+            modifierImportFile.value = '';
+            modifierImportFile.click();
+        });
+
+        modifierImportFile.addEventListener('change', () => {
+            const file = modifierImportFile.files && modifierImportFile.files[0];
+            if (!file) return;
+            if (typeof XLSX === 'undefined') {
+                alert('XLSX library not loaded.');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    const wb = XLSX.read(reader.result, { type: 'array' });
+                    const sheetName = wb.SheetNames[0];
+                    if (!sheetName) { alert('No sheets found in file.'); return; }
+                    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
+                    const imported = rows
+                        .map((row) => {
+                            const keyMap = {};
+                            Object.keys(row).forEach((k) => { keyMap[k.trim().toLowerCase()] = row[k]; });
+                            const name = String(keyMap.modifier || keyMap.name || '').trim();
+                            const description = String(keyMap.description || '').trim();
+                            return (name && description)
+                                ? { id: createModifierId(name), name, description }
+                                : null;
+                        })
+                        .filter(Boolean);
+                    if (!imported.length) { alert('No valid modifier rows found (requires Modifier and Description columns).'); return; }
+                    modifierCatalog = imported;
+                    selectedModifierIds = new Set();
+                    saveModifierCatalog();
+                    saveSelectedModifiers();
+                    renderModifierTable();
+                } catch (err) {
+                    console.error('Modifier import failed', err);
+                    alert('Import failed. Check the file format and try again.');
+                }
+            };
+            reader.onerror = () => { alert('Failed to read file.'); };
+            reader.readAsArrayBuffer(file);
+        });
 
         addModifierBtn.addEventListener('click', () => {
             const name = String(modifierNameInput.value || '').trim();

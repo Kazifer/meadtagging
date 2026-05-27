@@ -216,6 +216,11 @@
                         <td><button id="importAdventureSpecialReqsBtn" class="btn btn-secondary" type="button">Import (.xlsx)</button></td>
                     </tr>
                     <tr>
+                        <td>Templates</td>
+                        <td><button id="exportTemplatesBtn" class="btn btn-secondary" type="button">Export (.xlsx)</button></td>
+                        <td><button id="importTemplatesBtn" class="btn btn-secondary" type="button">Import (.xlsx)</button></td>
+                    </tr>
+                    <tr>
                         <td>Feedback Sheet</td>
                         <td><button id="exportFeedbackSheetBtn" class="btn btn-secondary" type="button">Export (.xlsx)</button></td>
                         <td>-</td>
@@ -236,6 +241,7 @@
         const adventureStorageKey = 'adventureLevelling.v1';
         const lootAllocationsStorageKey = 'lootCalcAllocated.v1';
         const scheduleStorageKey = 'adventureScheduling.v1';
+        const templateBuildLogStorageKey = 'templateBuilder.eventLog.v1';
 
         const form = document.getElementById('eventVariablesForm');
         const saveBtn = document.getElementById('saveBtn');
@@ -245,12 +251,14 @@
         const exportAdventureListingBtn = document.getElementById('exportAdventureListingBtn');
         const exportAdventureLevellingBtn = document.getElementById('exportAdventureLevellingBtn');
         const exportAdventureSpecialReqsBtn = document.getElementById('exportAdventureSpecialReqsBtn');
+        const exportTemplatesBtn = document.getElementById('exportTemplatesBtn');
         const exportFeedbackSheetBtn = document.getElementById('exportFeedbackSheetBtn');
         const importEventVarsBtn = document.getElementById('importEventVarsBtn');
         const importLootCalcBtn = document.getElementById('importLootCalcBtn');
         const importAdventureListingBtn = document.getElementById('importAdventureListingBtn');
         const importAdventureLevellingBtn = document.getElementById('importAdventureLevellingBtn');
         const importAdventureSpecialReqsBtn = document.getElementById('importAdventureSpecialReqsBtn');
+        const importTemplatesBtn = document.getElementById('importTemplatesBtn');
         const statusMessage = document.getElementById('statusMessage');
 
         function showStatus(message) {
@@ -589,6 +597,76 @@
             };
         }
 
+        function readTemplateBuildRows() {
+            try {
+                const raw = localStorage.getItem(templateBuildLogStorageKey);
+                const parsed = raw ? JSON.parse(raw) : [];
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (error) {
+                console.error('Failed to read template builds:', error);
+                return [];
+            }
+        }
+
+        function writeTemplateBuildRows(rows) {
+            localStorage.setItem(templateBuildLogStorageKey, JSON.stringify(rows));
+            window.dispatchEvent(new CustomEvent('template-build-log-changed', { detail: rows }));
+        }
+
+        function buildTemplateExportRows() {
+            return readTemplateBuildRows().map((row) => ({
+                Id: row.id || '',
+                Name: row.name || '',
+                EventNumber: row.eventNumber || '',
+                EventName: row.eventName || '',
+                EventTitle: row.eventTitle || '',
+                Level: row.level || '',
+                RaceId: row.raceId || '',
+                ClassId: row.classId || '',
+                UsedBP: row.usedBP || '',
+                Body: row.body || '',
+                ArmourValue: row.armourValue ?? '',
+                BuildJson: JSON.stringify(row.build || {}),
+                CreatedAt: row.createdAt || '',
+                UpdatedAt: row.updatedAt || ''
+            }));
+        }
+
+        function normalizeTemplateRowFromImport(row, index) {
+            const parseNumberOrBlank = (value) => {
+                const trimmed = String(value ?? '').trim();
+                if (!trimmed) return '';
+                const parsed = Number(trimmed);
+                return Number.isFinite(parsed) ? parsed : '';
+            };
+
+            let build = {};
+            try {
+                const rawBuild = row.BuildJson ?? row.buildJson ?? '{}';
+                const parsed = JSON.parse(String(rawBuild || '{}'));
+                build = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+            } catch (error) {
+                build = {};
+            }
+
+            return {
+                id: String(row.Id ?? row.id ?? `template-build-import-${Date.now()}-${index}`).trim(),
+                name: String(row.Name ?? row.name ?? '').trim(),
+                eventNumber: String(row.EventNumber ?? row.eventNumber ?? '').trim(),
+                eventName: String(row.EventName ?? row.eventName ?? '').trim(),
+                eventTitle: String(row.EventTitle ?? row.eventTitle ?? '').trim(),
+                level: parseNumberOrBlank(row.Level ?? row.level),
+                raceId: String(row.RaceId ?? row.raceId ?? '').trim(),
+                classId: String(row.ClassId ?? row.classId ?? '').trim(),
+                usedBP: parseNumberOrBlank(row.UsedBP ?? row.usedBP),
+                body: parseNumberOrBlank(row.Body ?? row.body),
+                armourValue: parseNumberOrBlank(row.ArmourValue ?? row.armourValue),
+                build,
+                createdAt: String(row.CreatedAt ?? row.createdAt ?? new Date().toISOString()).trim(),
+                updatedAt: String(row.UpdatedAt ?? row.updatedAt ?? '').trim()
+            };
+        }
+
         function exportEventVariables() {
             const vars = eventVarsApi?.get?.() || {};
             const row = {
@@ -607,6 +685,22 @@
             if (!prepared) return;
 
             const fileName = `${safeFilePart(vars.eventName)}_Event_Variables.xlsx`;
+            prepared.xlsx.writeFile(prepared.workbook, fileName);
+            showStatus(`Exported ${fileName}`);
+        }
+
+        function exportTemplates() {
+            const rows = buildTemplateExportRows();
+            if (!rows.length) {
+                showStatus('No saved templates to export.');
+                return;
+            }
+
+            const prepared = createWorkbookFromRows('Templates', rows);
+            if (!prepared) return;
+
+            const vars = eventVarsApi?.get?.() || {};
+            const fileName = `${safeFilePart(vars.eventName)}_Templates.xlsx`;
             prepared.xlsx.writeFile(prepared.workbook, fileName);
             showStatus(`Exported ${fileName}`);
         }
@@ -1307,6 +1401,37 @@
             }
         }
 
+        async function importTemplates() {
+            try {
+                const workbook = await readWorkbookFromPicker();
+                if (!workbook) {
+                    showStatus('Import cancelled.');
+                    return;
+                }
+
+                const rows = getSheetRows(workbook, 'Templates');
+                if (!rows.length) {
+                    showStatus('No Templates rows found in workbook.');
+                    return;
+                }
+
+                const normalizedRows = rows
+                    .map((row, index) => normalizeTemplateRowFromImport(row, index))
+                    .filter((row) => row.name);
+
+                if (!normalizedRows.length) {
+                    showStatus('No valid templates found to import.');
+                    return;
+                }
+
+                writeTemplateBuildRows(normalizedRows);
+                showStatus(`Imported ${normalizedRows.length} templates.`);
+            } catch (error) {
+                console.error('Failed to import Templates workbook:', error);
+                showStatus('Could not import Templates workbook.');
+            }
+        }
+
         saveBtn.addEventListener('click', saveValues);
         resetBtn.addEventListener('click', clearValues);
         exportEventVarsBtn.addEventListener('click', exportEventVariables);
@@ -1314,12 +1439,14 @@
         exportAdventureListingBtn.addEventListener('click', exportAdventureListing);
         exportAdventureLevellingBtn.addEventListener('click', exportAdventureLevelling);
         exportAdventureSpecialReqsBtn.addEventListener('click', exportAdventureSpecialRequirements);
+        exportTemplatesBtn.addEventListener('click', exportTemplates);
         exportFeedbackSheetBtn.addEventListener('click', exportFeedbackSheet);
         importEventVarsBtn.addEventListener('click', importEventVariables);
         importLootCalcBtn.addEventListener('click', importLootCalculation);
         importAdventureListingBtn.addEventListener('click', importAdventureListing);
         importAdventureLevellingBtn.addEventListener('click', importAdventureLevelling);
         importAdventureSpecialReqsBtn.addEventListener('click', importAdventureSpecialRequirements);
+        importTemplatesBtn.addEventListener('click', importTemplates);
         form.addEventListener('input', saveValues);
         form.addEventListener('change', saveValues);
 

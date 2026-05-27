@@ -114,17 +114,73 @@
         }
     }
 
+    function normalizeStateKey(value) {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+
+        try {
+            const url = new URL(raw, location.href);
+            const current = new URL(location.href);
+            if (canUseHistoryState()) {
+                return url.pathname + url.search;
+            }
+            const segments = url.pathname.split('/');
+            return decodeURIComponent(segments[segments.length - 1] || '').trim();
+        } catch (e) {
+            return decodeURIComponent(raw).trim();
+        }
+    }
+
     function findLinkByPath(path) {
+        const targetKey = normalizeStateKey(path);
         return links.find(a => {
+            const href = String(a.getAttribute('href') || '').trim();
             const p = resolvePath(a.getAttribute('href'));
-            return decodeURIComponent(p) === decodeURIComponent(path) || p === path;
+            return normalizeStateKey(p) === targetKey
+                || normalizeStateKey(href) === targetKey;
         });
+    }
+
+    function canUseHistoryState() {
+        return location.protocol !== 'file:' && location.origin !== 'null';
+    }
+
+    function readHashPath() {
+        const rawHash = String(location.hash || '');
+        if (!rawHash.startsWith('#')) return '';
+        return decodeURIComponent(rawHash.slice(1));
+    }
+
+    let suppressHashChangeLoad = false;
+
+    function writeNavigationState(stateUrl, push) {
+        if (canUseHistoryState()) {
+            if (!push) return;
+            try {
+                history.pushState({ url: stateUrl }, '', stateUrl);
+            } catch (e) {
+                console.warn('nav-loader: history.pushState failed', e && e.message);
+            }
+            return;
+        }
+
+        const hashValue = `#${encodeURIComponent(normalizeStateKey(stateUrl))}`;
+        if (push) {
+            if (location.hash !== hashValue) {
+                suppressHashChangeLoad = true;
+                location.hash = hashValue;
+            }
+        } else if (location.hash !== hashValue) {
+            location.replace(hashValue);
+        }
     }
 
     function loadUrl(hrefOrUrl, push = true) {
         const target = new URL(hrefOrUrl, location.href);
         const urlToLoad = target.href;
-        const stateUrl = target.pathname + target.search;
+        const stateUrl = canUseHistoryState()
+            ? (target.pathname + target.search)
+            : normalizeStateKey(hrefOrUrl);
         console.debug('nav-loader: loading into iframe', urlToLoad);
 
         return new Promise((resolve, reject) => {
@@ -143,14 +199,7 @@
             iframe.addEventListener('error', onError);
 
             iframe.src = urlToLoad;
-
-            if (push) {
-                try {
-                    history.pushState({url: stateUrl}, '', stateUrl);
-                } catch (e) {
-                    console.warn('nav-loader: history.pushState failed', e && e.message);
-                }
-            }
+            writeNavigationState(stateUrl, push);
         });
     }
 
@@ -179,18 +228,48 @@
         }
     });
 
+    function handleNavigationStateChange(path) {
+        const match = findLinkByPath(path);
+        if (!match) {
+            setActive(null);
+            return;
+        }
+
+        loadUrl(match.getAttribute('href') || match.href, false).then(() => {
+            setActive(match);
+        }).catch(() => {});
+    }
+
     // popstate handling
     window.addEventListener('popstate', function (e) {
         const state = e.state;
         const path = (state && state.url) ? state.url : (location.pathname + location.search);
-        loadUrl(path, false).then(() => {
-            const match = findLinkByPath(path);
-            setActive(match);
-        }).catch(() => {});
+        handleNavigationStateChange(path);
+    });
+
+    window.addEventListener('hashchange', function () {
+        if (canUseHistoryState()) return;
+        if (suppressHashChangeLoad) {
+            suppressHashChangeLoad = false;
+            return;
+        }
+        const path = readHashPath();
+        if (!path) return;
+        handleNavigationStateChange(path);
     });
 
     // initial load
     (function initial() {
+        const hashPath = readHashPath();
+        if (hashPath) {
+            const match = findLinkByPath(hashPath);
+            if (match) {
+                setActive(match);
+                loadUrl(match.href, false).catch(() => {});
+                return;
+            }
+        }
+
         const initialPath = location.pathname + location.search;
         const idx = initialPath.split('/').pop().toLowerCase();
         if (idx && idx !== '' && idx !== 'index.html') {
