@@ -235,7 +235,9 @@
                         </div>
                         <div class="editor-field">
                             <label for="editTemplate">Template</label>
-                            <input id="editTemplate" class="editor-input" type="text">
+                            <select id="editTemplate" class="editor-input">
+                                <option value="">Select template build...</option>
+                            </select>
                         </div>
                     </div>
                     <div class="editor-actions">
@@ -249,6 +251,7 @@
 
     <script>
         const RANDOM_NPC_STORAGE_KEY = 'randomNpcList.v1';
+        const TEMPLATE_BUILD_LOG_STORAGE_KEY = 'templateBuilder.eventLog.v1';
 
         const importXlsxBtn = document.getElementById('importXlsxBtn');
         const saveAllBtn = document.getElementById('saveAllBtn');
@@ -269,6 +272,7 @@
 
         let npcRows = [];
         let selectedNpcIndex = -1;
+        let templateOptions = [];
 
         function showStatus(message) {
             statusMessageEl.textContent = message;
@@ -291,6 +295,57 @@
                 motivation: String(row.motivation || '').trim(),
                 template: String(row.template || '').trim()
             };
+        }
+
+        function loadTemplateOptions() {
+            try {
+                const raw = localStorage.getItem(TEMPLATE_BUILD_LOG_STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : [];
+                const rows = Array.isArray(parsed) ? parsed : [];
+
+                templateOptions = rows
+                    .map((row) => ({
+                        name: String(row?.name || '').trim(),
+                        eventTitle: String(row?.eventTitle || '').trim()
+                    }))
+                    .filter((row) => row.name)
+                    .sort((left, right) => left.name.localeCompare(right.name));
+            } catch (error) {
+                console.error('Random NPCs: failed to load template options', error);
+                templateOptions = [];
+            }
+        }
+
+        function renderTemplateOptions(selectedValue = '') {
+            const selected = String(selectedValue || '').trim();
+            editTemplateEl.innerHTML = '';
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Select template build...';
+            editTemplateEl.appendChild(defaultOption);
+
+            const seen = new Set();
+            templateOptions.forEach((option) => {
+                if (seen.has(option.name)) return;
+                seen.add(option.name);
+
+                const item = document.createElement('option');
+                item.value = option.name;
+                item.textContent = option.eventTitle ? `${option.name} (${option.eventTitle})` : option.name;
+                editTemplateEl.appendChild(item);
+            });
+
+            if (selected && !seen.has(selected)) {
+                const legacyOption = document.createElement('option');
+                legacyOption.value = selected;
+                legacyOption.textContent = `${selected} (existing)`;
+                editTemplateEl.appendChild(legacyOption);
+            }
+
+            editTemplateEl.value = selected && Array.from(editTemplateEl.options).some((option) => option.value === selected)
+                ? selected
+                : '';
         }
 
         function loadSavedNpcs() {
@@ -374,7 +429,7 @@
                 editRoleEl.value = '';
                 editDescriptionEl.value = '';
                 editMotivationEl.value = '';
-                editTemplateEl.value = '';
+                renderTemplateOptions('');
             } else {
                 const npc = npcRows[index];
                 editorHintEl.textContent = `Editing NPC ${index + 1}`;
@@ -382,7 +437,7 @@
                 editRoleEl.value = npc.role || '';
                 editDescriptionEl.value = npc.description || '';
                 editMotivationEl.value = npc.motivation || '';
-                editTemplateEl.value = npc.template || '';
+                renderTemplateOptions(npc.template || '');
             }
 
             renderNpcList();
@@ -723,6 +778,7 @@
         });
 
         loadSavedNpcs();
+        loadTemplateOptions();
         setSelectedNpc(npcRows.length ? 0 : -1);
         if (!npcRows.length) {
             showStatus('Ready. Import NPCs or edit saved entries.');

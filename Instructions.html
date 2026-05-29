@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instructions</title>
+    <link rel="stylesheet" href="theme.css">
+    <style>
+        .instructions-page {
+            max-width: 980px;
+            padding-bottom: 48px;
+        }
+
+        .intro-card,
+        .step-card,
+        .tips-card {
+            border: 1px solid var(--app-border);
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.94);
+            padding: 18px;
+            margin-bottom: 14px;
+        }
+
+        h1 {
+            margin: 0 0 10px;
+            font-size: 1.8rem;
+            color: var(--app-heading);
+        }
+
+        h2 {
+            margin: 0 0 10px;
+            font-size: 1.1rem;
+            color: var(--app-heading);
+        }
+
+        p {
+            margin: 0;
+            color: var(--app-muted);
+            line-height: 1.55;
+        }
+
+        ol,
+        ul {
+            margin: 8px 0 0;
+            padding-left: 18px;
+            color: var(--app-text);
+            line-height: 1.6;
+        }
+
+        .quick-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .quick-link {
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid var(--app-border);
+            border-radius: 999px;
+            padding: 6px 10px;
+            color: var(--app-text);
+            text-decoration: none;
+            background: rgba(15, 23, 42, 0.75);
+            font-size: 0.86rem;
+        }
+
+        .quick-link:hover {
+            border-color: #00bcd4;
+            color: #e0f7fa;
+        }
+
+        .note {
+            margin-top: 10px;
+            color: #cbd5e1;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <main class="container instructions-page">
+        <section class="intro-card">
+            <h1>Instructions</h1>
+            <p>Use this workspace to prepare event variables, plan adventures, and generate outputs such as tags and templates.</p>
+            <div class="quick-links">
+                <a class="quick-link" href="Event Variables.html">Event Variables</a>
+                <a class="quick-link" href="Adventure Listing.html">Adventure Listing</a>
+                <a class="quick-link" href="Loot Calculation.html">Loot Calculation</a>
+                <a class="quick-link" href="NPC Listing.html">NPC Listing</a>
+            </div>
+        </section>
+
+        <section class="step-card">
+            <h2>Recommended Workflow</h2>
+            <ol>
+                <li>Start in Event Variables and enter event name, number  and difficulty.</li>
+                <li>Open Adventure Listing and import the listing as per Google Forms</li>
+                <li>Use Generate Template on each adventure row to create the Word templates to send.</li>
+                <li>Once Registration closes, complete remaining event varilables, perfrom Loot Calculation + Adventure DC</li>
+                <li>Complete Loot allocations, tags and scheduling</li>
+                <li>Export all data and templates for Event prep</li>
+            </ol>
+            <p class="note">Template generation on local files requires selecting the .docx template once using Select Word Template.</p>
+        </section>
+
+        <section class="tips-card">
+            <h2>Tips</h2>
+            <ul>
+                <li>Most pages share data through localStorage, so update event details first.</li>
+                <li>If a page looks out of date, refresh and reopen it from the menu.</li>
+                <li>Keep exported files in the event folder for easier packaging and handoff.</li>
+            </ul>
+        </section>
+    </main>
+</body>
+</html>

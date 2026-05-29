@@ -434,6 +434,7 @@
         </div>
 
         <div class="actions">
+            <button id="selectTemplateBtn" class="btn btn-secondary" type="button">Select Word Template</button>
             <button id="resetPageBtn" class="btn btn-secondary" type="button">Clear Adventure Listing Data</button>
         </div>
 
@@ -494,8 +495,11 @@
     </main>
 
     <script src="event-variables.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script>
         const STORAGE_KEY = 'adventureLevelling.v1';
+        const TEMPLATE_STORAGE_KEY = 'adventureTemplateDocx.base64.v1';
+        const TEMPLATE_NAME_STORAGE_KEY = 'adventureTemplateDocx.name.v1';
 
         const body = document.getElementById('adventureTableBody');
         const eventTitleEl = document.getElementById('eventTitle');
@@ -507,6 +511,7 @@
         const totalAplBarEl = document.getElementById('totalAplBar');
         const totalSilverBarEl = document.getElementById('totalSilverBar');
         const totalProductionBarEl = document.getElementById('totalProductionBar');
+        const selectTemplateBtn = document.getElementById('selectTemplateBtn');
         const resetPageBtn = document.getElementById('resetPageBtn');
         const statusMessage = document.getElementById('statusMessage');
         const detailsDialog = document.getElementById('adventureDetailsDialog');
@@ -520,9 +525,321 @@
 
         let rows = [];
         let activeDetailsIndex = -1;
+        let templateBufferCache = null;
 
         function showStatus(message) {
             statusMessage.textContent = message;
+        }
+
+        function replaceFirst(text, find, replaceWith) {
+            const index = text.indexOf(find);
+            if (index < 0) return text;
+            return text.slice(0, index) + replaceWith + text.slice(index + find.length);
+        }
+
+        function normalizeTemplateText(value) {
+            return String(value ?? '')
+                .replace(/\r?\n/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function escapeXmlText(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        function sanitizeFilename(value) {
+            return String(value ?? '')
+                .replace(/[<>:"/\\|?*]+/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function arrayBufferToBase64(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            const chunkSize = 0x8000;
+
+            for (let i = 0; i < bytes.length; i += chunkSize) {
+                const chunk = bytes.subarray(i, i + chunkSize);
+                binary += String.fromCharCode(...chunk);
+            }
+
+            return btoa(binary);
+        }
+
+        function base64ToArrayBuffer(base64Value) {
+            const binary = atob(base64Value);
+            const bytes = new Uint8Array(binary.length);
+
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+
+            return bytes.buffer;
+        }
+
+        function pickDocxFile() {
+            return new Promise((resolve, reject) => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                input.style.display = 'none';
+
+                input.addEventListener('change', () => {
+                    const file = input.files?.[0] || null;
+                    if (!file) {
+                        reject(new Error('No template file selected'));
+                        return;
+                    }
+
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const result = reader.result;
+                        if (!(result instanceof ArrayBuffer)) {
+                            reject(new Error('Could not read selected template file'));
+                            return;
+                        }
+                        resolve({
+                            fileName: file.name,
+                            buffer: result
+                        });
+                    };
+                    reader.onerror = () => reject(new Error('Template file read failed'));
+                    reader.readAsArrayBuffer(file);
+                }, { once: true });
+
+                document.body.appendChild(input);
+                input.click();
+                setTimeout(() => {
+                    if (input.parentNode) {
+                        input.parentNode.removeChild(input);
+                    }
+                }, 0);
+            });
+        }
+
+        function saveTemplateToStorage(fileName, buffer) {
+            const base64 = arrayBufferToBase64(buffer);
+            try {
+                localStorage.setItem(TEMPLATE_STORAGE_KEY, base64);
+                localStorage.setItem(TEMPLATE_NAME_STORAGE_KEY, fileName || 'template.docx');
+                return true;
+            } catch (error) {
+                console.warn('AdventureListing: template cache save failed', error);
+                return false;
+            }
+        }
+
+        function loadTemplateFromStorage() {
+            try {
+                const base64 = localStorage.getItem(TEMPLATE_STORAGE_KEY);
+                if (!base64) return null;
+                return base64ToArrayBuffer(base64);
+            } catch (error) {
+                console.warn('AdventureListing: template cache load failed', error);
+                return null;
+            }
+        }
+
+        async function ensureTemplateBuffer(forcePicker = false) {
+            if (!forcePicker && templateBufferCache instanceof ArrayBuffer) {
+                return templateBufferCache;
+            }
+
+            if (!forcePicker) {
+                const cached = loadTemplateFromStorage();
+                if (cached) {
+                    templateBufferCache = cached;
+                    return cached;
+                }
+            }
+
+            const picked = await pickDocxFile();
+            templateBufferCache = picked.buffer;
+            const saved = saveTemplateToStorage(picked.fileName, picked.buffer);
+
+            if (saved) {
+                showStatus(`Template selected: ${picked.fileName}`);
+            } else {
+                showStatus(`Template selected for this session: ${picked.fileName}`);
+            }
+
+            return picked.buffer;
+        }
+
+        function getAdventureTemplateValues(row, index) {
+            const vars = window.EventVariables?.get?.() || {};
+            const eventNumberRaw = normalizeTemplateText(vars.eventNumber);
+            const eventName = normalizeTemplateText(vars.eventName);
+            const eventCode = eventNumberRaw ? `E${eventNumberRaw}` : 'E00';
+            const eventTitle = [eventCode, eventName].filter(Boolean).join(' - ') || 'Untitled Event';
+            const adventureNo = normalizeTemplateText(row?.no) || String(index + 1);
+            const adventureTitle = normalizeTemplateText(row?.title);
+            const combinedTitle = adventureTitle ? `A${adventureNo} - ${adventureTitle}` : `A${adventureNo}`;
+            const headerTitle = adventureTitle || `Adventure ${adventureNo}`;
+            const sceneTitle = adventureTitle || `Adventure ${adventureNo}`;
+
+            return {
+                title: combinedTitle,
+                summary: 'Summary',
+                author: normalizeTemplateText(row?.author) || 'TBC',
+                npcs: normalizeTemplateText(row?.npcs) || '0',
+                difficulty: normalizeTemplateText(row?.difficulty) || 'None',
+                type: normalizeTemplateText(row?.type) || 'Other',
+                description: normalizeTemplateText(row?.description || row?.notes) || 'TBC',
+                specialRequirements: normalizeTemplateText(row?.specialRequirements || row?.schedulingNotes) || 'None',
+                sceneTitle,
+                headerTitle,
+                eventCode,
+                eventTitle,
+                eventFilePrefix: eventTitle,
+                adventureCode: `A${adventureNo}`
+            };
+        }
+
+        function applyAdventureTemplateValues(documentXml, values) {
+            const xmlValues = {
+                title: escapeXmlText(values.title),
+                summary: escapeXmlText(values.summary),
+                author: escapeXmlText(values.author),
+                npcs: escapeXmlText(values.npcs),
+                difficulty: escapeXmlText(values.difficulty),
+                type: escapeXmlText(values.type),
+                description: escapeXmlText(values.description),
+                specialRequirements: escapeXmlText(values.specialRequirements),
+                sceneTitle: escapeXmlText(values.sceneTitle)
+            };
+
+            let nextXml = documentXml;
+            nextXml = replaceFirst(nextXml, '<w:t>Adventure Title</w:t>', `<w:t>${xmlValues.title}</w:t>`);
+            nextXml = replaceFirst(nextXml, '<w:t>Adventure Summary</w:t>', `<w:t>${xmlValues.summary}</w:t>`);
+            nextXml = replaceFirst(nextXml, '<w:t>Douw</w:t>', `<w:t>${xmlValues.author}</w:t>`);
+            nextXml = replaceFirst(nextXml, '&lt;Minimum number needed to run this&gt;', xmlValues.npcs);
+            nextXml = replaceFirst(nextXml, '&lt;Difficulty&gt;', xmlValues.difficulty);
+            nextXml = replaceFirst(nextXml, 'Adventure Type: &lt;', 'Adventure Type: ');
+            nextXml = replaceFirst(nextXml, '<w:t>type</w:t>', `<w:t>${xmlValues.type}</w:t>`);
+            nextXml = replaceFirst(nextXml, '<w:t>&gt;</w:t>', '<w:t></w:t>');
+            nextXml = replaceFirst(nextXml, '&lt;Description&gt;', xmlValues.description);
+            nextXml = replaceFirst(nextXml, '&lt;Special Requirements&gt;', xmlValues.specialRequirements);
+            nextXml = replaceFirst(nextXml, 'Scene 1 - &lt;Scene Title&gt;', `Scene 1 - ${xmlValues.sceneTitle}`);
+
+            return nextXml;
+        }
+
+        function applyAdventureHeaderValues(headerXml, values) {
+            const namespace = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+            const parser = new DOMParser();
+            const parsed = parser.parseFromString(headerXml, 'application/xml');
+            const parserError = parsed.getElementsByTagName('parsererror')[0];
+
+            if (parserError) {
+                let fallback = headerXml;
+                fallback = fallback.replace(/Adventure Title/g, escapeXmlText(values.headerTitle));
+                fallback = fallback.replace(/XX/g, escapeXmlText(values.adventureCode));
+                return fallback;
+            }
+
+            const textNodes = Array.from(parsed.getElementsByTagNameNS(namespace, 't'));
+            const markerIndex = textNodes.findIndex((node) => (node.textContent || '').includes('Adventure Title'));
+
+            textNodes.forEach((node) => {
+                const current = node.textContent || '';
+                let next = current;
+                next = next.replace(/Adventure Title/g, values.headerTitle);
+                next = next.replace(/XX/g, values.adventureCode);
+                node.textContent = next;
+            });
+
+            if (markerIndex > 0) {
+                const prefixIndexes = [];
+                for (let i = markerIndex - 1; i >= Math.max(0, markerIndex - 5); i--) {
+                    const text = (textNodes[i]?.textContent || '').trim();
+                    if (!text) continue;
+                    if (/^[A-Za-z0-9]+$/.test(text) && text.length <= 3) {
+                        prefixIndexes.unshift(i);
+                        continue;
+                    }
+                    break;
+                }
+
+                if (prefixIndexes.length > 0) {
+                    textNodes[prefixIndexes[0]].textContent = values.eventCode;
+                    for (let i = 1; i < prefixIndexes.length; i++) {
+                        textNodes[prefixIndexes[i]].textContent = '';
+                    }
+                }
+            }
+
+            return new XMLSerializer().serializeToString(parsed);
+        }
+
+        async function generateAdventureTemplate(index) {
+            if (!window.JSZip) {
+                showStatus('Template generation failed: JSZip failed to load.');
+                return;
+            }
+
+            const row = rows[index];
+            if (!row) {
+                showStatus('Template generation failed: adventure row not found.');
+                return;
+            }
+
+            try {
+                showStatus('Generating Word template...');
+
+                const buffer = await ensureTemplateBuffer();
+                const zip = await JSZip.loadAsync(buffer);
+                const documentXml = await zip.file('word/document.xml')?.async('string');
+
+                if (!documentXml) {
+                    throw new Error('Template is missing word/document.xml');
+                }
+
+                const values = getAdventureTemplateValues(row, index);
+                const updatedXml = applyAdventureTemplateValues(documentXml, values);
+                zip.file('word/document.xml', updatedXml);
+
+                const headerPartNames = ['word/header1.xml', 'word/header2.xml', 'word/header3.xml'];
+                for (const headerPartName of headerPartNames) {
+                    const headerFile = zip.file(headerPartName);
+                    if (!headerFile) continue;
+                    const headerXml = await headerFile.async('string');
+                    const updatedHeaderXml = applyAdventureHeaderValues(headerXml, values);
+                    zip.file(headerPartName, updatedHeaderXml);
+                }
+
+                const blob = await zip.generateAsync({
+                    type: 'blob',
+                    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                });
+
+                const safeEvent = sanitizeFilename(values.eventFilePrefix) || 'Event';
+                const safeTitle = sanitizeFilename(values.title) || `A${index + 1}`;
+                const outputName = `${safeEvent} - ${safeTitle} - Template.docx`;
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = outputName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+
+                showStatus(`Template generated: ${outputName}`);
+            } catch (error) {
+                console.error('AdventureListing: template generation failed', error);
+                if (String(error?.message || '').includes('No template file selected')) {
+                    showStatus('Template generation cancelled. Select a .docx template to continue.');
+                    return;
+                }
+
+                showStatus('Could not generate template. Use "Select Word Template" and choose the .docx file.');
+            }
         }
 
         function parseAdventureCount(value) {
@@ -930,6 +1247,16 @@
                 editBtn.textContent = 'Edit';
                 editBtn.addEventListener('click', () => openDetailsDialog(index));
                 editTd.appendChild(editBtn);
+
+                const templateBtn = document.createElement('button');
+                templateBtn.type = 'button';
+                templateBtn.className = 'btn btn-small';
+                templateBtn.style.marginLeft = '6px';
+                templateBtn.textContent = 'Generate Template';
+                templateBtn.addEventListener('click', () => {
+                    generateAdventureTemplate(index);
+                });
+                editTd.appendChild(templateBtn);
                 tr.appendChild(editTd);
 
                 tr.appendChild(makeInputCell('text', row.no, (e) => {
@@ -1045,6 +1372,19 @@
             syncRowCountToEventVariables();
             renderRows();
             showStatus('Adventure listing data cleared.');
+        });
+
+        selectTemplateBtn.addEventListener('click', async () => {
+            try {
+                await ensureTemplateBuffer(true);
+            } catch (error) {
+                if (String(error?.message || '').includes('No template file selected')) {
+                    showStatus('Template selection cancelled.');
+                    return;
+                }
+                console.error('AdventureListing: template selection failed', error);
+                showStatus('Could not load template file. Please try again.');
+            }
         });
 
         dialogCancelBtn.addEventListener('click', closeDetailsDialog);

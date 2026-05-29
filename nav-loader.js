@@ -278,6 +278,13 @@
                 setActive(match);
                 loadUrl(match.href, false).catch(() => {});
             }
+            return;
+        }
+
+        const instructionsLink = findLinkByPath('Instructions.html');
+        if (instructionsLink) {
+            setActive(instructionsLink);
+            loadUrl(instructionsLink.getAttribute('href') || instructionsLink.href, false).catch(() => {});
         }
     })();
 })();

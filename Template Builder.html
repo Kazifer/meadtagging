@@ -44,8 +44,9 @@ p{color:var(--app-muted)}
 
 /* SETUP BAR */
 .setup-card{padding:16px 18px;margin-bottom:18px}
-.setup-bar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto auto;gap:12px}
+.setup-bar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto auto;gap:12px}
 .setup-group{display:flex;flex-direction:column;gap:6px}
+.setup-group.commoner-only{display:none}
 .setup-group label,.build-name-group label{font-size:0.78rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
 select,input[type=text]{background:var(--panel2);color:var(--text);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;font-family:inherit;font-size:0.92rem;width:100%}
 select:focus,input[type=text]:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(6,182,212,0.16)}
@@ -206,7 +207,12 @@ input[type=text]::placeholder{color:var(--dim)}
           <option value="R">Rogue</option>
           <option value="S">Scholar</option>
           <option value="T">Templar</option>
+          <option value="C">Commoner</option>
         </select>
+      </div>
+      <div id="commonerBodyGroup" class="setup-group commoner-only">
+        <label>Commoner Body</label>
+        <input id="commonerBodyInput" type="number" min="0" step="1" placeholder="Set custom body">
       </div>
       <div class="stat-box" id="statBP">
         <div class="stat-val" id="bpUsed">0</div>
@@ -381,6 +387,7 @@ const SKILLS = [
 {id:'alchemy',         name:'Alchemy',               cat:'Trades',    costs:{F:6,R:3,S:4,T:5}, prereqs:['herbal_lore'], repeatable:true, notes:'Each purchase = +1 Alchemy Crafting Level'},
 {id:'craft_potion',    name:'Craft Potion',          cat:'Trades',    costs:{F:6,R:5,S:3,T:4}, prereqs:['ANY_EARTH_LVL4'], repeatable:true, notes:'Req: Earth Lvl 4 Spell Slot. Each purchase = +1 Potion Crafting Level'},
 {id:'craft_scroll',    name:'Craft Scroll',          cat:'Trades',    costs:{F:6,R:5,S:3,T:4}, prereqs:['ANY_CEL_LVL4'], repeatable:true, notes:'Req: Celestial Lvl 4 Spell Slot. Each purchase = +1 Scroll Crafting Level'},
+{id:'create_runic_tattoo', name:'Create Runic Tattoo', cat:'Trades',  costs:{F:6,R:5,S:3,T:4}, prereqs:['ANY_NATURE_LVL4'], repeatable:true, notes:'Req: 4th Lvl Nature Spell. Each purchase = +1 Runic Tattoo Crafting Level'},
 {id:'craft_trap',      name:'Craft Trap',            cat:'Trades',    costs:{F:6,R:3,S:4,T:5}, prereqs:['disarm_trap'], repeatable:true, notes:'Each purchase = +1 Trap Crafting Level'},
 {id:'pick_locks',      name:'Pick Locks',            cat:'Trades',    costs:{F:9,R:3,S:9,T:9}},
 {id:'smithing',        name:'Smithing',              cat:'Trades',    costs:{F:3,R:4,S:4,T:4}, repeatable:true, notes:'Each purchase = +1 Smithing Level'},
@@ -506,6 +513,7 @@ const SHORT_WEAPON_IDS = ['small_weapon','one_hand_blunt','one_hand_edged'];
 const SPELL_LVL1_IDS = ['pc_1','pe_1','pn_1','sc_1','se_1','sn_1'];
 const CEL_LVL4_IDS = ['pc_4','sc_4'];
 const EARTH_LVL4_IDS = ['pe_4','se_4'];
+const NATURE_LVL4_IDS = ['pn_4','sn_4'];
 const TEMPLATE_BUILD_LOG_STORAGE_KEY = 'templateBuilder.eventLog.v1';
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
@@ -517,6 +525,7 @@ let savedBuildLog = [];
 function getLevel(){ return parseInt(document.getElementById('selLevel').value); }
 function getRaceId(){ return document.getElementById('selRace').value; }
 function getClass(){ return document.getElementById('selClass').value; }
+function isCommonerClass(classId = getClass()){ return classId === 'C'; }
 function getRace(){ return RACES.find(r=>r.id===getRaceId()); }
 function getTraits(){
   const r = getRace();
@@ -529,6 +538,7 @@ function getTraits(){
 }
 
 function getSkillCost(skill){
+  if (isCommonerClass()) return null;
   if(skill.trait){
     const traits = getTraits();
     return traits.includes(skill.trait) ? skill.costs.with : skill.costs.without;
@@ -621,6 +631,7 @@ function hasPrereq(prereqStr){
   if(prereqStr === 'ANY_SPELL_LVL1') return SPELL_LVL1_IDS.some(id=>getBuildQty(id)>0);
   if(prereqStr === 'ANY_CEL_LVL4') return CEL_LVL4_IDS.some(id=>getBuildQty(id)>0);
   if(prereqStr === 'ANY_EARTH_LVL4') return EARTH_LVL4_IDS.some(id=>getBuildQty(id)>0);
+  if(prereqStr === 'ANY_NATURE_LVL4') return NATURE_LVL4_IDS.some(id=>getBuildQty(id)>0);
   // Count-based: back_attack_x4, pc_1_x2, etc.
   const xMatch = prereqStr.match(/^(.+)_x(\d+)$/);
   if(xMatch) return getBuildQty(xMatch[1]) >= parseInt(xMatch[2]);
@@ -642,6 +653,7 @@ function resolvePrereqToSkill(token){
   if(token === 'ANY_SPELL_LVL1') return 'pc_1';
   if(token === 'ANY_CEL_LVL4') return 'pc_4';
   if(token === 'ANY_EARTH_LVL4') return 'pe_4';
+  if(token === 'ANY_NATURE_LVL4') return 'pn_4';
   const xMatch = token.match(/^(.+)_x(\d+)$/);
   if(xMatch) return xMatch[1]; // the skill to add more of
   return token;
@@ -773,6 +785,44 @@ function getArmourValueInput(){
   return document.getElementById('armourValueInput');
 }
 
+function getCommonerBodyInput(){
+  return document.getElementById('commonerBodyInput');
+}
+
+function getCurrentBodyValue(){
+  if (isCommonerClass()) {
+    const manual = Number.parseInt(String(getCommonerBodyInput()?.value || '').trim(), 10);
+    return Number.isFinite(manual) ? Math.max(0, manual) : 0;
+  }
+
+  const level = getLevel();
+  const classId = getClass();
+  return BODY[classId]?.[level - 1] ?? 0;
+}
+
+function updateCommonerInputs(){
+  const commonerBodyGroup = document.getElementById('commonerBodyGroup');
+  const commonerBodyInput = getCommonerBodyInput();
+  const armourInput = getArmourValueInput();
+  const isCommoner = isCommonerClass();
+
+  if (commonerBodyGroup) {
+    commonerBodyGroup.style.display = isCommoner ? 'flex' : 'none';
+  }
+
+  if (!commonerBodyInput || !armourInput) return;
+
+  if (isCommoner) {
+    if (!String(commonerBodyInput.value || '').trim()) {
+      commonerBodyInput.value = '0';
+    }
+
+    if (String(armourInput.dataset.customized || '') !== 'true' && !String(armourInput.value || '').trim()) {
+      setArmourValue(0, false);
+    }
+  }
+}
+
 function setArmourValue(value, customized=false){
   const input = getArmourValueInput();
   if (!input) return;
@@ -789,13 +839,17 @@ function getCurrentBuildWearLimit(){
     F: 20,
     R: 15,
     S: 10,
-    T: 15
+    T: 15,
+    C: 0
   };
 
   return (baseByClass[getClass()] ?? 0) + (getBuildQty('wear_extra_armor') * 5);
 }
 
 function getDefaultCurrentArmourValue(){
+  if (isCommonerClass()) {
+    return 0;
+  }
   const dexArmor = getCurrentBuildDexArmor();
   return dexArmor > 0 ? dexArmor : getCurrentBuildWearLimit();
 }
@@ -849,7 +903,7 @@ function getBuildSnapshot(){
     raceId,
     classId,
     usedBP: getTotalBP(),
-    body: BODY[classId][level - 1],
+    body: getCurrentBodyValue(),
     armourValue: getArmourValue(),
     build: cloneBuildState(),
     createdAt: new Date().toISOString()
@@ -861,6 +915,13 @@ function applySavedBuild(entry){
   document.getElementById('selLevel').value = String(entry.level || 1);
   document.getElementById('selRace').value = String(entry.raceId || RACES[0]?.id || '');
   document.getElementById('selClass').value = String(entry.classId || 'F');
+  updateCommonerInputs();
+  if (String(entry.classId || '') === 'C') {
+    const commonerInput = getCommonerBodyInput();
+    if (commonerInput) {
+      commonerInput.value = String(Number.isFinite(Number(entry.body)) ? Number(entry.body) : 0);
+    }
+  }
   build = cloneBuildState(entry.build || {});
   setBuildName(entry.name || '');
   if (Number.isFinite(Number(entry.armourValue))) {
@@ -883,7 +944,7 @@ function deleteSavedBuild(id){
 }
 
 function saveCurrentBuild(){
-  if (!Object.keys(build).length) {
+  if (!isCommonerClass() && !Object.keys(build).length) {
     showNotif('Add at least one skill before saving.', true);
     return;
   }
@@ -972,7 +1033,7 @@ function renderCurrentEventPill(){
 }
 
 function getClassName(classId){
-  return ({ F:'Fighter', R:'Rogue', S:'Scholar', T:'Templar' })[classId] || classId || '-';
+  return ({ F:'Fighter', R:'Rogue', S:'Scholar', T:'Templar', C:'Commoner' })[classId] || classId || '-';
 }
 
 function getRaceName(raceId){
@@ -1041,6 +1102,7 @@ function summarizeSpellSlots(entry, prefix, label){
 }
 
 function getTemplateClassLabel(entry){
+  if (entry?.classId === 'C') return 'Commoner';
   const className = getClassName(entry?.classId);
   if (entry?.classId !== 'S') return className;
 
@@ -1079,7 +1141,8 @@ function getTemplateWearLimit(entry){
     F: 20,
     R: 15,
     S: 10,
-    T: 15
+    T: 15,
+    C: 0
   };
 
   return (baseByClass[entry?.classId] ?? 0) + (getSavedBuildQty(entry, 'wear_extra_armor') * 5);
@@ -1378,11 +1441,12 @@ function renderSkillList(){
     }
     const inBuild = getBuildQty(s.id) > 0;
     const cost = getSkillCost(s);
-    const costDisplay = cost===0 ? 'Free' : (cost ?? '?');
+    const costDisplay = isCommonerClass() ? 'N/A' : (cost===0 ? 'Free' : (cost ?? '?'));
     const costClass = cost===0 ? 'free' : (cost===null ? 'unknown' : '');
     const prereqText = s.prereqs ? s.prereqs.filter(p=>!hasPrereq(p)).map(p=>{
       if(p==='ANY_WEAPON') return 'any weapon skill';
       if(p==='ANY_SPELL_LVL1') return 'Level 1 Spell Slot';
+      if(p==='ANY_NATURE_LVL4') return '4th Lvl Nature Spell Slot';
       const xm = p.match(/^(.+)_x(\d+)$/);
       if(xm){ const sk=SKILL_MAP[xm[1]]; return `${xm[2]}x ${sk?sk.name:xm[1]}`; }
       const sk=SKILL_MAP[p]; return sk?sk.name:p;
@@ -1405,7 +1469,7 @@ function renderSkillList(){
       ${clickHandler}>
       <div class="sk-row">
         <div class="sk-name">${s.name}${s.repeatable?'<span class="repeatable"> ∞</span>':''}${inBuildText}</div>
-        <div class="sk-cost ${costClass}">${costDisplay} BP</div>
+        <div class="sk-cost ${costClass}">${isCommonerClass() ? costDisplay : `${costDisplay} BP`}</div>
       </div>
       ${s.notes?`<div class="sk-meta">${s.notes}</div>`:''}
       ${prereqText?`<div class="sk-prereq">⚠ Needs: ${prereqText}</div>`:''}
@@ -1438,7 +1502,7 @@ function renderBuild(){
     html += `<div class="section-divider">${cat}</div>`;
     items.forEach(({s,qty})=>{
       const cost = getSkillCost(s);
-      const total = cost !== null ? cost*qty : '?';
+      const total = isCommonerClass() ? 'N/A' : (cost !== null ? cost*qty : '?');
       const handedControls = isHandedSkill(s)
         ? `<div class="bi-hand-controls"><div class="hand-qty-group"><span class="hand-qty-label">L</span><button class="qty-btn" onclick="adjustQty('${s.id}',-1,'left')">−</button><span class="qty-num">${getBuildHandQty(s.id,'left')}</span><button class="qty-btn" onclick="adjustQty('${s.id}',1,'left')">+</button></div><div class="hand-qty-group"><span class="hand-qty-label">R</span><button class="qty-btn" onclick="adjustQty('${s.id}',-1,'right')">−</button><span class="qty-num">${getBuildHandQty(s.id,'right')}</span><button class="qty-btn" onclick="adjustQty('${s.id}',1,'right')">+</button></div></div>`
         : '';
@@ -1502,22 +1566,23 @@ function handleBuildDrop(e){
 function updateStats(){
   const lvl = getLevel();
   const cl = getClass();
-  const totalBP = getBP(lvl);
+  const isCommoner = isCommonerClass(cl);
+  const totalBP = isCommoner ? 0 : getBP(lvl);
   const usedBP = getTotalBP();
   const remain = totalBP - usedBP;
-  const pct = Math.min(100, Math.round(usedBP/totalBP*100));
+  const pct = totalBP > 0 ? Math.min(100, Math.round(usedBP/totalBP*100)) : 0;
   const over = usedBP > totalBP;
 
-  document.getElementById('bpUsed').textContent = usedBP;
+  document.getElementById('bpUsed').textContent = isCommoner ? 'N/A' : usedBP;
   document.getElementById('bpFill').style.width = pct+'%';
   document.getElementById('bpFill').className = 'bp-fill'+(over?' over':'');
-  document.getElementById('bpBarText').textContent = `${usedBP} / ${totalBP} BP`;
+  document.getElementById('bpBarText').textContent = isCommoner ? 'No BP target (Commoner)' : `${usedBP} / ${totalBP} BP`;
   document.getElementById('statBP').className = 'stat-box'+(over?' over':'');
-  document.getElementById('footerBP').textContent = usedBP;
-  document.getElementById('footerAvail').textContent = totalBP;
-  document.getElementById('footerRemain').textContent = remain;
-  document.getElementById('footerRemain').style.color = remain<0?'#e05030':'var(--gold2)';
-  document.getElementById('bodyVal').textContent = BODY[cl][lvl-1];
+  document.getElementById('footerBP').textContent = isCommoner ? 'N/A' : usedBP;
+  document.getElementById('footerAvail').textContent = isCommoner ? 'N/A' : totalBP;
+  document.getElementById('footerRemain').textContent = isCommoner ? 'N/A' : remain;
+  document.getElementById('footerRemain').style.color = isCommoner ? 'var(--gold2)' : (remain<0?'#e05030':'var(--gold2)');
+  document.getElementById('bodyVal').textContent = getCurrentBodyValue();
   refreshArmourValueDefault();
 }
 
@@ -1562,6 +1627,13 @@ function init(){
   lvlSel.addEventListener('change', ()=>{ updateStats(); renderSkillList(); });
   raceSel.addEventListener('change', ()=>{ updateRaceInfo(); renderSkillList(); renderBuild(); updateStats(); });
   document.getElementById('selClass').addEventListener('change', ()=>{ renderSkillList(); renderBuild(); updateStats(); });
+  const commonerBodyInput = getCommonerBodyInput();
+  if (commonerBodyInput) {
+    commonerBodyInput.addEventListener('input', () => {
+      updateStats();
+    });
+  }
+  document.getElementById('selClass').addEventListener('change', ()=>{ updateCommonerInputs(); });
   document.getElementById('skillSearch').addEventListener('input', e=>{ searchQuery=e.target.value; renderSkillList(); });
   document.getElementById('newBuildBtn').addEventListener('click', startNewBuild);
   document.getElementById('saveBuildBtn').addEventListener('click', saveCurrentBuild);
@@ -1581,6 +1653,7 @@ function init(){
 
   loadSavedBuildLog();
   renderCurrentEventPill();
+  updateCommonerInputs();
 
   renderCatTabs();
   renderSkillList();
