@@ -516,7 +516,7 @@
                     allocatedInput.value = lootAllocations[row.label] ?? '';
                     allocatedInput.setAttribute('aria-label', `Allocated amount for ${row.label}`);
 
-                    allocatedInput.addEventListener('input', () => {
+                    const persistAllocation = () => {
                         const value = allocatedInput.value.trim();
                         if (!value) {
                             delete lootAllocations[row.label];
@@ -524,6 +524,16 @@
                             lootAllocations[row.label] = value;
                         }
                         saveLootAllocations();
+                    };
+
+                    // Save while typing, but do not rerender the full table on each keypress.
+                    allocatedInput.addEventListener('input', () => {
+                        persistAllocation();
+                    });
+
+                    // Recompute totals/remaining once editing is committed.
+                    allocatedInput.addEventListener('change', () => {
+                        persistAllocation();
                         renderLootCalc();
                     });
 
