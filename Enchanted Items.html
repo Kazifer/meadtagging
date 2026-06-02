@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enchantment Builder</title>
+    <link rel="stylesheet" href="theme.css">
+    <style>
+        .container {
+            max-width: 1180px;
+        }
+
+        .intro {
+            color: var(--app-muted);
+            margin-bottom: 14px;
+        }
+
+        .card {
+            border: 1px solid var(--app-border);
+            border-radius: 10px;
+            background: #111827;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+
+        .field-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field-full {
+            grid-column: 1 / -1;
+        }
+
+        .field label {
+            color: var(--app-muted);
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .field input,
+        .field select,
+        .field textarea {
+            border: 1px solid var(--app-border);
+            border-radius: 8px;
+            background: #0b1220;
+            color: var(--app-text);
+            padding: 8px 10px;
+            font-size: 0.92rem;
+        }
+
+        .field textarea {
+            min-height: 86px;
+            resize: vertical;
+        }
+
+        .enchantment-group {
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 10px;
+            background: #0b1220;
+        }
+
+        .enchantment-group-title {
+            color: #d1d5db;
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .enchantment-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: var(--app-muted);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .hint-box {
+            border: 1px solid #334155;
+            border-radius: 8px;
+            background: #0b1220;
+            padding: 10px;
+            color: #cbd5e1;
+            font-size: 0.88rem;
+            line-height: 1.5;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #f8fafc;
+            background: #2563eb;
+        }
+
+        .btn-secondary {
+            background: #334155;
+        }
+
+        .btn-success {
+            background: #166534;
+        }
+
+        .btn-danger {
+            background: #991b1b;
+        }
+
+        .status {
+            margin-top: 10px;
+            color: var(--app-muted);
+            min-height: 1.2em;
+        }
+
+        .table-wrap {
+            overflow: auto;
+            border: 1px solid var(--app-border);
+            border-radius: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 980px;
+            background: #111827;
+        }
+
+        th,
+        td {
+            border-bottom: 1px solid var(--app-border);
+            padding: 10px;
+            text-align: left;
+            vertical-align: top;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: #0f172a;
+            color: #d1d5db;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .action-cell {
+            white-space: nowrap;
+        }
+
+        .mini-btn {
+            border: 0;
+            border-radius: 6px;
+            padding: 6px 9px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            color: #fff;
+            background: #475569;
+            margin-right: 6px;
+        }
+
+        .mini-btn.delete {
+            background: #b91c1c;
+        }
+
+        @media (max-width: 900px) {
+            .field-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .enchantment-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>Enchantment Builder</h1>
+        <p class="intro">Build enchanted item entries from the enchantments list, link each to an adventure, and send all built items to Item Tags.</p>
+
+        <section class="card">
+            <div class="field-grid">
+                <div class="field field-full enchantment-group">
+                    <div class="enchantment-group-title">Enchantments</div>
+                    <div class="enchantment-grid">
+                        <div class="field">
+                            <label for="enchantmentSelect">First Enchantment</label>
+                            <select id="enchantmentSelect"></select>
+                        </div>
+                        <div class="field">
+                            <label class="toggle-row"><input id="addSecondEnchantmentToggle" type="checkbox"> Add second enchantment</label>
+                            <select id="enchantmentSelect2" class="hidden"></select>
+                            <input id="customNotesInput2" class="hidden" type="text" placeholder="Second enchantment notes (optional)">
+                        </div>
+                        <div class="field">
+                            <label class="toggle-row"><input id="addThirdEnchantmentToggle" type="checkbox"> Add third enchantment</label>
+                            <select id="enchantmentSelect3" class="hidden"></select>
+                            <input id="customNotesInput3" class="hidden" type="text" placeholder="Third enchantment notes (optional)">
+                        </div>
+                    </div>
+                </div>
+                <div class="field">
+                    <label for="adventureSelect">Associated Adventure</label>
+                    <select id="adventureSelect"></select>
+                </div>
+                <div class="field">
+                    <label for="itemNameInput">Item Applied To</label>
+                    <input id="itemNameInput" type="text" placeholder="Free text item name">
+                </div>
+                <div class="field">
+                    <label for="customNotesInput">Custom Notes (Optional)</label>
+                    <input id="customNotesInput" type="text" placeholder="Extra details for this item">
+                </div>
+                <div class="field">
+                    <label for="expiryDateInput">Expiry Date</label>
+                    <input id="expiryDateInput" type="date">
+                </div>
+                <div class="field">
+                    <label class="toggle-row"><input id="identifiedInput" type="checkbox"> Identified</label>
+                </div>
+                <div class="field field-full">
+                    <label>Enchantment Details</label>
+                    <div id="enchantmentDetails" class="hint-box">Select an enchantment to preview its details.</div>
+                </div>
+                <div class="field field-full hidden" id="enchantmentDetails2Wrap">
+                    <label>Second Enchantment Details</label>
+                    <div id="enchantmentDetails2" class="hint-box">Select a second enchantment to preview its details.</div>
+                </div>
+                <div class="field field-full hidden" id="enchantmentDetails3Wrap">
+                    <label>Third Enchantment Details</label>
+                    <div id="enchantmentDetails3" class="hint-box">Select a third enchantment to preview its details.</div>
+                </div>
+            </div>
+            <div class="actions">
+                <button id="addEntryBtn" class="btn" type="button">Add Enchanted Item</button>
+                <button id="clearFormBtn" class="btn btn-secondary" type="button">Clear Form</button>
+                <button id="reloadAdventuresBtn" class="btn btn-secondary" type="button">Reload Adventures</button>
+            </div>
+            <p id="statusMessage" class="status"></p>
+        </section>
+
+        <section class="card">
+            <div class="actions">
+                <button id="saveBuilderBtn" class="btn btn-secondary" type="button">Save Builder Items</button>
+                <button id="pushToItemTagsBtn" class="btn btn-success" type="button">Save All and Add to Item Tags</button>
+                <button id="clearBuilderBtn" class="btn btn-danger" type="button">Clear Builder List</button>
+            </div>
+        </section>
+
+        <section class="table-wrap" aria-label="Enchantment builder entries">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Identified</th>
+                        <th>Enchantment</th>
+                        <th>Level</th>
+                        <th>Total Levels</th>
+                        <th>Target Type</th>
+                        <th>Adventure</th>
+                        <th>Description</th>
+                        <th>Notes</th>
+                        <th>Expiry Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="entriesBody"></tbody>
+            </table>
+        </section>
+    </main>
+
+    <script src="event-variables.js"></script>
+    <script>
+        const BUILDER_STORAGE_KEY = 'enchantedItems.builder.v1';
+        const ITEM_TAGS_STORAGE_KEY = 'itemTags.items.v2';
+        const ADVENTURE_STORAGE_KEY = 'adventureLevelling.v1';
+
+        // Source: Resources/Enchantments.xlsx
+        const ENCHANTMENTS = [
+            { id: 'magic_aura', name: 'Magic Aura', level: 2, targetType: 'Weapon', description: 'Instills a magical aura, allowing the wielder to swing for "Magic" damage type at will (no numerical bonus).' },
+            { id: 'elemental_aura', name: 'Elemental Aura', level: 3, targetType: 'Weapon', description: 'Sheathes the weapon in an element (Fire, Ice, etc.) to use as a damage type. Multiple auras can be added to switch between.' },
+            { id: 'channel_spell', name: 'Channel Spell', level: 5, targetType: 'Weapon', description: 'Spellstrike.' },
+            { id: 'damage_aura', name: 'Damage Aura', level: 5, targetType: 'Weapon', description: 'Grants a +1 damage bonus and "Magic" damage type. Can stack in a pyramid fashion up to a maximum of +3.' },
+            { id: 'arcane_armor', name: 'Arcane Armor', level: 3, targetType: 'Armour', description: 'Provides 2 points of magical armor per casting (stacks up to 5 times for 10 points max). Refits with 1 minute of concentration.' },
+            { id: 'create_mark_destroy_mark', name: 'Create Mark / Destroy Mark', level: 1, targetType: 'Item / Spirit', description: 'Places a custom physical mark on the item, or a Mark of Ownership on the skin of whoever holds the item for an hour.' },
+            { id: 'enchant', name: 'Enchant', level: 1, targetType: 'Item / Spirit', description: 'Imbues the item with a single battle magic spell from memory, which the possessor can activate and cast exactly once.' },
+            { id: 'destroy_magic_lesser', name: 'Destroy Magic, Lesser', level: 2, targetType: 'Item', description: 'Instantaneous touch spell that terminates active Formal and Battle magic of the scroll school.' },
+            { id: 'cloak_minor', name: 'Cloak, Minor', level: 2, targetType: 'Item / Spirit', description: 'Provides a single-use protective barrier that absorbs a designated spell or effect type once before expiring (max 1 year duration).' },
+            { id: 'render_indestructible', name: 'Render Indestructible', level: 2, targetType: 'Item', description: 'Protects the item from common destruction effects such as Shatter, Destroy, and trap damage.' },
+            { id: 'bane_minor', name: 'Bane, Minor', level: 3, targetType: 'Item / Spirit', description: 'Single-use protection that reflects a chosen effect back at the attacker.' },
+            { id: 'delimit', name: 'Delimit', level: 4, targetType: 'Item', description: 'Restricts the item\'s active effects based on a single criterion (race, profession, specific skill, or level).' },
+            { id: 'spell_store', name: 'Spell Store', level: 4, targetType: 'Item / Spirit', description: 'Creates a rechargeable battle magic slot (baseline 3 levels, expandable up to 9 levels via pyramid castings). Must be manually charged.' },
+            { id: 'cloak', name: 'Cloak', level: 5, targetType: 'Item / Spirit', description: 'Grants a once-per-day protective barrier that completely absorbs a specific type of effect or spell below 9th level.' },
+            { id: 'bane', name: 'Bane', level: 6, targetType: 'Item / Spirit', description: 'Grants a once-per-day defense that reflects a specific type of effect or named spell back upon the original caster.' },
+            { id: 'expanded_enchantment', name: 'Expanded Enchantment', level: 6, targetType: 'Item / Spirit', description: 'Imbues the item with a single battle magic spell that the possessor can cast once per game reset or limited reset.' },
+            { id: 'spirit_link', name: 'Spirit Link', level: 6, targetType: 'Item / Spirit', description: 'Bonds the item to a spirit. The item becomes intangible/invisible if the spirit dies, reforming with them upon resurrection.' },
+            { id: 'destroy_magic_greater', name: 'Destroy Magic, Greater', level: 8, targetType: 'Item', description: 'Greater version that can terminate broader active magic effects including advanced links.' },
+            { id: 'spirit_lock', name: 'Spirit Lock', level: 9, targetType: 'Item / Spirit', description: 'Absolute bond. Item only works for that spirit. Can unravel permanently if resurrection fails or on specific destroy effects.' },
+            { id: 'extend_enchantment', name: 'Extend Enchantment', level: 3, targetType: 'Formal Batch', description: 'Modifies duration; extends all enchantments in the current batch to last for 6 months.' },
+            { id: 'extend_formal_magic', name: 'Extend Formal Magic', level: 5, targetType: 'Formal Batch', description: 'Modifies duration; extends all enchantments in the current batch to last for 1 year.' },
+            { id: 'greater_extension', name: 'Greater Extension', level: 9, targetType: 'Formal Batch', description: 'Modifies duration; extends all enchantments in the current batch to last for 2 years.' }
+        ];
+
+        const enchantmentSelectEl = document.getElementById('enchantmentSelect');
+        const addSecondEnchantmentToggleEl = document.getElementById('addSecondEnchantmentToggle');
+        const addThirdEnchantmentToggleEl = document.getElementById('addThirdEnchantmentToggle');
+        const enchantmentSelect2El = document.getElementById('enchantmentSelect2');
+        const enchantmentSelect3El = document.getElementById('enchantmentSelect3');
+        const customNotesInput2El = document.getElementById('customNotesInput2');
+        const customNotesInput3El = document.getElementById('customNotesInput3');
+        const adventureSelectEl = document.getElementById('adventureSelect');
+        const itemNameInputEl = document.getElementById('itemNameInput');
+        const customNotesInputEl = document.getElementById('customNotesInput');
+        const expiryDateInputEl = document.getElementById('expiryDateInput');
+        const identifiedInputEl = document.getElementById('identifiedInput');
+        const enchantmentDetailsEl = document.getElementById('enchantmentDetails');
+        const enchantmentDetails2WrapEl = document.getElementById('enchantmentDetails2Wrap');
+        const enchantmentDetails3WrapEl = document.getElementById('enchantmentDetails3Wrap');
+        const enchantmentDetails2El = document.getElementById('enchantmentDetails2');
+        const enchantmentDetails3El = document.getElementById('enchantmentDetails3');
+        const statusMessageEl = document.getElementById('statusMessage');
+        const entriesBodyEl = document.getElementById('entriesBody');
+
+        let builderRows = [];
+
+        function showStatus(message) {
+            statusMessageEl.textContent = message;
+        }
+
+        function getDefaultExpiryDate() {
+            const date = new Date();
+            date.setFullYear(date.getFullYear() + 1);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function getEnchantmentById(id) {
+            return ENCHANTMENTS.find((item) => item.id === id) || null;
+        }
+
+        function normalizeBuilderRow(row) {
+            const expiry = String(row?.expiry || '').trim();
+            const additionalEnchantments = Array.isArray(row?.additionalEnchantments)
+                ? row.additionalEnchantments
+                : [];
+
+            return {
+                itemName: String(row?.itemName || '').trim(),
+                identified: Boolean(row?.identified),
+                enchantmentId: String(row?.enchantmentId || '').trim(),
+                enchantmentName: String(row?.enchantmentName || '').trim(),
+                level: Number.isFinite(Number(row?.level)) ? Number(row.level) : null,
+                targetType: String(row?.targetType || '').trim(),
+                description: String(row?.description || '').trim(),
+                additionalEnchantments: additionalEnchantments.map((entry) => ({
+                    enchantmentId: String(entry?.enchantmentId || '').trim(),
+                    enchantmentName: String(entry?.enchantmentName || '').trim(),
+                    level: Number.isFinite(Number(entry?.level)) ? Number(entry.level) : null,
+                    targetType: String(entry?.targetType || '').trim(),
+                    description: String(entry?.description || '').trim(),
+                    notes: String(entry?.notes || '').trim()
+                })).filter((entry) => entry.enchantmentName),
+                adventure: String(row?.adventure || '').trim(),
+                notes: String(row?.notes || '').trim(),
+                expiry: expiry || getDefaultExpiryDate()
+            };
+        }
+
+        function loadBuilderRows() {
+            try {
+                const raw = localStorage.getItem(BUILDER_STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : [];
+                builderRows = Array.isArray(parsed) ? parsed.map(normalizeBuilderRow) : [];
+            } catch (error) {
+                console.error('Enchantment Builder: failed to load rows', error);
+                builderRows = [];
+            }
+        }
+
+        function saveBuilderRows() {
+            localStorage.setItem(BUILDER_STORAGE_KEY, JSON.stringify(builderRows));
+        }
+
+        function formatAdventureLabel(row) {
+            const no = String(row?.no || '').trim();
+            const title = String(row?.title || '').trim();
+            if (no && title) return `A${no} - ${title}`;
+            if (no) return `A${no}`;
+            return title;
+        }
+
+        function loadAdventureOptions() {
+            let options = [];
+            try {
+                const raw = localStorage.getItem(ADVENTURE_STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : { rows: [] };
+                const rows = Array.isArray(parsed?.rows) ? parsed.rows : [];
+                options = rows
+                    .map((row) => formatAdventureLabel(row))
+                    .filter(Boolean);
+            } catch (error) {
+                console.error('Enchantment Builder: failed to load adventures', error);
+            }
+
+            adventureSelectEl.innerHTML = '';
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = options.length
+                ? 'Select adventure...'
+                : 'No adventures found (fill Adventure Listing first)';
+            adventureSelectEl.appendChild(defaultOption);
+
+            options.forEach((label) => {
+                const option = document.createElement('option');
+                option.value = label;
+                option.textContent = label;
+                adventureSelectEl.appendChild(option);
+            });
+        }
+
+        function renderEnchantmentOptionsFor(selectEl, placeholder) {
+            selectEl.innerHTML = '';
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = placeholder;
+            selectEl.appendChild(defaultOption);
+
+            ENCHANTMENTS.forEach((enchantment) => {
+                const option = document.createElement('option');
+                option.value = enchantment.id;
+                option.textContent = `${enchantment.name} (L${enchantment.level})`;
+                selectEl.appendChild(option);
+            });
+        }
+
+        function renderEnchantmentOptions() {
+            renderEnchantmentOptionsFor(enchantmentSelectEl, 'Select enchantment...');
+            renderEnchantmentOptionsFor(enchantmentSelect2El, 'Select second enchantment...');
+            renderEnchantmentOptionsFor(enchantmentSelect3El, 'Select third enchantment...');
+        }
+
+        function renderDetailsForSelect(selectEl, detailsEl, defaultMessage) {
+            const selected = getEnchantmentById(selectEl.value);
+            if (!selected) {
+                detailsEl.textContent = defaultMessage;
+                return;
+            }
+
+            detailsEl.innerHTML = [
+                `<strong>${selected.name}</strong>`,
+                `Level: ${selected.level}`,
+                `Target Type: ${selected.targetType}`,
+                `Description: ${selected.description}`
+            ].join('<br>');
+        }
+
+        function renderEnchantmentDetails() {
+            renderDetailsForSelect(
+                enchantmentSelectEl,
+                enchantmentDetailsEl,
+                'Select an enchantment to preview its details.'
+            );
+
+            renderDetailsForSelect(
+                enchantmentSelect2El,
+                enchantmentDetails2El,
+                'Select a second enchantment to preview its details.'
+            );
+
+            renderDetailsForSelect(
+                enchantmentSelect3El,
+                enchantmentDetails3El,
+                'Select a third enchantment to preview its details.'
+            );
+        }
+
+        function updateAdditionalEnchantmentVisibility() {
+            const showSecond = Boolean(addSecondEnchantmentToggleEl.checked);
+            const showThird = showSecond && Boolean(addThirdEnchantmentToggleEl.checked);
+
+            enchantmentSelect2El.classList.toggle('hidden', !showSecond);
+            customNotesInput2El.classList.toggle('hidden', !showSecond);
+            enchantmentDetails2WrapEl.classList.toggle('hidden', !showSecond);
+
+            enchantmentSelect3El.classList.toggle('hidden', !showThird);
+            customNotesInput3El.classList.toggle('hidden', !showThird);
+            enchantmentDetails3WrapEl.classList.toggle('hidden', !showThird);
+
+            if (!showSecond) {
+                addThirdEnchantmentToggleEl.checked = false;
+                enchantmentSelect2El.value = '';
+                enchantmentSelect3El.value = '';
+                customNotesInput2El.value = '';
+                customNotesInput3El.value = '';
+            } else if (!showThird) {
+                enchantmentSelect3El.value = '';
+                customNotesInput3El.value = '';
+            }
+
+            renderEnchantmentDetails();
+        }
+
+        function getSelectedEnchantmentsForEntry() {
+            const primary = getEnchantmentById(enchantmentSelectEl.value);
+            const second = addSecondEnchantmentToggleEl.checked
+                ? getEnchantmentById(enchantmentSelect2El.value)
+                : null;
+            const third = addSecondEnchantmentToggleEl.checked && addThirdEnchantmentToggleEl.checked
+                ? getEnchantmentById(enchantmentSelect3El.value)
+                : null;
+
+            return [primary, second, third].filter(Boolean);
+        }
+
+        function clearForm() {
+            enchantmentSelectEl.value = '';
+            addSecondEnchantmentToggleEl.checked = false;
+            addThirdEnchantmentToggleEl.checked = false;
+            enchantmentSelect2El.value = '';
+            enchantmentSelect3El.value = '';
+            customNotesInput2El.value = '';
+            customNotesInput3El.value = '';
+            adventureSelectEl.value = '';
+            itemNameInputEl.value = '';
+            customNotesInputEl.value = '';
+            expiryDateInputEl.value = getDefaultExpiryDate();
+            identifiedInputEl.checked = false;
+            updateAdditionalEnchantmentVisibility();
+            renderEnchantmentDetails();
+        }
+
+        function buildRowEnchantmentsSummary(row) {
+            const allEnchantments = [
+                {
+                    enchantmentName: row.enchantmentName,
+                    level: row.level,
+                    targetType: row.targetType,
+                    description: row.description
+                },
+                ...(Array.isArray(row.additionalEnchantments) ? row.additionalEnchantments : [])
+            ].filter((entry) => entry.enchantmentName);
+
+            return {
+                names: allEnchantments.map((entry) => entry.enchantmentName).join(' + ') || '-',
+                levels: allEnchantments.map((entry) => entry.level ?? '-').join(' / ') || '-',
+                totalLevels: allEnchantments.reduce((sum, entry) => {
+                    const level = Number(entry.level);
+                    return Number.isFinite(level) ? sum + level : sum;
+                }, 0),
+                targetTypes: allEnchantments.map((entry) => entry.targetType || '-').join(' / ') || '-',
+                descriptions: allEnchantments.map((entry) => entry.description || '-').join(' | ') || '-'
+            };
+        }
+
+        function renderRows() {
+            entriesBodyEl.innerHTML = '';
+
+            if (!builderRows.length) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.colSpan = 11;
+                td.textContent = 'No enchantment entries added yet.';
+                tr.appendChild(td);
+                entriesBodyEl.appendChild(tr);
+                return;
+            }
+
+            builderRows.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                const summary = buildRowEnchantmentsSummary(row);
+                [
+                    row.itemName || '-',
+                    row.identified ? 'Yes' : 'No',
+                    summary.names,
+                    summary.levels,
+                    String(summary.totalLevels || 0),
+                    summary.targetTypes,
+                    row.adventure || '-',
+                    summary.descriptions,
+                    row.notes || '-',
+                    row.expiry || '-'
+                ].forEach((value) => {
+                    const td = document.createElement('td');
+                    td.textContent = String(value);
+                    tr.appendChild(td);
+                });
+
+                const actionTd = document.createElement('td');
+                actionTd.className = 'action-cell';
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'mini-btn delete';
+                removeBtn.textContent = 'Remove';
+                removeBtn.addEventListener('click', () => {
+                    builderRows.splice(index, 1);
+                    saveBuilderRows();
+                    renderRows();
+                    showStatus('Entry removed.');
+                });
+                actionTd.appendChild(removeBtn);
+                tr.appendChild(actionTd);
+                entriesBodyEl.appendChild(tr);
+            });
+        }
+
+        function readItemTagsPayload() {
+            try {
+                const raw = localStorage.getItem(ITEM_TAGS_STORAGE_KEY);
+                if (!raw) {
+                    return { title: '', items: [] };
+                }
+
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) {
+                    return { title: '', items: parsed };
+                }
+
+                return {
+                    title: typeof parsed?.title === 'string' ? parsed.title : '',
+                    items: Array.isArray(parsed?.items) ? parsed.items : []
+                };
+            } catch (error) {
+                console.error('Enchantment Builder: failed to read item tags storage', error);
+                return { title: '', items: [] };
+            }
+        }
+
+        function normalizeItemTagEntry(entry) {
+            return {
+                name: String(entry?.name || '').trim(),
+                code: String(entry?.code || '').trim(),
+                description: String(entry?.description || '').trim(),
+                itemValue: String(entry?.itemValue || '').trim(),
+                encodedValue: String(entry?.encodedValue || '').trim(),
+                persistantProp: Boolean(entry?.persistantProp),
+                enchantment: String(entry?.enchantment || '').trim(),
+                expiry: String(entry?.expiry || '').trim() || getDefaultExpiryDate()
+            };
+        }
+
+        function buildEventAdventureCode(value) {
+            const source = String(value || '').trim();
+            const adventureMatch = source.match(/A\s*(\d+)/i);
+            const adventureCode = adventureMatch ? `A${adventureMatch[1]}` : '';
+            const eventNumber = String(window.EventVariables?.get?.()?.eventNumber || '').trim();
+
+            if (eventNumber && adventureCode) {
+                return `E${eventNumber}${adventureCode}`;
+            }
+
+            if (!eventNumber && /^E\d+A\d+$/i.test(source)) {
+                return source.toUpperCase();
+            }
+
+            return adventureCode || 'ENCHANT';
+        }
+
+        function convertBuilderRowToItemTag(row) {
+            const adventureCode = buildEventAdventureCode(row.adventure);
+            const isIdentified = Boolean(row.identified);
+
+            if (!isIdentified) {
+                return normalizeItemTagEntry({
+                    name: row.itemName,
+                    code: adventureCode,
+                    description: 'Identify before use',
+                    itemValue: '',
+                    encodedValue: '',
+                    persistantProp: false,
+                    enchantment: '',
+                    expiry: row.expiry
+                });
+            }
+
+            const notes = String(row.notes || '').trim();
+            const additional = Array.isArray(row.additionalEnchantments) ? row.additionalEnchantments : [];
+            const secondNotes = String(additional[0]?.notes || '').trim();
+            const thirdNotes = String(additional[1]?.notes || '').trim();
+            const descriptionLines = [`Enchantment Notes: `];
+
+            if (secondNotes) {
+                descriptionLines.push(`${secondNotes}`);
+            }
+            if (thirdNotes) {
+                descriptionLines.push(`${thirdNotes}`);
+            }
+
+            const description = descriptionLines.join(' | ');
+            const enchantmentNames = [
+                String(row.enchantmentName || row.enchantment || '').trim(),
+                ...additional.map((entry) => String(entry?.enchantmentName || '').trim())
+            ].filter(Boolean);
+            const enchantmentList = enchantmentNames.join(' + ');
+            const enchantmentWithNotes = notes ? `${enchantmentList} (${notes})` : enchantmentList;
+
+            return normalizeItemTagEntry({
+                name: row.itemName,
+                code: adventureCode,
+                description,
+                itemValue: '',
+                encodedValue: '',
+                persistantProp: false,
+                enchantment: enchantmentWithNotes,
+                expiry: row.expiry
+            });
+        }
+
+        function addBuilderRowsToItemTags() {
+            if (!builderRows.length) {
+                showStatus('No builder items to add to Item Tags.');
+                return;
+            }
+
+            const payload = readItemTagsPayload();
+            const eventVars = window.EventVariables?.get?.() || {};
+            const eventTitle = window.EventVariables?.buildTitle?.(eventVars) || '';
+            const existingItems = Array.isArray(payload.items) ? payload.items : [];
+            const additions = builderRows.map(convertBuilderRowToItemTag);
+
+            payload.items = [...existingItems, ...additions];
+            if (!payload.title && eventTitle) {
+                payload.title = eventTitle;
+            }
+
+            localStorage.setItem(ITEM_TAGS_STORAGE_KEY, JSON.stringify(payload));
+            showStatus(`Saved ${builderRows.length} builder items and added them to Item Tags.`);
+        }
+
+        document.getElementById('addEntryBtn').addEventListener('click', () => {
+            const selectedEnchantments = getSelectedEnchantmentsForEntry();
+            const itemName = String(itemNameInputEl.value || '').trim();
+            const adventure = String(adventureSelectEl.value || '').trim();
+            const notes = String(customNotesInputEl.value || '').trim();
+            const notes2 = String(customNotesInput2El.value || '').trim();
+            const notes3 = String(customNotesInput3El.value || '').trim();
+            const expiry = String(expiryDateInputEl.value || '').trim() || getDefaultExpiryDate();
+            const identified = Boolean(identifiedInputEl.checked);
+
+            if (!selectedEnchantments.length) {
+                showStatus('Select an enchantment.');
+                return;
+            }
+
+            if (addSecondEnchantmentToggleEl.checked && !enchantmentSelect2El.value) {
+                showStatus('Select the second enchantment or untick the option.');
+                return;
+            }
+
+            if (addSecondEnchantmentToggleEl.checked && addThirdEnchantmentToggleEl.checked && !enchantmentSelect3El.value) {
+                showStatus('Select the third enchantment or untick the option.');
+                return;
+            }
+
+            if (!itemName) {
+                showStatus('Enter the item this enchantment applies to.');
+                return;
+            }
+
+            if (!adventure) {
+                showStatus('Select an associated adventure.');
+                return;
+            }
+
+            const [primary, ...additional] = selectedEnchantments;
+
+            builderRows.unshift(normalizeBuilderRow({
+                itemName,
+                identified,
+                enchantmentId: primary.id,
+                enchantmentName: primary.name,
+                level: primary.level,
+                targetType: primary.targetType,
+                description: primary.description,
+                additionalEnchantments: additional.map((entry, index) => ({
+                    enchantmentId: entry.id,
+                    enchantmentName: entry.name,
+                    level: entry.level,
+                    targetType: entry.targetType,
+                    description: entry.description,
+                    notes: index === 0 ? notes2 : notes3
+                })),
+                adventure,
+                notes,
+                expiry
+            }));
+
+            saveBuilderRows();
+            renderRows();
+            clearForm();
+            showStatus('Enchanted item added to builder list.');
+        });
+
+        document.getElementById('clearFormBtn').addEventListener('click', () => {
+            clearForm();
+            showStatus('Form cleared.');
+        });
+
+        document.getElementById('reloadAdventuresBtn').addEventListener('click', () => {
+            loadAdventureOptions();
+            showStatus('Adventure options reloaded from Adventure Listing.');
+        });
+
+        document.getElementById('saveBuilderBtn').addEventListener('click', () => {
+            saveBuilderRows();
+            showStatus(`Saved ${builderRows.length} builder items.`);
+        });
+
+        document.getElementById('pushToItemTagsBtn').addEventListener('click', () => {
+            saveBuilderRows();
+            addBuilderRowsToItemTags();
+        });
+
+        document.getElementById('clearBuilderBtn').addEventListener('click', () => {
+            builderRows = [];
+            saveBuilderRows();
+            renderRows();
+            showStatus('Builder list cleared.');
+        });
+
+        enchantmentSelectEl.addEventListener('change', renderEnchantmentDetails);
+        enchantmentSelect2El.addEventListener('change', renderEnchantmentDetails);
+        enchantmentSelect3El.addEventListener('change', renderEnchantmentDetails);
+        addSecondEnchantmentToggleEl.addEventListener('change', updateAdditionalEnchantmentVisibility);
+        addThirdEnchantmentToggleEl.addEventListener('change', updateAdditionalEnchantmentVisibility);
+
+        loadBuilderRows();
+        renderEnchantmentOptions();
+        loadAdventureOptions();
+        updateAdditionalEnchantmentVisibility();
+        renderEnchantmentDetails();
+        expiryDateInputEl.value = getDefaultExpiryDate();
+        renderRows();
+        showStatus('Ready. Build enchanted items and push to Item Tags when done.');
+    </script>
+</body>
+</html>

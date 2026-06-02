@@ -132,12 +132,12 @@
     }
 
     function findLinkByPath(path) {
-        const targetKey = normalizeStateKey(path);
+        const targetKey = normalizeStateKey(path).toLowerCase();
         return links.find(a => {
             const href = String(a.getAttribute('href') || '').trim();
             const p = resolvePath(a.getAttribute('href'));
-            return normalizeStateKey(p) === targetKey
-                || normalizeStateKey(href) === targetKey;
+            return normalizeStateKey(p).toLowerCase() === targetKey
+                || normalizeStateKey(href).toLowerCase() === targetKey;
         });
     }
 
@@ -217,7 +217,11 @@
             return; // invalid URL
         }
 
-        if (target.origin === location.origin && target.pathname.toLowerCase().endsWith('.html')) {
+        const isHtmlPage = target.pathname.toLowerCase().endsWith('.html');
+        const isSameOrigin = target.origin === location.origin;
+        const isLocalFileNavigation = location.protocol === 'file:' && target.protocol === 'file:';
+
+        if (isHtmlPage && (isSameOrigin || isLocalFileNavigation)) {
             e.preventDefault();
             setActive(a);
             closeAllDropdowns();

@@ -44,7 +44,7 @@
                          <h3 class="text-lg font-bold font-lora mb-4 text-white">Add Item Manually</h3>
                          <form id="manualItemForm" class="space-y-4">
                             <input type="text" id="itemName" placeholder="Item Name*" required class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <input type="text" id="itemCode" placeholder="Event Code*" required class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                     <select id="itemAdventure" required class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"></select>
                             <textarea id="itemDesc" placeholder="Description*" required rows="3" class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
                             <input type="number" id="itemValue" min="0" max="9999" step="1" placeholder="Item Value (0-9999)" class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             <input type="text" id="itemEncodedValue" placeholder="EncodedValue" readonly class="w-full bg-slate-800 border border-slate-600 rounded-lg py-2 px-3 text-sky-300 placeholder-gray-500 focus:outline-none">
@@ -98,7 +98,7 @@
             <form id="editItemForm" class="space-y-3">
                 <input type="hidden" id="editItemId">
                 <input type="text" id="editItemName" placeholder="Item Name*" required class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <input type="text" id="editItemCode" placeholder="Event Code*" required class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <select id="editItemAdventure" required class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"></select>
                 <textarea id="editItemDesc" placeholder="Description*" required rows="3" class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
                 <input type="number" id="editItemValue" min="0" max="9999" step="1" placeholder="Item Value (0-9999)" class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 <input type="text" id="editItemEncodedValue" placeholder="EncodedValue" readonly class="w-full bg-slate-800 border border-slate-600 rounded-lg py-2 px-3 text-sky-300 placeholder-gray-500 focus:outline-none">
@@ -125,8 +125,10 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const itemsStorageKey = 'itemTags.items.v2';
+        const adventureStorageKey = 'adventureLevelling.v1';
         const defaultItemsJsonPath = 'item-tags-items.json';
         let adventureItems = [];
+        let adventureOptions = [];
         let boundJsonFileHandle = null;
         const manualForm = document.getElementById('manualItemForm');
         const itemList = document.getElementById('itemList');
@@ -139,6 +141,7 @@
         const saveJsonBtn = document.getElementById('saveJsonBtn');
         const bindJsonBtn = document.getElementById('bindJsonBtn');
         const adventureTitleInput = document.getElementById('adventureTitle');
+        const itemAdventureSelect = document.getElementById('itemAdventure');
         const itemValueInput = document.getElementById('itemValue');
         const itemEncodedValueInput = document.getElementById('itemEncodedValue');
 
@@ -151,6 +154,7 @@
         const editModal = document.getElementById('editModal');
         const editForm = document.getElementById('editItemForm');
         const cancelEditBtn = document.getElementById('cancelEditBtn');
+        const editItemAdventureSelect = document.getElementById('editItemAdventure');
         const editItemValueInput = document.getElementById('editItemValue');
         const editItemEncodedValueInput = document.getElementById('editItemEncodedValue');
 
@@ -171,6 +175,87 @@
             if (typeof value === 'boolean') return value;
             const normalized = String(value || '').trim().toLowerCase();
             return normalized === 'true' || normalized === 'yes' || normalized === '1';
+        };
+
+        const adventureCodeFromValue = (value) => {
+            const source = String(value || '').trim();
+            const adventureMatch = source.match(/A\s*(\d+)/i);
+            const adventureCode = adventureMatch ? `A${adventureMatch[1]}` : '';
+            const eventNumber = String(window.EventVariables?.get?.()?.eventNumber || '').trim();
+
+            if (eventNumber && adventureCode) {
+                return `E${eventNumber}${adventureCode}`;
+            }
+
+            if (!eventNumber && /^E\d+A\d+$/i.test(source)) {
+                return source.toUpperCase();
+            }
+
+            return adventureCode || source;
+        };
+
+        const loadAdventureOptions = () => {
+            try {
+                const raw = localStorage.getItem(adventureStorageKey);
+                const parsed = raw ? JSON.parse(raw) : { rows: [] };
+                const rows = Array.isArray(parsed?.rows) ? parsed.rows : [];
+                adventureOptions = rows
+                    .map((row) => {
+                        const no = String(row?.no || '').trim();
+                        const title = String(row?.title || '').trim();
+                        if (no && title) return { code: `A${no}`, label: `A${no} - ${title}` };
+                        if (no) return { code: `A${no}`, label: `A${no}` };
+                        if (title) return { code: title, label: title };
+                        return null;
+                    })
+                    .filter(Boolean);
+            } catch (error) {
+                console.error('Failed to load adventure options:', error);
+                adventureOptions = [];
+            }
+        };
+
+        const renderAdventureSelectOptions = (selectEl, selectedValue = '') => {
+            if (!selectEl) return;
+
+            const selected = String(selectedValue || '').trim();
+            selectEl.innerHTML = '';
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = adventureOptions.length
+                ? 'Select Adventure*'
+                : 'No adventures found (fill Adventure Listing first)';
+            selectEl.appendChild(defaultOption);
+
+            const seen = new Set();
+            adventureOptions.forEach((option) => {
+                if (seen.has(option.label)) return;
+                seen.add(option.label);
+                const optionEl = document.createElement('option');
+                optionEl.value = option.label;
+                optionEl.textContent = option.label;
+                selectEl.appendChild(optionEl);
+            });
+
+            if (selected && !seen.has(selected)) {
+                const legacy = document.createElement('option');
+                legacy.value = selected;
+                legacy.textContent = `${selected} (existing)`;
+                selectEl.appendChild(legacy);
+            }
+
+            selectEl.value = selected;
+        };
+
+        const findAdventureLabelByCode = (code) => {
+            const normalizedCode = String(code || '').trim().toUpperCase();
+            if (!normalizedCode) return '';
+
+            const adventureCodeMatch = normalizedCode.match(/A\d+/i);
+            const lookupCode = adventureCodeMatch ? adventureCodeMatch[0].toUpperCase() : normalizedCode;
+            const match = adventureOptions.find((option) => String(option.code || '').toUpperCase() === lookupCode);
+            return match ? match.label : lookupCode;
         };
 
         const valueCodeMap = ['Z', 'O', 'T', 'H', 'F', 'I', 'S', 'E', 'G', 'N'];
@@ -229,16 +314,23 @@
             };
         };
 
-        const sanitizeItem = (item) => ({
+        const sanitizeItem = (item) => {
+            const adventure = String(item?.adventure || findAdventureLabelByCode(item?.code) || '').trim();
+            const fallbackCode = String(item?.code || '').trim();
+            const computedCode = adventureCodeFromValue(adventure || fallbackCode);
+
+            return {
             name: String(item?.name || '').trim(),
-            code: String(item?.code || '').trim(),
+            code: computedCode,
+            adventure,
             description: String(item?.description || '').trim(),
             itemValue: normalizeItemValue(item?.itemValue) || '',
             encodedValue: computeEncodedValue(item),
             persistantProp: toPersistantProp(item?.persistantProp),
             enchantment: String(item?.enchantment || ''),
             expiry: String(item?.expiry || '')
-        });
+        };
+        };
 
         const sanitizeItems = (items) => items
             .map(sanitizeItem)
@@ -338,7 +430,7 @@
                 <thead>
                     <tr class="border-b border-slate-700">
                         <th class="py-2 px-3 font-bold uppercase text-sm text-gray-400">Name</th>
-                        <th class="py-2 px-3 font-bold uppercase text-sm text-gray-400">Code</th>
+                        <th class="py-2 px-3 font-bold uppercase text-sm text-gray-400">Adventure</th>
                         <th class="py-2 px-3 font-bold uppercase text-sm text-gray-400">Persistant Prop</th>
                         <th class="py-2 px-3 font-bold uppercase text-sm text-gray-400 text-right">Actions</th>
                     </tr>
@@ -350,7 +442,7 @@
                 tr.className = 'border-b border-slate-700 hover:bg-slate-700 transition-colors duration-150';
                 tr.innerHTML = `
                     <td class="py-3 px-3">${item.name}</td>
-                    <td class="py-3 px-3 text-gray-400">${item.code}</td>
+                    <td class="py-3 px-3 text-gray-400">${item.adventure || item.code}</td>
                     <td class="py-3 px-3 text-gray-300">${item.persistantProp ? 'True' : 'False'}</td>
                     <td class="py-3 px-3 text-right">
                         <button class="edit-btn text-indigo-400 hover:text-indigo-300 mr-2 p-1" data-index="${index}" title="Edit">&#9998;</button>
@@ -364,8 +456,10 @@
         };
         
         const addItem = (item) => {
-            if (!item.name || !item.code || !item.description) {
-                showNotification('Name, Event Code, and Description are required.');
+            const resolvedAdventure = String(item.adventure || findAdventureLabelByCode(item.code) || '').trim();
+
+            if (!item.name || !resolvedAdventure || !item.description) {
+                showNotification('Name, Adventure, and Description are required.');
                 return false;
             }
 
@@ -377,7 +471,8 @@
 
             adventureItems.push({
                 name: item.name,
-                code: item.code,
+                code: adventureCodeFromValue(resolvedAdventure),
+                adventure: resolvedAdventure,
                 description: item.description,
                 itemValue: normalizedValue || '',
                 encodedValue: computeEncodedValue({ itemValue: normalizedValue || '', encodedValue: item.encodedValue || '' }),
@@ -394,7 +489,7 @@
             e.preventDefault();
             const newItem = {
                 name: document.getElementById('itemName').value,
-                code: document.getElementById('itemCode').value,
+                adventure: document.getElementById('itemAdventure').value,
                 description: document.getElementById('itemDesc').value,
                 itemValue: document.getElementById('itemValue').value,
                 encodedValue: document.getElementById('itemEncodedValue').value,
@@ -406,6 +501,7 @@
             if (wasAdded) {
                 manualForm.reset();
                 itemEncodedValueInput.value = '';
+                renderAdventureSelectOptions(itemAdventureSelect, '');
             }
         });
 
@@ -453,6 +549,7 @@
                     const item = {
                         name: values[nameIndex],
                         code: values[codeIndex],
+                        adventure: findAdventureLabelByCode(values[codeIndex]),
                         description: values[descIndex],
                         itemValue: valueIndex > -1 ? values[valueIndex] : '',
                         encodedValue: encodedValueIndex > -1 ? values[encodedValueIndex] : '',
@@ -483,7 +580,7 @@
                 const item = adventureItems[index];
                 document.getElementById('editItemId').value = index;
                 document.getElementById('editItemName').value = item.name;
-                document.getElementById('editItemCode').value = item.code;
+                renderAdventureSelectOptions(editItemAdventureSelect, item.adventure || findAdventureLabelByCode(item.code));
                 document.getElementById('editItemDesc').value = item.description;
                 document.getElementById('editItemValue').value = item.itemValue || '';
                 document.getElementById('editItemEncodedValue').value = item.encodedValue || computeEncodedValue(item);
@@ -515,7 +612,7 @@
 
             const updatedItem = {
                 name: document.getElementById('editItemName').value,
-                code: document.getElementById('editItemCode').value,
+                adventure: document.getElementById('editItemAdventure').value,
                 description: document.getElementById('editItemDesc').value,
                 itemValue: document.getElementById('editItemValue').value,
                 encodedValue: document.getElementById('editItemEncodedValue').value,
@@ -524,8 +621,8 @@
                 expiry: document.getElementById('editItemExpiry').value,
             };
             
-            if (!updatedItem.name || !updatedItem.code || !updatedItem.description) {
-                showNotification('Name, Event Code, and Description are required.');
+            if (!updatedItem.name || !updatedItem.adventure || !updatedItem.description) {
+                showNotification('Name, Adventure, and Description are required.');
                 return;
             }
 
@@ -537,6 +634,7 @@
 
             updatedItem.itemValue = normalizedValue || '';
             updatedItem.encodedValue = computeEncodedValue(updatedItem);
+            updatedItem.code = adventureCodeFromValue(updatedItem.adventure);
 
             adventureItems[index] = updatedItem;
             renderItems();
@@ -862,6 +960,9 @@
             document.body.removeChild(a);
         });
 
+        loadAdventureOptions();
+        renderAdventureSelectOptions(itemAdventureSelect, '');
+        renderAdventureSelectOptions(editItemAdventureSelect, '');
         const loadedFromCache = loadItemsFromLocalCache();
         if (!loadedFromCache) {
             loadDefaultItemsJson().finally(() => renderItems());

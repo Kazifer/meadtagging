@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formal Register</title>
+    <link rel="stylesheet" href="theme.css">
+    <style>
+        .container {
+            max-width: 1100px;
+        }
+
+        .intro {
+            color: var(--app-muted);
+            margin-bottom: 14px;
+        }
+
+        .card {
+            border: 1px solid var(--app-border);
+            border-radius: 10px;
+            background: #111827;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+
+        .field-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field label {
+            color: var(--app-muted);
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .field input,
+        .field select,
+        .field textarea {
+            border: 1px solid var(--app-border);
+            border-radius: 8px;
+            background: #0b1220;
+            color: var(--app-text);
+            padding: 8px 10px;
+            font-size: 0.92rem;
+        }
+
+        .field textarea {
+            min-height: 92px;
+            resize: vertical;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #f8fafc;
+            background: #2563eb;
+        }
+
+        .btn-secondary {
+            background: #334155;
+        }
+
+        .status {
+            color: var(--app-muted);
+            min-height: 1.2em;
+        }
+
+        .table-wrap {
+            overflow: auto;
+            border: 1px solid var(--app-border);
+            border-radius: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 760px;
+            background: #111827;
+        }
+
+        th,
+        td {
+            border-bottom: 1px solid var(--app-border);
+            padding: 10px;
+            text-align: left;
+            vertical-align: top;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: #0f172a;
+            color: #d1d5db;
+            font-weight: 700;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        @media (max-width: 860px) {
+            .field-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>Cantrip Register</h1>
+        <p class="intro">Maintain a registry of Cantrips for reference.</p>
+
+        <section class="card">
+            <div class="field-grid">
+                <div class="field">
+                    <label for="formalName">Formal Name</label>
+                    <input id="formalName" type="text" placeholder="Example: Ward of the Dawn Gate">
+                </div>
+                <div class="field">
+                    <label for="formalCircle">Circle / Level</label>
+                    <input id="formalCircle" type="text" placeholder="Example: 4th Circle">
+                </div>
+                <div class="field">
+                    <label for="formalCaster">Caster</label>
+                    <input id="formalCaster" type="text" placeholder="Character or NPC">
+                </div>
+                <div class="field">
+                    <label for="formalStatus">Status</label>
+                    <select id="formalStatus">
+                        <option value="">Select status...</option>
+                        <option>Planned</option>
+                        <option>Completed</option>
+                        <option>Failed</option>
+                        <option>Revoked</option>
+                    </select>
+                </div>
+                <div class="field" style="grid-column: 1 / -1;">
+                    <label for="formalNotes">Notes</label>
+                    <textarea id="formalNotes" placeholder="Components used, witnesses, and outcomes"></textarea>
+                </div>
+            </div>
+            <div class="actions">
+                <button id="addFormalBtn" class="btn" type="button">Add Entry</button>
+                <button id="clearFormalBtn" class="btn btn-secondary" type="button">Clear</button>
+            </div>
+            <p id="statusMessage" class="status"></p>
+        </section>
+
+        <section class="table-wrap" aria-label="Formal register entries">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Formal</th>
+                        <th>Circle</th>
+                        <th>Caster</th>
+                        <th>Status</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody id="formalBody"></tbody>
+            </table>
+        </section>
+    </main>
+
+    <script>
+        const STORAGE_KEY = 'formalRegister.v1';
+        const formalNameEl = document.getElementById('formalName');
+        const formalCircleEl = document.getElementById('formalCircle');
+        const formalCasterEl = document.getElementById('formalCaster');
+        const formalStatusEl = document.getElementById('formalStatus');
+        const formalNotesEl = document.getElementById('formalNotes');
+        const statusMessageEl = document.getElementById('statusMessage');
+        const formalBodyEl = document.getElementById('formalBody');
+
+        let rows = [];
+
+        function showStatus(message) {
+            statusMessageEl.textContent = message;
+        }
+
+        function normalizeRow(row) {
+            return {
+                name: String(row?.name || '').trim(),
+                circle: String(row?.circle || '').trim(),
+                caster: String(row?.caster || '').trim(),
+                status: String(row?.status || '').trim(),
+                notes: String(row?.notes || '').trim()
+            };
+        }
+
+        function loadRows() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : [];
+                rows = Array.isArray(parsed) ? parsed.map(normalizeRow) : [];
+            } catch (error) {
+                console.error('Formal Register: failed to load', error);
+                rows = [];
+            }
+        }
+
+        function saveRows() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+        }
+
+        function renderRows() {
+            formalBodyEl.innerHTML = '';
+            if (!rows.length) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.colSpan = 5;
+                td.textContent = 'No register entries yet.';
+                tr.appendChild(td);
+                formalBodyEl.appendChild(tr);
+                return;
+            }
+
+            rows.forEach((row) => {
+                const tr = document.createElement('tr');
+                [row.name, row.circle, row.caster, row.status, row.notes].forEach((value) => {
+                    const td = document.createElement('td');
+                    td.textContent = value || '-';
+                    tr.appendChild(td);
+                });
+                formalBodyEl.appendChild(tr);
+            });
+        }
+
+        function clearForm() {
+            formalNameEl.value = '';
+            formalCircleEl.value = '';
+            formalCasterEl.value = '';
+            formalStatusEl.value = '';
+            formalNotesEl.value = '';
+        }
+
+        document.getElementById('addFormalBtn').addEventListener('click', () => {
+            const row = normalizeRow({
+                name: formalNameEl.value,
+                circle: formalCircleEl.value,
+                caster: formalCasterEl.value,
+                status: formalStatusEl.value,
+                notes: formalNotesEl.value
+            });
+
+            if (!row.name) {
+                showStatus('Formal name is required.');
+                return;
+            }
+
+            rows.unshift(row);
+            saveRows();
+            renderRows();
+            clearForm();
+            showStatus('Formal register entry added.');
+        });
+
+        document.getElementById('clearFormalBtn').addEventListener('click', clearForm);
+
+        loadRows();
+        renderRows();
+        showStatus('Ready.');
+    </script>
+</body>
+</html>
