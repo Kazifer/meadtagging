@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random NPCs</title>
+    <link rel="stylesheet" href="theme.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        .card {
+            border: 1px solid var(--app-border);
+            border-radius: 10px;
+            background: #111827;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        label {
+            color: var(--app-muted);
+            font-size: 0.9rem;
+        }
+
+        input,
+        select {
+            background: #0b1220;
+            border: 1px solid var(--app-border);
+            border-radius: 8px;
+            color: var(--app-text);
+            padding: 8px;
+            font-size: 0.92rem;
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 8px;
+            padding: 9px 12px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #f8fafc;
+            background: #2563eb;
+        }
+
+        .btn-export {
+            background: #166534;
+        }
+
+        .btn-danger {
+            background: #991b1b;
+        }
+
+        .btn-save {
+            background: #0f766e;
+        }
+
+        .status {
+            min-height: 1.2em;
+            color: #93c5fd;
+            font-size: 0.9rem;
+            margin-top: 8px;
+        }
+
+        .list-layout {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 12px;
+        }
+
+        .npc-table-wrap {
+            overflow: auto;
+            border: 1px solid #334155;
+            border-radius: 8px;
+        }
+
+        .npc-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .npc-table th,
+        .npc-table td {
+            border-bottom: 1px solid #334155;
+            padding: 8px;
+            text-align: left;
+            font-size: 0.88rem;
+        }
+
+        .npc-table th {
+            color: #93c5fd;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .npc-row {
+            cursor: pointer;
+        }
+
+        .npc-row:hover {
+            background: #111827;
+        }
+
+        .npc-row.selected {
+            background: #1e3a8a;
+        }
+
+        .editor-card {
+            border: 1px solid #334155;
+            border-radius: 8px;
+            background: #0b1220;
+            padding: 10px;
+        }
+
+        .editor-title {
+            margin: 0 0 8px;
+            color: #bfdbfe;
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .editor-fields {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+
+        .editor-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .editor-field label {
+            font-size: 0.78rem;
+            color: #93c5fd;
+        }
+
+        .editor-input {
+            width: 100%;
+            box-sizing: border-box;
+            background: #111827;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            color: #e2e8f0;
+            padding: 7px 8px;
+            font-size: 0.9rem;
+        }
+
+        .editor-textarea {
+            resize: vertical;
+            min-height: 96px;
+        }
+
+        .editor-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .hint {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            margin: 0;
+        }
+
+        @media (max-width: 900px) {
+            .list-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>Random NPCs</h1>
+        <p>Manage, import, edit, and export NPC entries for encounters and story hooks.</p>
+
+        <section class="card">
+            <div class="controls">
+                <button id="importXlsxBtn" class="btn" type="button">Import XLS</button>
+                <button id="saveAllBtn" class="btn btn-save" type="button">Save All</button>
+                <button id="exportPdfBtn" class="btn btn-export" type="button">Export PDF Tags</button>
+                <button id="exportXlsxBtn" class="btn btn-export" type="button">Export XLS Tags</button>
+                <button id="clearBtn" class="btn btn-danger" type="button">Clear NPCs</button>
+                <input id="importFileInput" type="file" accept=".xlsx,.xls" hidden>
+            </div>
+            <div id="statusMessage" class="status"></div>
+        </section>
+
+        <section class="card">
+            <div class="list-layout">
+                <div class="npc-table-wrap">
+                    <table class="npc-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Name</th>
+                                <th>Role</th>
+                                <th>Description</th>
+                                <th>Motivation</th>
+                                <th>Template</th>
+                            </tr>
+                        </thead>
+                        <tbody id="npcListBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="editor-card">
+                    <h2 class="editor-title">Selected NPC Editor</h2>
+                    <p id="editorHint" class="hint">Select an NPC row to edit.</p>
+                    <div class="editor-fields">
+                        <div class="editor-field">
+                            <label for="editName">Name</label>
+                            <input id="editName" class="editor-input" type="text">
+                        </div>
+                        <div class="editor-field">
+                            <label for="editRole">Role</label>
+                            <input id="editRole" class="editor-input" type="text">
+                        </div>
+                        <div class="editor-field">
+                            <label for="editDescription">Description</label>
+                            <textarea id="editDescription" class="editor-input editor-textarea"></textarea>
+                        </div>
+                        <div class="editor-field">
+                            <label for="editMotivation">Motivation</label>
+                            <textarea id="editMotivation" class="editor-input editor-textarea"></textarea>
+                        </div>
+                        <div class="editor-field">
+                            <label for="editTemplate">Template</label>
+                            <select id="editTemplate" class="editor-input">
+                                <option value="">Select template build...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="editor-actions">
+                        <button id="saveSelectedBtn" class="btn" type="button">Save Selected NPC</button>
+                        <button id="deleteSelectedBtn" class="btn btn-danger" type="button">Delete Selected NPC</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const RANDOM_NPC_STORAGE_KEY = 'randomNpcList.v1';
+        const TEMPLATE_BUILD_LOG_STORAGE_KEY = 'templateBuilder.eventLog.v1';
+
+        const importXlsxBtn = document.getElementById('importXlsxBtn');
+        const saveAllBtn = document.getElementById('saveAllBtn');
+        const importFileInput = document.getElementById('importFileInput');
+        const exportPdfBtn = document.getElementById('exportPdfBtn');
+        const exportXlsxBtn = document.getElementById('exportXlsxBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const npcListBodyEl = document.getElementById('npcListBody');
+        const editorHintEl = document.getElementById('editorHint');
+        const editNameEl = document.getElementById('editName');
+        const editRoleEl = document.getElementById('editRole');
+        const editDescriptionEl = document.getElementById('editDescription');
+        const editMotivationEl = document.getElementById('editMotivation');
+        const editTemplateEl = document.getElementById('editTemplate');
+        const saveSelectedBtn = document.getElementById('saveSelectedBtn');
+        const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+        const statusMessageEl = document.getElementById('statusMessage');
+
+        let npcRows = [];
+        let selectedNpcIndex = -1;
+        let templateOptions = [];
+
+        function showStatus(message) {
+            statusMessageEl.textContent = message;
+        }
+
+        function getEventTitle() {
+            const eventApi = window.EventVariables;
+            if (!eventApi) return 'Event Unknown';
+            const vars = eventApi.get ? eventApi.get() : {};
+            const title = eventApi.buildTitle ? eventApi.buildTitle(vars) : '';
+            return String(title || '').trim() || 'Event Unknown';
+        }
+
+        function normalizeNpc(source) {
+            const row = source || {};
+            return {
+                name: String(row.name || '').trim(),
+                role: String(row.role || '').trim(),
+                description: String(row.description || row.trait || '').trim(),
+                motivation: String(row.motivation || '').trim(),
+                template: String(row.template || '').trim()
+            };
+        }
+
+        function loadTemplateOptions() {
+            try {
+                const raw = localStorage.getItem(TEMPLATE_BUILD_LOG_STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : [];
+                const rows = Array.isArray(parsed) ? parsed : [];
+
+                templateOptions = rows
+                    .map((row) => ({
+                        name: String(row?.name || '').trim(),
+                        eventTitle: String(row?.eventTitle || '').trim()
+                    }))
+                    .filter((row) => row.name)
+                    .sort((left, right) => left.name.localeCompare(right.name));
+            } catch (error) {
+                console.error('Random NPCs: failed to load template options', error);
+                templateOptions = [];
+            }
+        }
+
+        function renderTemplateOptions(selectedValue = '') {
+            const selected = String(selectedValue || '').trim();
+            editTemplateEl.innerHTML = '';
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Select template build...';
+            editTemplateEl.appendChild(defaultOption);
+
+            const seen = new Set();
+            templateOptions.forEach((option) => {
+                if (seen.has(option.name)) return;
+                seen.add(option.name);
+
+                const item = document.createElement('option');
+                item.value = option.name;
+                item.textContent = option.eventTitle ? `${option.name} (${option.eventTitle})` : option.name;
+                editTemplateEl.appendChild(item);
+            });
+
+            if (selected && !seen.has(selected)) {
+                const legacyOption = document.createElement('option');
+                legacyOption.value = selected;
+                legacyOption.textContent = `${selected} (existing)`;
+                editTemplateEl.appendChild(legacyOption);
+            }
+
+            editTemplateEl.value = selected && Array.from(editTemplateEl.options).some((option) => option.value === selected)
+                ? selected
+                : '';
+        }
+
+        function loadSavedNpcs() {
+            try {
+                const raw = localStorage.getItem(RANDOM_NPC_STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : [];
+                const rows = Array.isArray(parsed) ? parsed : [];
+                npcRows = rows.map((row) => normalizeNpc(row));
+            } catch (error) {
+                console.error('Random NPCs: failed to load saved NPCs', error);
+                npcRows = [];
+            }
+        }
+
+        function saveAllNpcs() {
+            try {
+                localStorage.setItem(RANDOM_NPC_STORAGE_KEY, JSON.stringify(npcRows));
+                showStatus(`Saved ${npcRows.length} NPCs.`);
+            } catch (error) {
+                console.error('Random NPCs: failed to save NPCs', error);
+                showStatus('Failed to save NPCs.');
+            }
+        }
+
+        function renderNpcList() {
+            npcListBodyEl.innerHTML = '';
+
+            if (!npcRows.length) {
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.colSpan = 6;
+                cell.className = 'hint';
+                cell.textContent = 'No NPCs yet. Import to begin.';
+                row.appendChild(cell);
+                npcListBodyEl.appendChild(row);
+                selectedNpcIndex = -1;
+                return;
+            }
+
+            npcRows.forEach((npc, index) => {
+                const row = document.createElement('tr');
+                row.className = 'npc-row' + (index === selectedNpcIndex ? ' selected' : '');
+                row.addEventListener('click', () => {
+                    setSelectedNpc(index);
+                });
+
+                const values = [
+                    String(index + 1),
+                    npc.name || '-',
+                    npc.role || '-',
+                    npc.description || '-',
+                    npc.motivation || '-',
+                    npc.template || '-'
+                ];
+
+                values.forEach((value) => {
+                    const cell = document.createElement('td');
+                    cell.textContent = value;
+                    row.appendChild(cell);
+                });
+
+                npcListBodyEl.appendChild(row);
+            });
+        }
+
+        function setSelectedNpc(index) {
+            selectedNpcIndex = index;
+
+            const hasSelection = index >= 0 && index < npcRows.length;
+            editNameEl.disabled = !hasSelection;
+            editRoleEl.disabled = !hasSelection;
+            editDescriptionEl.disabled = !hasSelection;
+            editMotivationEl.disabled = !hasSelection;
+            editTemplateEl.disabled = !hasSelection;
+            saveSelectedBtn.disabled = !hasSelection;
+            deleteSelectedBtn.disabled = !hasSelection;
+
+            if (!hasSelection) {
+                editorHintEl.textContent = 'Select an NPC row to edit.';
+                editNameEl.value = '';
+                editRoleEl.value = '';
+                editDescriptionEl.value = '';
+                editMotivationEl.value = '';
+                renderTemplateOptions('');
+            } else {
+                const npc = npcRows[index];
+                editorHintEl.textContent = `Editing NPC ${index + 1}`;
+                editNameEl.value = npc.name || '';
+                editRoleEl.value = npc.role || '';
+                editDescriptionEl.value = npc.description || '';
+                editMotivationEl.value = npc.motivation || '';
+                renderTemplateOptions(npc.template || '');
+            }
+
+            renderNpcList();
+        }
+
+        function saveSelectedNpc() {
+            if (selectedNpcIndex < 0 || selectedNpcIndex >= npcRows.length) {
+                showStatus('Select an NPC to save changes.');
+                return;
+            }
+
+            npcRows[selectedNpcIndex] = normalizeNpc({
+                name: editNameEl.value,
+                role: editRoleEl.value,
+                description: editDescriptionEl.value,
+                motivation: editMotivationEl.value,
+                template: editTemplateEl.value
+            });
+
+            renderNpcList();
+            showStatus('Selected NPC updated.');
+        }
+
+        function deleteSelectedNpc() {
+            if (selectedNpcIndex < 0 || selectedNpcIndex >= npcRows.length) {
+                showStatus('Select an NPC to delete.');
+                return;
+            }
+
+            npcRows.splice(selectedNpcIndex, 1);
+
+            if (!npcRows.length) {
+                setSelectedNpc(-1);
+            } else {
+                const nextIndex = Math.min(selectedNpcIndex, npcRows.length - 1);
+                setSelectedNpc(nextIndex);
+            }
+
+            showStatus('Selected NPC deleted.');
+        }
+
+        function parseStandardNpcRows(sheet) {
+            const jsonRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+            return jsonRows
+                .map((row) => {
+                    const keyMap = {};
+                    Object.keys(row).forEach((key) => {
+                        keyMap[String(key).trim().toLowerCase()] = row[key];
+                    });
+
+                    return normalizeNpc({
+                        name: keyMap.name,
+                        role: keyMap.role,
+                        description: keyMap.description || keyMap.trait,
+                        motivation: keyMap.motivation,
+                        template: keyMap.template
+                    });
+                })
+                .filter((row) => row.name || row.role || row.description || row.motivation || row.template);
+        }
+
+        function parseTagNpcRows(sheet) {
+            const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+            const output = [];
+            let current = null;
+
+            aoa.forEach((row) => {
+                const label = String(row[0] || '').trim();
+                const value = String(row[1] || '').trim();
+                const lowerLabel = label.toLowerCase();
+                const isFieldLabel = ['name', 'role', 'description', 'trait', 'motivation', 'template', 'notes'].includes(lowerLabel);
+
+                if (/^npc tag\s+/i.test(label)) {
+                    if (current && (current.name || current.role || current.description || current.motivation || current.template)) {
+                        output.push(normalizeNpc(current));
+                    }
+                    current = { name: '', role: '', description: '', motivation: '', template: '' };
+                    return;
+                }
+
+                // Newer tag format: first row is the NPC name (not "NPC Tag X").
+                if (!isFieldLabel && !/^event:/i.test(label) && !value) {
+                    if (current && (current.name || current.role || current.description || current.motivation || current.template)) {
+                        output.push(normalizeNpc(current));
+                    }
+                    current = { name: label, role: '', description: '', motivation: '', template: '' };
+                    return;
+                }
+
+                if (!current) return;
+
+                if (/^name$/i.test(label)) current.name = value;
+                else if (/^role$/i.test(label)) current.role = value;
+                else if (/^description$/i.test(label) || /^trait$/i.test(label)) current.description = value;
+                else if (/^motivation$/i.test(label)) current.motivation = value;
+                else if (/^template$/i.test(label)) current.template = value;
+            });
+
+            if (current && (current.name || current.role || current.description || current.motivation || current.template)) {
+                output.push(normalizeNpc(current));
+            }
+
+            return output;
+        }
+
+        function importNpcFile(file) {
+            if (!file) return;
+            if (typeof XLSX === 'undefined') {
+                showStatus('Import requires XLSX library.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    const data = reader.result;
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    if (!firstSheetName) {
+                        showStatus('Import failed: workbook has no sheets.');
+                        return;
+                    }
+
+                    const sheet = workbook.Sheets[firstSheetName];
+                    let importedRows = parseStandardNpcRows(sheet);
+                    if (!importedRows.length) {
+                        importedRows = parseTagNpcRows(sheet);
+                    }
+
+                    if (!importedRows.length) {
+                        showStatus('No NPC rows found in imported file.');
+                        return;
+                    }
+
+                    npcRows = importedRows;
+                    setSelectedNpc(0);
+                    showStatus(`Imported ${npcRows.length} NPCs from XLS.`);
+                } catch (error) {
+                    console.error('Random NPCs: import failed', error);
+                    showStatus('Import failed. Check file format and try again.');
+                }
+            };
+
+            reader.onerror = () => {
+                showStatus('Failed to read import file.');
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        function exportPdfTags() {
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                showStatus('PDF export library failed to load.');
+                return;
+            }
+
+            if (!npcRows.length) {
+                showStatus('No NPCs to export. Import or add NPCs first.');
+                return;
+            }
+
+            const doc = new window.jspdf.jsPDF({ unit: 'pt', format: 'a4' });
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 20;
+            const tagWidth = pageWidth - (margin * 2);
+            const tagHeight = 260;
+            const lineGap = 14;
+            const labelX = margin + 10;
+            const valueX = margin + 92;
+            const valueWidth = tagWidth - 102;
+
+            let y = margin;
+
+            function drawWrappedField(fieldLabel, fieldValue, startY) {
+                const text = String(fieldValue || '-').trim() || '-';
+                const wrapped = doc.splitTextToSize(text, valueWidth);
+                const shown = wrapped.slice(0, 4);
+
+                doc.text(fieldLabel, labelX, startY);
+                doc.text(shown, valueX, startY);
+
+                return startY + (Math.max(1, shown.length) * lineGap) + 2;
+            }
+
+            npcRows.forEach((npc, index) => {
+                if (y + tagHeight > pageHeight - margin) {
+                    doc.addPage();
+                    y = margin;
+                }
+
+                doc.setDrawColor(51, 65, 85);
+                doc.roundedRect(margin, y, tagWidth, tagHeight, 8, 8);
+
+                doc.setFontSize(13);
+                doc.setTextColor(15, 23, 42);
+                doc.text(npc.name || `NPC ${index + 1}`, margin + 10, y + 18);
+
+                doc.setFontSize(9);
+                doc.text(`Event: ${getEventTitle()}`, margin + 10, y + 34);
+
+                let textY = y + 52;
+                textY = drawWrappedField('Role:', npc.role, textY);
+                textY = drawWrappedField('Description:', npc.description, textY);
+                textY = drawWrappedField('Motivation:', npc.motivation, textY);
+                textY = drawWrappedField('Template:', npc.template, textY);
+
+                const notesTop = Math.max(textY + 6, y + 164);
+                const notesHeight = Math.max(64, (y + tagHeight - 10) - notesTop);
+                doc.text('Notes:', margin + 10, notesTop - 6);
+                doc.roundedRect(margin + 10, notesTop, tagWidth - 20, notesHeight, 6, 6);
+
+                y += tagHeight + 10;
+            });
+
+            doc.save('Random_NPC_Tags.pdf');
+            showStatus('Random NPC tags exported to PDF.');
+        }
+
+        function exportXlsxTags() {
+            if (typeof XLSX === 'undefined') {
+                showStatus('XLS export library failed to load.');
+                return;
+            }
+
+            if (!npcRows.length) {
+                showStatus('No NPCs to export. Import or add NPCs first.');
+                return;
+            }
+
+            const eventTitle = getEventTitle();
+            const aoa = [];
+            const merges = [];
+            const rowsDef = [];
+
+            function wrapForSheet(text, maxChars) {
+                const source = String(text || '-').trim();
+                if (!source) return '-';
+                const words = source.split(/\s+/).filter(Boolean);
+                if (!words.length) return '-';
+
+                const lines = [];
+                let current = words[0];
+
+                for (let i = 1; i < words.length; i++) {
+                    const next = words[i];
+                    if ((current + ' ' + next).length <= maxChars) {
+                        current += ' ' + next;
+                    } else {
+                        lines.push(current);
+                        current = next;
+                    }
+                }
+                lines.push(current);
+                return lines.join('\n');
+            }
+
+            npcRows.forEach((npc, idx) => {
+                const start = aoa.length;
+                const wrappedDescription = wrapForSheet(npc.description || '-', 54);
+                const wrappedMotivation = wrapForSheet(npc.motivation || '-', 54);
+                const descLines = Math.max(1, wrappedDescription.split('\n').length);
+                const motivationLines = Math.max(1, wrappedMotivation.split('\n').length);
+
+                aoa.push([npc.name || `NPC ${idx + 1}`, '', '', '']);
+                merges.push({ s: { r: start, c: 0 }, e: { r: start, c: 3 } });
+                rowsDef.push({ hpt: 22 });
+
+                aoa.push([`Event: ${eventTitle}`, '', '', '']);
+                merges.push({ s: { r: start + 1, c: 0 }, e: { r: start + 1, c: 3 } });
+                rowsDef.push({ hpt: 18 });
+
+                aoa.push(['Name', npc.name || '-', '', '']);
+                merges.push({ s: { r: start + 2, c: 1 }, e: { r: start + 2, c: 3 } });
+                rowsDef.push({ hpt: 18 });
+
+                aoa.push(['Role', npc.role || '-', '', '']);
+                merges.push({ s: { r: start + 3, c: 1 }, e: { r: start + 3, c: 3 } });
+                rowsDef.push({ hpt: 18 });
+
+                aoa.push(['Description', wrappedDescription, '', '']);
+                merges.push({ s: { r: start + 4, c: 1 }, e: { r: start + 4, c: 3 } });
+                rowsDef.push({ hpt: Math.min(88, 16 * descLines) });
+
+                aoa.push(['Motivation', wrappedMotivation, '', '']);
+                merges.push({ s: { r: start + 5, c: 1 }, e: { r: start + 5, c: 3 } });
+                rowsDef.push({ hpt: Math.min(88, 16 * motivationLines) });
+
+                aoa.push(['Template', npc.template || '-', '', '']);
+                merges.push({ s: { r: start + 6, c: 1 }, e: { r: start + 6, c: 3 } });
+                rowsDef.push({ hpt: 18 });
+
+                aoa.push(['Notes', '', '', '']);
+                merges.push({ s: { r: start + 7, c: 0 }, e: { r: start + 7, c: 3 } });
+                rowsDef.push({ hpt: 18 });
+
+                aoa.push(['', '', '', '']);
+                merges.push({ s: { r: start + 8, c: 0 }, e: { r: start + 8, c: 3 } });
+                rowsDef.push({ hpt: 72 });
+
+                aoa.push(['', '', '', '']);
+                rowsDef.push({ hpt: 12 });
+            });
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            ws['!merges'] = merges;
+            ws['!rows'] = rowsDef;
+            ws['!cols'] = [
+                { wch: 16 },
+                { wch: 32 },
+                { wch: 20 },
+                { wch: 20 }
+            ];
+
+            XLSX.utils.book_append_sheet(wb, ws, 'Random NPC Tags');
+            XLSX.writeFile(wb, 'Random_NPC_Tags.xlsx');
+            showStatus('Random NPC tags exported to XLS.');
+        }
+
+        importXlsxBtn.addEventListener('click', () => {
+            importFileInput.value = '';
+            importFileInput.click();
+        });
+        saveAllBtn.addEventListener('click', saveAllNpcs);
+        importFileInput.addEventListener('change', () => {
+            importNpcFile(importFileInput.files && importFileInput.files[0]);
+        });
+        exportPdfBtn.addEventListener('click', exportPdfTags);
+        exportXlsxBtn.addEventListener('click', exportXlsxTags);
+        saveSelectedBtn.addEventListener('click', saveSelectedNpc);
+        deleteSelectedBtn.addEventListener('click', deleteSelectedNpc);
+        clearBtn.addEventListener('click', () => {
+            npcRows = [];
+            setSelectedNpc(-1);
+            showStatus('NPC list cleared.');
+        });
+
+        loadSavedNpcs();
+        loadTemplateOptions();
+        setSelectedNpc(npcRows.length ? 0 : -1);
+        if (!npcRows.length) {
+            showStatus('Ready. Import NPCs or edit saved entries.');
+        } else {
+            showStatus(`Loaded ${npcRows.length} saved NPCs.`);
+        }
+    </script>
+    <script src="event-variables.js"></script>
+</body>
+</html>

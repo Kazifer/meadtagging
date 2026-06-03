@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formal Scroll Register</title>
+    <link rel="stylesheet" href="theme.css">
+    <style>
+        .container {
+            max-width: 1100px;
+        }
+
+        .intro {
+            color: var(--app-muted);
+            margin-bottom: 14px;
+        }
+
+        .card {
+            border: 1px solid var(--app-border);
+            border-radius: 10px;
+            background: #111827;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+
+        .field-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field label {
+            color: var(--app-muted);
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .field input,
+        .field select,
+        .field textarea {
+            border: 1px solid var(--app-border);
+            border-radius: 8px;
+            background: #0b1220;
+            color: var(--app-text);
+            padding: 8px 10px;
+            font-size: 0.92rem;
+        }
+
+        .field textarea {
+            min-height: 92px;
+            resize: vertical;
+        }
+
+        .field-readonly {
+            opacity: 0.95;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #f8fafc;
+            background: #2563eb;
+        }
+
+        .btn-secondary {
+            background: #334155;
+        }
+
+        .btn-danger {
+            background: #991b1b;
+        }
+
+        .btn-success {
+            background: #166534;
+        }
+
+        .status {
+            color: var(--app-muted);
+            min-height: 1.2em;
+        }
+
+        .table-wrap {
+            overflow: auto;
+            border: 1px solid var(--app-border);
+            border-radius: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 760px;
+            background: #111827;
+        }
+
+        th,
+        td {
+            border-bottom: 1px solid var(--app-border);
+            padding: 10px;
+            text-align: left;
+            vertical-align: top;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: #0f172a;
+            color: #d1d5db;
+            font-weight: 700;
+        }
+
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th.sortable:hover {
+            background: #172036;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .action-cell {
+            white-space: nowrap;
+        }
+
+        .mini-btn {
+            border: 0;
+            border-radius: 6px;
+            padding: 6px 9px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            color: #fff;
+            background: #475569;
+            margin-right: 6px;
+        }
+
+        .mini-btn.delete {
+            background: #b91c1c;
+        }
+
+        @media (max-width: 860px) {
+            .field-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>Formal Scroll Register</h1>
+        <p class="intro">Select Formal Scrolls and maintain a register with Name, Level, School, Event Number, and Adventure Number.</p>
+
+        <section class="card">
+            <div class="field-grid">
+                <div class="field">
+                    <label for="formalSelect">Formal Scroll</label>
+                    <select id="formalSelect"></select>
+                </div>
+                <div class="field">
+                    <label for="formalName">Name</label>
+                    <input id="formalName" type="text" placeholder="Formal scroll name">
+                </div>
+                <div class="field">
+                    <label for="formalLevel">Level</label>
+                    <input id="formalLevel" type="text" placeholder="Auto-filled from selected scroll (editable)">
+                </div>
+                <div class="field">
+                    <label for="formalSchool">School</label>
+                    <input id="formalSchool" type="text" placeholder="Auto-filled from selected scroll (editable)">
+                </div>
+                <div class="field">
+                    <label for="eventNumber">Event Number</label>
+                    <input id="eventNumber" type="text" placeholder="Example: 12">
+                </div>
+                <div class="field">
+                    <label for="adventureSelect">Adventure Number</label>
+                    <select id="adventureSelect"></select>
+                </div>
+            </div>
+            <div class="actions">
+                <button id="saveEntryBtn" class="btn" type="button">Add Entry</button>
+                <button id="clearFormBtn" class="btn btn-secondary" type="button">Clear Form</button>
+                <button id="exportBtn" class="btn btn-success" type="button">Export .xls</button>
+                <button id="importBtn" class="btn btn-secondary" type="button">Import .xls</button>
+                <button id="clearRegisterBtn" class="btn btn-danger" type="button">Clear Register</button>
+                <input id="importFileInput" type="file" accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none;">
+            </div>
+            <p id="statusMessage" class="status"></p>
+        </section>
+
+        <section class="table-wrap" aria-label="Formal register entries">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="sortable" data-sort-key="name" data-label="Name">Name</th>
+                        <th class="sortable" data-sort-key="level" data-label="Level">Level</th>
+                        <th class="sortable" data-sort-key="school" data-label="School">School</th>
+                        <th class="sortable" data-sort-key="eventNumber" data-label="Event Number">Event Number</th>
+                        <th class="sortable" data-sort-key="adventureNumber" data-label="Adventure Number">Adventure Number</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="formalBody"></tbody>
+            </table>
+        </section>
+    </main>
+
+    <script src="event-variables.js"></script>
+    <script src="formal-scrolls-data.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script>
+        const STORAGE_KEY = 'formalScrollRegister.v1';
+        const ADVENTURE_STORAGE_KEY = 'adventureLevelling.v1';
+
+        const formalSelectEl = document.getElementById('formalSelect');
+        const formalNameEl = document.getElementById('formalName');
+        const formalLevelEl = document.getElementById('formalLevel');
+        const formalSchoolEl = document.getElementById('formalSchool');
+        const eventNumberEl = document.getElementById('eventNumber');
+        const adventureSelectEl = document.getElementById('adventureSelect');
+
+        const saveEntryBtn = document.getElementById('saveEntryBtn');
+        const clearFormBtn = document.getElementById('clearFormBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const importBtn = document.getElementById('importBtn');
+        const clearRegisterBtn = document.getElementById('clearRegisterBtn');
+        const importFileInput = document.getElementById('importFileInput');
+
+        const statusMessageEl = document.getElementById('statusMessage');
+        const formalBodyEl = document.getElementById('formalBody');
+        const sortableHeaderEls = Array.from(document.querySelectorAll('th.sortable'));
+
+        const formalScrolls = Array.isArray(window.formalScrollsData) ? window.formalScrollsData : [];
+        let rows = [];
+        let editingId = null;
+        let sortState = { key: 'name', direction: 'asc' };
+
+        function showStatus(message) {
+            statusMessageEl.textContent = message;
+        }
+
+        function generateId() {
+            return `formal-register-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+        }
+
+        function safeFilePart(value) {
+            return String(value || '')
+                .trim()
+                .replace(/[^a-z0-9-_ ]/gi, '')
+                .replace(/\s+/g, '_')
+                .replace(/_+/g, '_')
+                .replace(/^_+|_+$/g, '') || 'Event';
+        }
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function normalizeRow(row) {
+            return {
+                id: String(row?.id || generateId()).trim(),
+                name: String(row?.name || '').trim(),
+                level: String(row?.level || row?.school || '').trim(),
+                school: String(row?.school || '').trim(),
+                eventNumber: String(row?.eventNumber || '').trim(),
+                adventureNumber: String(row?.adventureNumber || '').trim()
+            };
+        }
+
+        function findFormalScrollByName(name) {
+            const target = String(name || '').trim().toLowerCase();
+            if (!target) return null;
+            return formalScrolls.find((scroll) => String(scroll?.name || '').trim().toLowerCase() === target) || null;
+        }
+
+        function readAdventureOptions() {
+            try {
+                const raw = localStorage.getItem(ADVENTURE_STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : { rows: [] };
+                const entries = Array.isArray(parsed?.rows) ? parsed.rows : [];
+                return entries.map((row) => {
+                    const no = String(row?.no || '').trim();
+                    const title = String(row?.title || '').trim();
+                    if (no && title) return `A${no} - ${title}`;
+                    if (no) return `A${no}`;
+                    return title;
+                }).filter(Boolean);
+            } catch (error) {
+                console.error('Formal Scroll Register: failed to read adventures', error);
+                return [];
+            }
+        }
+
+        function renderFormalOptions() {
+            formalSelectEl.innerHTML = '';
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = formalScrolls.length
+                ? 'Select formal scroll...'
+                : 'No formal scroll data loaded';
+            formalSelectEl.appendChild(defaultOption);
+
+            formalScrolls.forEach((scroll) => {
+                const option = document.createElement('option');
+                option.value = String(scroll?.name || '').trim();
+                option.textContent = String(scroll?.name || '').trim();
+                formalSelectEl.appendChild(option);
+            });
+        }
+
+        function renderAdventureOptions(selectedValue = '') {
+            const options = readAdventureOptions();
+            adventureSelectEl.innerHTML = '';
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = options.length
+                ? 'Select adventure...'
+                : 'No adventures found (fill Adventure Listing first)';
+            adventureSelectEl.appendChild(defaultOption);
+
+            const seen = new Set();
+            options.forEach((label) => {
+                if (seen.has(label)) return;
+                seen.add(label);
+                const option = document.createElement('option');
+                option.value = label;
+                option.textContent = label;
+                adventureSelectEl.appendChild(option);
+            });
+
+            if (selectedValue && !seen.has(selectedValue)) {
+                const legacy = document.createElement('option');
+                legacy.value = selectedValue;
+                legacy.textContent = `${selectedValue} (existing)`;
+                adventureSelectEl.appendChild(legacy);
+            }
+
+            adventureSelectEl.value = selectedValue;
+        }
+
+        function syncNameAndLevelFromSelection() {
+            const selectedName = String(formalSelectEl.value || '').trim();
+            if (!selectedName) {
+                formalLevelEl.value = '';
+                formalSchoolEl.value = '';
+                return;
+            }
+
+            const selected = formalScrolls.find((scroll) => String(scroll?.name || '').trim() === selectedName);
+            formalNameEl.value = selectedName;
+            formalLevelEl.value = String(selected?.level || '').trim();
+            formalSchoolEl.value = String(selected?.school || '').trim();
+        }
+
+        function loadRows() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : [];
+                rows = Array.isArray(parsed) ? parsed.map(normalizeRow) : [];
+
+                let didBackfillSchool = false;
+                rows = rows.map((row) => {
+                    if (row.school) return row;
+                    const match = findFormalScrollByName(row.name);
+                    const school = String(match?.school || '').trim();
+                    if (!school) return row;
+                    didBackfillSchool = true;
+                    return {
+                        ...row,
+                        school
+                    };
+                });
+
+                if (didBackfillSchool) {
+                    saveRows();
+                }
+            } catch (error) {
+                console.error('Formal Register: failed to load', error);
+                rows = [];
+            }
+        }
+
+        function saveRows() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+        }
+
+        function renderRows() {
+            formalBodyEl.innerHTML = '';
+            if (!rows.length) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.colSpan = 6;
+                td.textContent = 'No register entries yet.';
+                tr.appendChild(td);
+                formalBodyEl.appendChild(tr);
+                return;
+            }
+
+            const sortedRows = [...rows].sort((left, right) => {
+                const key = sortState.key;
+                const direction = sortState.direction === 'desc' ? -1 : 1;
+
+                const leftRaw = String(left?.[key] ?? '').trim();
+                const rightRaw = String(right?.[key] ?? '').trim();
+
+                const leftAdventureMatch = leftRaw.match(/A\s*(\d+)/i);
+                const rightAdventureMatch = rightRaw.match(/A\s*(\d+)/i);
+                const leftNumber = leftAdventureMatch ? Number(leftAdventureMatch[1]) : Number(leftRaw);
+                const rightNumber = rightAdventureMatch ? Number(rightAdventureMatch[1]) : Number(rightRaw);
+                const bothNumeric = Number.isFinite(leftNumber) && Number.isFinite(rightNumber);
+
+                if (bothNumeric) {
+                    return (leftNumber - rightNumber) * direction;
+                }
+
+                return leftRaw.localeCompare(rightRaw, undefined, { sensitivity: 'base' }) * direction;
+            });
+
+            sortedRows.forEach((row) => {
+                const tr = document.createElement('tr');
+                [row.name, row.level, row.school, row.eventNumber, row.adventureNumber].forEach((value) => {
+                    const td = document.createElement('td');
+                    td.textContent = value || '-';
+                    tr.appendChild(td);
+                });
+
+                const actionTd = document.createElement('td');
+                actionTd.className = 'action-cell';
+
+                const editBtn = document.createElement('button');
+                editBtn.type = 'button';
+                editBtn.className = 'mini-btn';
+                editBtn.textContent = 'Edit';
+                editBtn.addEventListener('click', () => {
+                    editingId = row.id;
+                    formalNameEl.value = row.name;
+                    formalLevelEl.value = row.level;
+                    formalSchoolEl.value = row.school;
+                    eventNumberEl.value = row.eventNumber;
+                    renderAdventureOptions(row.adventureNumber);
+
+                    const matchingScroll = formalScrolls.find((scroll) => String(scroll?.name || '').trim() === row.name);
+                    formalSelectEl.value = matchingScroll ? row.name : '';
+                    saveEntryBtn.textContent = 'Update Entry';
+                    showStatus('Editing entry. Update and click Update Entry.');
+                });
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'mini-btn delete';
+                deleteBtn.textContent = 'Remove';
+                deleteBtn.addEventListener('click', () => {
+                    rows = rows.filter((entry) => entry.id !== row.id);
+                    saveRows();
+                    renderRows();
+                    showStatus('Entry removed.');
+                });
+
+                actionTd.appendChild(editBtn);
+                actionTd.appendChild(deleteBtn);
+                tr.appendChild(actionTd);
+                formalBodyEl.appendChild(tr);
+            });
+
+            renderSortHeaders();
+        }
+
+        function renderSortHeaders() {
+            sortableHeaderEls.forEach((headerEl) => {
+                const key = String(headerEl.dataset.sortKey || '');
+                const label = String(headerEl.dataset.label || headerEl.textContent || '').trim();
+                const isActive = key === sortState.key;
+                const indicator = isActive ? (sortState.direction === 'asc' ? ' ▲' : ' ▼') : '';
+                headerEl.textContent = `${label}${indicator}`;
+            });
+        }
+
+        function toggleSort(key) {
+            if (!key) return;
+
+            if (sortState.key === key) {
+                sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortState = { key, direction: 'asc' };
+            }
+
+            renderRows();
+        }
+
+        function clearForm() {
+            editingId = null;
+            formalSelectEl.value = '';
+            formalNameEl.value = '';
+            formalLevelEl.value = '';
+            formalSchoolEl.value = '';
+            eventNumberEl.value = String(window.EventVariables?.get?.()?.eventNumber || '').trim();
+            renderAdventureOptions('');
+            saveEntryBtn.textContent = 'Add Entry';
+        }
+
+        function getFormRow() {
+            return normalizeRow({
+                id: editingId || generateId(),
+                name: formalNameEl.value,
+                level: formalLevelEl.value,
+                school: formalSchoolEl.value,
+                eventNumber: eventNumberEl.value,
+                adventureNumber: adventureSelectEl.value
+            });
+        }
+
+        function exportRowsToXls() {
+            if (!rows.length) {
+                showStatus('No register entries to export.');
+                return;
+            }
+
+            if (!window.XLSX) {
+                showStatus('XLSX library failed to load. Refresh and try again.');
+                return;
+            }
+
+            const eventVars = window.EventVariables?.get?.() || {};
+            const fileName = `${safeFilePart(eventVars.eventName || 'Event')}_Formal_Scroll_Register.xls`;
+
+            const exportRows = rows.map((row) => ({
+                Name: row.name,
+                Level: row.level,
+                School: row.school,
+                EventNumber: row.eventNumber,
+                AdventureNumber: row.adventureNumber
+            }));
+
+            const workbook = window.XLSX.utils.book_new();
+            const worksheet = window.XLSX.utils.json_to_sheet(exportRows);
+            window.XLSX.utils.book_append_sheet(workbook, worksheet, 'Formal Scroll Register');
+            window.XLSX.writeFile(workbook, fileName, { bookType: 'biff8' });
+            showStatus(`Exported ${fileName}`);
+        }
+
+        async function importRowsFromWorkbook(file) {
+            if (!window.XLSX) {
+                showStatus('XLSX library failed to load. Refresh and try again.');
+                return;
+            }
+
+            const buffer = await file.arrayBuffer();
+            const workbook = window.XLSX.read(buffer, { type: 'array' });
+            const preferredSheet = workbook.Sheets['Formal Scroll Register']
+                ? 'Formal Scroll Register'
+                : workbook.SheetNames[0];
+
+            const sheet = workbook.Sheets[preferredSheet];
+            const imported = window.XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+            if (!imported.length) {
+                showStatus('No rows found in workbook.');
+                return;
+            }
+
+            const mapped = imported.map((row) => normalizeRow({
+                id: generateId(),
+                name: row.Name ?? row['Formal Name'] ?? row.name,
+                level: row.Level ?? row.level,
+                school: row.School ?? row.school,
+                eventNumber: row['Event Number'] ?? row.EventNumber ?? row.eventNumber,
+                adventureNumber: row['Adventure Number'] ?? row.AdventureNumber ?? row.adventureNumber
+            })).filter((row) => row.name);
+
+            if (!mapped.length) {
+                showStatus('No valid rows found to import.');
+                return;
+            }
+
+            rows = mapped;
+            saveRows();
+            renderRows();
+            clearForm();
+            showStatus(`Imported ${mapped.length} register entries.`);
+        }
+
+        saveEntryBtn.addEventListener('click', () => {
+            const row = getFormRow();
+
+            if (!row.name) {
+                showStatus('Name is required.');
+                return;
+            }
+
+            if (!row.level) {
+                showStatus('Level is required. Select a formal scroll first.');
+                return;
+            }
+
+            if (editingId) {
+                rows = rows.map((entry) => entry.id === editingId ? row : entry);
+                showStatus('Entry updated.');
+            } else {
+                rows.unshift(row);
+                showStatus('Entry added.');
+            }
+
+            saveRows();
+            renderRows();
+            clearForm();
+        });
+
+        clearFormBtn.addEventListener('click', () => {
+            clearForm();
+            showStatus('Form cleared.');
+        });
+
+        clearRegisterBtn.addEventListener('click', () => {
+            if (!window.confirm('Clear all formal scroll register entries?')) {
+                return;
+            }
+            rows = [];
+            saveRows();
+            renderRows();
+            clearForm();
+            showStatus('Register cleared.');
+        });
+
+        exportBtn.addEventListener('click', exportRowsToXls);
+
+        importBtn.addEventListener('click', () => {
+            importFileInput.value = '';
+            importFileInput.click();
+        });
+
+        importFileInput.addEventListener('change', async (event) => {
+            const file = event.target.files && event.target.files[0] ? event.target.files[0] : null;
+            if (!file) return;
+
+            try {
+                await importRowsFromWorkbook(file);
+            } catch (error) {
+                console.error('Formal Scroll Register: import failed', error);
+                showStatus('Could not import workbook.');
+            }
+        });
+
+        formalSelectEl.addEventListener('change', syncNameAndLevelFromSelection);
+        sortableHeaderEls.forEach((headerEl) => {
+            headerEl.addEventListener('click', () => {
+                toggleSort(String(headerEl.dataset.sortKey || ''));
+            });
+        });
+
+        renderFormalOptions();
+        renderAdventureOptions('');
+        loadRows();
+        renderRows();
+        clearForm();
+        showStatus('Ready.');
+    </script>
+</body>
+</html>
