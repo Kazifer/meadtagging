@@ -13,18 +13,33 @@
         .field input, .field select { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--app-border); background: #1f2937; color: var(--app-text); font-size: 0.95rem; }
         .field input:focus, .field select:focus { outline: 2px solid #00bcd4; outline-offset: 1px; }
         .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
-        .btn { border: 0; border-radius: 8px; padding: 10px 14px; font-weight: 600; cursor: pointer; transition: filter 0.2s ease; }
+        .btn {
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: filter 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            line-height: 1.2;
+            appearance: none;
+              
+        }
         .btn:hover { filter: brightness(1.06); }
         .btn-primary { background: #00bcd4; color: #0f172a; }
         .btn-secondary { background: #4a5568; color: #edf2f7; }
-        .status { margin-top: 12px; color: var(--app-muted); min-height: 1.2em; }
+        .status { margin-top: 20px; color:#4a5568; min-height: 1.0em; font-style: italic; }
         .hint { margin-top: 8px; font-size: 0.92rem; }
+
     </style>
 </head>
 <body>
     <main class="container">
         <h1>Event Variables</h1>
-        <p>Set your event-level values once. They are saved in your browser and automatically restored the next time you open this page.</p>
+        <p>Set your event-level values once (used for remaining page calculations)</p>
 
         <form id="eventVariablesForm" class="event-form" autocomplete="off">
             <div class="field">
@@ -68,11 +83,10 @@
         <div class="actions">
             <button id="saveBtn" class="btn btn-primary" type="button">Save</button>
             <button id="resetBtn" class="btn btn-secondary" type="button">Clear Saved Values</button>
-            <a href="Config and Exports.html" class="btn btn-secondary" style="text-decoration:none; display:inline-flex; align-items:center;">Open Config and Exports</a>
         </div>
-
+  
         <p id="statusMessage" class="status"></p>
-        <p class="hint">Tip: values auto-save when you type. Imports/exports are now on Config and Exports.</p>
+
     </main>
 
     <script src="event-variables.js"></script>

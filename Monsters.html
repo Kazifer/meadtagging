@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monster Encounter Builder</title>
   <link rel="stylesheet" href="theme.css">
-    <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
@@ -181,7 +181,7 @@
 
                 <div>
                     <label for="adventure-title" class="block mb-2 text-sm font-medium text-slate-300">Adventure Title</label>
-                    <input type="text" id="adventure-title" value="" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5">
+                    <select id="adventure-title" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5"></select>
                 </div>
                 
                 <div id="adventure-roster-list" class="mt-4 space-y-3 max-h-96 overflow-y-auto pr-2">
@@ -323,6 +323,44 @@
         </div>
     </div> 
 
+    <!-- Modifier Edit Modal -->
+    <div id="modifier-edit-modal" class="fixed inset-0 z-50 justify-center p-4 hidden modal-backdrop">
+        <div class="relative w-full max-w-xl max-h-[90vh] overflow-y-auto">
+            <div class="relative bg-slate-800 rounded-lg shadow-xl modal">
+                <form id="modifier-edit-form" class="p-4 md:p-5">
+                    <div class="flex items-center justify-between pb-4 mb-4 border-b rounded-t border-slate-600">
+                        <h3 class="text-lg font-semibold text-amber-400">Edit Modifier</h3>
+                        <button type="button" id="close-modifier-edit-modal-btn" class="text-slate-400 bg-transparent hover:bg-slate-600 hover:text-white rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center">
+                            <span class="sr-only">Close modal</span>
+                            x
+                        </button>
+                    </div>
+
+                    <input type="hidden" id="modifier-edit-id">
+
+                    <div class="grid gap-4 mb-4 grid-cols-1">
+                        <div>
+                            <label for="modifier-edit-name" class="block mb-2 text-sm font-medium text-slate-300">Modifier Name</label>
+                            <input id="modifier-edit-name" type="text" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5" required>
+                        </div>
+                        <div>
+                            <label for="modifier-edit-description" class="block mb-2 text-sm font-medium text-slate-300">Modifier Description</label>
+                            <textarea id="modifier-edit-description" rows="3" class="block p-2.5 w-full text-sm text-slate-200 bg-slate-700 rounded-lg border border-slate-600 focus:ring-amber-500 focus:border-amber-500" required></textarea>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button type="submit" class="text-white bg-amber-600 hover:bg-amber-700 focus:ring-4 focus:outline-none focus:ring-amber-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">
+                            Save Modifier
+                        </button>
+                        <button type="button" id="cancel-modifier-edit-btn" class="text-slate-200 bg-slate-600 hover:bg-slate-700 focus:ring-4 focus:outline-none focus:ring-slate-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="event-variables.js"></script>
     <script src="monsters-data.js"></script>
     <script>
@@ -354,16 +392,16 @@
         const exportModifiersBtn = document.getElementById('export-modifiers-btn');
         const importModifiersBtn = document.getElementById('import-modifiers-btn');
         const modifierImportFile = document.getElementById('modifier-import-file');
+        const modifierEditModal = document.getElementById('modifier-edit-modal');
+        const modifierEditForm = document.getElementById('modifier-edit-form');
+        const modifierEditIdInput = document.getElementById('modifier-edit-id');
+        const modifierEditNameInput = document.getElementById('modifier-edit-name');
+        const modifierEditDescriptionInput = document.getElementById('modifier-edit-description');
+        const closeModifierEditModalBtn = document.getElementById('close-modifier-edit-modal-btn');
+        const cancelModifierEditBtn = document.getElementById('cancel-modifier-edit-btn');
         const rosterList = document.getElementById('adventure-roster-list');
         const rosterPlaceholder = document.getElementById('roster-placeholder');
         const adventureTitleInput = document.getElementById('adventure-title');
-
-        const eventVars = window.EventVariables?.get?.();
-        const eventTitle = window.EventVariables?.buildTitle?.(eventVars);
-        if (adventureTitleInput && !adventureTitleInput.value.trim() && eventTitle) {
-            adventureTitleInput.value = eventTitle;
-            currentAdventure.title = eventTitle;
-        }
         
         const modal = document.getElementById('monster-modal');
         const monsterForm = document.getElementById('monster-form');
@@ -374,6 +412,7 @@
         let monsterDatabase = [];
         const modifiersStorageKey = 'monsterModifiersSelected.v1';
         const modifiersCatalogStorageKey = 'monsterModifiersCatalog.v1';
+        const adventureListingStorageKey = 'adventureLevelling.v1';
         const defaultModifierCatalog = [
             { id: 'elite', name: 'Elite', description: 'Increase Body by 25% and APL by 2.' },
             { id: 'berserk', name: 'Berserk', description: 'Monster gains +2 Strength and cannot retreat.' },
@@ -383,6 +422,62 @@
         ];
         let modifierCatalog = [...defaultModifierCatalog];
         let selectedModifierIds = new Set();
+
+        const buildAdventureLabel = (row, index) => {
+            const no = String(row?.no || '').trim();
+            const title = String(row?.title || '').trim();
+            if (no && title) return `A${no} - ${title}`;
+            if (title) return title;
+            if (no) return `A${no}`;
+            return `Adventure ${index + 1}`;
+        };
+
+        const loadAdventureOptions = () => {
+            try {
+                const raw = localStorage.getItem(adventureListingStorageKey);
+                const parsed = raw ? JSON.parse(raw) : { rows: [] };
+                const rows = Array.isArray(parsed?.rows) ? parsed.rows : [];
+                const titles = rows
+                    .map((row, index) => buildAdventureLabel(row, index))
+                    .filter((value) => String(value || '').trim() !== '');
+
+                return Array.from(new Set(titles));
+            } catch (error) {
+                console.error('Failed to load Adventure Listing options:', error);
+                return [];
+            }
+        };
+
+        const populateAdventureTitleSelect = () => {
+            if (!adventureTitleInput) return;
+
+            const options = loadAdventureOptions();
+            const currentValue = String(currentAdventure.title || '').trim();
+
+            adventureTitleInput.innerHTML = '';
+
+            const placeholderOption = document.createElement('option');
+            placeholderOption.value = '';
+            placeholderOption.textContent = options.length
+                ? 'Select adventure...'
+                : 'No adventures found (fill Adventure Listing first)';
+            adventureTitleInput.appendChild(placeholderOption);
+
+            options.forEach((title) => {
+                const option = document.createElement('option');
+                option.value = title;
+                option.textContent = title;
+                adventureTitleInput.appendChild(option);
+            });
+
+            if (currentValue && options.includes(currentValue)) {
+                adventureTitleInput.value = currentValue;
+            } else {
+                adventureTitleInput.value = '';
+            }
+
+            currentAdventure.title = adventureTitleInput.value;
+        };
 
         const createModifierId = (name) => {
             const base = String(name || '')
@@ -520,6 +615,22 @@
 
         const getSelectedModifiers = () => modifierCatalog.filter((m) => selectedModifierIds.has(m.id));
 
+        const openModifierEditModal = (modifier) => {
+            modifierEditIdInput.value = modifier.id;
+            modifierEditNameInput.value = modifier.name;
+            modifierEditDescriptionInput.value = modifier.description;
+            modifierEditModal.classList.remove('hidden');
+            modifierEditModal.classList.add('flex');
+            modifierEditNameInput.focus();
+        };
+
+        const closeModifierEditModal = () => {
+            modifierEditModal.classList.add('hidden');
+            modifierEditModal.classList.remove('flex');
+            modifierEditForm.reset();
+            modifierEditIdInput.value = '';
+        };
+
         const renderModifierTable = () => {
             modifierTableBody.innerHTML = '';
 
@@ -561,26 +672,7 @@
                 editBtn.className = 'font-medium text-blue-400 hover:underline mr-3';
                 editBtn.textContent = 'Edit';
                 editBtn.addEventListener('click', () => {
-                    const nextName = window.prompt('Modifier name:', modifier.name);
-                    if (nextName == null) return;
-                    const trimmedName = String(nextName).trim();
-                    if (!trimmedName) {
-                        showCustomConfirm('Modifier name is required.', () => {});
-                        return;
-                    }
-
-                    const nextDescription = window.prompt('Modifier description:', modifier.description);
-                    if (nextDescription == null) return;
-                    const trimmedDescription = String(nextDescription).trim();
-                    if (!trimmedDescription) {
-                        showCustomConfirm('Modifier description is required.', () => {});
-                        return;
-                    }
-
-                    modifier.name = trimmedName;
-                    modifier.description = trimmedDescription;
-                    saveModifierCatalog();
-                    renderModifierTable();
+                    openModifierEditModal(modifier);
                 });
 
                 const removeBtn = document.createElement('button');
@@ -689,6 +781,44 @@
             modifierNameInput.value = '';
             modifierDescriptionInput.value = '';
             modifierNameInput.focus();
+        });
+
+        modifierEditForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+
+            const id = String(modifierEditIdInput.value || '').trim();
+            const nextName = String(modifierEditNameInput.value || '').trim();
+            const nextDescription = String(modifierEditDescriptionInput.value || '').trim();
+
+            if (!id) {
+                closeModifierEditModal();
+                return;
+            }
+
+            if (!nextName || !nextDescription) {
+                showCustomConfirm('Modifier name and description are required.', () => {});
+                return;
+            }
+
+            const targetModifier = modifierCatalog.find((item) => item.id === id);
+            if (!targetModifier) {
+                closeModifierEditModal();
+                return;
+            }
+
+            targetModifier.name = nextName;
+            targetModifier.description = nextDescription;
+            saveModifierCatalog();
+            renderModifierTable();
+            closeModifierEditModal();
+        });
+
+        closeModifierEditModalBtn.addEventListener('click', closeModifierEditModal);
+        cancelModifierEditBtn.addEventListener('click', closeModifierEditModal);
+        modifierEditModal.addEventListener('click', (event) => {
+            if (event.target === modifierEditModal) {
+                closeModifierEditModal();
+            }
         });
 
         // --- RENDER FUNCTIONS ---
@@ -1549,6 +1679,7 @@
             monsterDatabase = initialMonsterData.map(monster => ({ ...monster, id: crypto.randomUUID() })); 
             loadModifierCatalog();
             loadSelectedModifiers();
+            populateAdventureTitleSelect();
             rebuildTypeControls();
             renderModifierTable();
             

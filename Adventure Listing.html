@@ -47,15 +47,20 @@
         }
 
         .stat-chip {
-            background: #111827;
+            background: #152d60;
             border: 1px solid var(--app-border);
             border-radius: 8px;
             padding: 8px 12px;
             color: var(--app-text);
             font-size: 0.92rem;
+             flex-direction: column;
+            gap: 10px;
+            justify-self: end;
+            width: 100%;
         }
 
         .stat-chip-metric {
+            background:#0b1220;
             width: 100%;
             max-width: 360px;
         }
@@ -315,8 +320,9 @@
 
         .status {
             margin-top: 12px;
-            color: var(--app-muted);
+            color:#4a5568;
             min-height: 1.2em;
+            font-style: italic;
         }
 
         .btn-small {
@@ -417,7 +423,11 @@
                 <h1>Adventure Listing</h1>
                 <p class="intro">Manage adventure rows here. This table is shared with Adventure Levelling metrics.</p>
             </div>
+            
             <div class="metric-stack">
+            <div class="stat-chip"><b>Event:</b> <span id="eventTitle">-</span></div>
+            <div class="stat-chip"><b>Expected Adventures:</b> <span id="expectedCount">0</span></div>
+            <div class="stat-chip"><b>Event Level:</b> <span id="eventLevel">-</span></div>
                 <div class="stat-chip stat-chip-metric">
                     <div class="metric-title">Total APL vs Goal</div>
                     <div id="totalApl" class="metric-value">0 / 0 (0%)</div>
@@ -433,15 +443,9 @@
                     <div id="totalProduction" class="metric-value">0 / 0 (0%)</div>
                     <div class="metric-bar" aria-hidden="true"><span id="totalProductionBar" class="metric-bar-fill metric-bar-low"></span></div>
                 </div>
+
             </div>
         </section>
-
-        <div class="stats">
-            <div class="stat-chip">Event: <span id="eventTitle">-</span></div>
-            <div class="stat-chip">Expected Adventures: <span id="expectedCount">0</span></div>
-            <div class="stat-chip">Event Level: <span id="eventLevel">-</span></div>
-        </div>
-
         <div class="actions">
             <button id="selectTemplateBtn" class="btn btn-secondary" type="button">Select Word Template</button>
             <button id="resetPageBtn" class="btn btn-secondary" type="button">Clear Adventure Listing Data</button>
@@ -507,6 +511,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script>
         const STORAGE_KEY = 'adventureLevelling.v1';
+        const LOOT_ALLOCATIONS_STORAGE_KEY = 'lootCalcAllocated.v1';
+        const LOOT_SILVER_LABEL = 'Total Silver';
+        const LOOT_PRODUCTION_LABEL = 'Production Items';
         const TEMPLATE_STORAGE_KEY = 'adventureTemplateDocx.base64.v1';
         const TEMPLATE_NAME_STORAGE_KEY = 'adventureTemplateDocx.name.v1';
 
@@ -965,6 +972,41 @@
             }
         }
 
+        function readLootAllocations() {
+            try {
+                const raw = localStorage.getItem(LOOT_ALLOCATIONS_STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : {};
+                return parsed && typeof parsed === 'object' ? parsed : {};
+            } catch (error) {
+                console.error('AdventureListing: failed to read loot allocations', error);
+                return {};
+            }
+        }
+
+        function writeLootAllocations(allocations) {
+            try {
+                localStorage.setItem(LOOT_ALLOCATIONS_STORAGE_KEY, JSON.stringify(allocations));
+            } catch (error) {
+                console.error('AdventureListing: failed to write loot allocations', error);
+            }
+        }
+
+        function syncLootAllocationsFromAdventureTotals() {
+            const totalSilver = rows.reduce((sum, row) => sum + parseNumber(row?.silver), 0);
+            const totalProduction = rows.reduce((sum, row) => sum + parseNumber(row?.production), 0);
+            const roundedSilver = Math.round(totalSilver * 100) / 100;
+            const roundedProduction = Math.round(totalProduction * 100) / 100;
+            const allocations = readLootAllocations();
+
+            if (roundedSilver > 0) allocations[LOOT_SILVER_LABEL] = String(roundedSilver);
+            else delete allocations[LOOT_SILVER_LABEL];
+
+            if (roundedProduction > 0) allocations[LOOT_PRODUCTION_LABEL] = String(roundedProduction);
+            else delete allocations[LOOT_PRODUCTION_LABEL];
+
+            writeLootAllocations(allocations);
+        }
+
         function syncRowCountToEventVariables() {
             const vars = window.EventVariables?.get?.() || {};
             const targetCount = parseAdventureCount(vars.totalAdventures);
@@ -1303,6 +1345,7 @@
             applyAutoCalculatedAmounts();
             sortRowsInPlace(targetAplByDifficulty);
             updateSummaryTotals();
+            syncLootAllocationsFromAdventureTotals();
 
             rows.forEach((row, index) => {
                 const tr = document.createElement('tr');
@@ -1376,6 +1419,7 @@
                     rows[index].apl = e.target.value;
                     applyAutoCalculatedAmounts();
                     updateSummaryTotals();
+                    syncLootAllocationsFromAdventureTotals();
                     saveRows();
 
                     const silverInput = tr.children[9]?.querySelector('input');
@@ -1394,6 +1438,7 @@
                     rows[index].silver = e.target.value;
                     rows[index].silverManual = e.target.value.trim() !== '';
                     updateSummaryTotals();
+                    syncLootAllocationsFromAdventureTotals();
                     saveRows();
                 }));
 
@@ -1401,6 +1446,7 @@
                     rows[index].production = e.target.value;
                     rows[index].productionManual = e.target.value.trim() !== '';
                     updateSummaryTotals();
+                    syncLootAllocationsFromAdventureTotals();
                     saveRows();
                 }));
 

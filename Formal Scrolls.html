@@ -14,6 +14,63 @@
     <!-- jsPDF will be loaded dynamically by the React app's useEffect -->
     <link rel="stylesheet" href="formal-scrolls.css">
     <style>
+      .formal-scrolls-theme .from-purple-600 {
+        --from-color: #2563eb;
+      }
+
+      .formal-scrolls-theme .to-fuchsia-700 {
+        --to-color: #1d4ed8;
+      }
+
+      .formal-scrolls-theme .hover\:from-purple-700:hover {
+        --from-color: #1d4ed8;
+      }
+
+      .formal-scrolls-theme .hover\:to-fuchsia-800:hover {
+        --to-color: #1e40af;
+      }
+
+      .formal-scrolls-theme .focus\:ring-purple-500:focus {
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.55);
+      }
+
+      .formal-scrolls-theme .focus\:border-purple-500:focus {
+        border-color: #3b82f6;
+      }
+
+      .formal-scrolls-theme .file\:bg-purple-700::file-selector-button {
+        background-color: #1d4ed8;
+      }
+
+      .formal-scrolls-theme .hover\:file\:bg-purple-800:hover::file-selector-button {
+        background-color: #1e40af;
+      }
+
+      .formal-scrolls-theme .file\:text-purple-100::file-selector-button {
+        color: #fffbeb;
+      }
+
+      .formal-scrolls-theme .bg-purple-900 {
+        background-color: #1f2937;
+      }
+
+      .formal-scrolls-theme .border-purple-700 {
+        border-color: #4b5563;
+      }
+
+      .formal-scrolls-theme .text-purple-100,
+      .formal-scrolls-theme .text-purple-200 {
+        color: #e2e8f0;
+      }
+
+      .formal-scrolls-theme .bg-purple-800 {
+        background-color: #374151;
+      }
+
+      .formal-scrolls-theme .formal-title {
+        color: #3b82f6;
+      }
+
       .scroll-modal-backdrop {
         position: fixed;
         inset: 0;
@@ -539,9 +596,9 @@ doc.setFont('helvetica', 'normal');
           };
 
           return (
-            <div className="min-h-screen bg-gray-900 p-4 font-inter flex flex-col items-center">
+            <div className="formal-scrolls-theme min-h-screen bg-gray-900 p-4 font-inter flex flex-col items-center">
               <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-3xl mb-8">
-                <h1 className="text-3xl font-bold text-center text-gray-100 mb-6">Formal Scroll Creator</h1>
+                <h1 className="formal-title text-3xl font-bold text-center text-gray-100 mb-6">Formal Scroll Creator</h1>
 
                 {/* Input Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -668,7 +725,7 @@ doc.setFont('helvetica', 'normal');
                   <button
                     onClick={() => generatePdf(true)}
                     disabled={isLoading || !isJsPDFLoaded || !selectedScroll}
-                    className="w-full bg-gradient-to-r from-emerald-600 to-green-700 text-white py-3 px-4 rounded-md font-semibold text-lg shadow-md hover:from-emerald-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-gradient-to-r from-purple-600 to-fuchsia-700 text-white py-3 px-4 rounded-md font-semibold text-lg shadow-md hover:from-purple-700 hover:to-fuchsia-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isLoading ? 'Generating...' : 'Generate PDF and Add to Formal Register'}
                   </button>

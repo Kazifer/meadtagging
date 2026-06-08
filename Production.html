@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adventure Loot Creator</title>
+    <link rel="stylesheet" href="theme.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <!-- Add jspdf-autotable plugin for autoTable functionality -->
@@ -12,35 +13,125 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body {
+            margin: 0;
             font-family: 'Inter', sans-serif;
-            background-color: #1a202c; /* Dark background */
-            color: #e2e8f0; /* Light text */
+            background-color: var(--app-bg);
+            color: var(--app-text);
         }
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 2rem auto;
             padding: 2rem;
-            background-color: #2d3748; /* Darker container background */
+            background-color: var(--app-panel);
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); /* Darker shadow */
         }
+        header {
+            background: #0f172a;
+            border: 1px solid var(--app-border);
+        }
+        .page-title {
+            margin: 0 0 8px;
+            color: var(--app-heading);
+            font-size: 2rem;
+            font-weight: 700;
+            text-align: left;
+        }
+        .header-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 360px;
+            gap: 14px;
+            align-items: start;
+        }
+        .metric-card {
+            width: 100%;
+            border: 1px solid var(--app-border);
+            border-radius: 10px;
+            background: #152d60;
+            padding: 12px;
+            box-sizing: border-box;
+        }
+        .metric-title {
+            margin: 0 0 4px;
+            font-size: 0.95rem;
+            color: #cbd5e1;
+            font-weight: 700;
+        }
+        .metric-value-large {
+            margin: 0 0 10px;
+            font-size: 2rem;
+            line-height: 1.05;
+            color: #e2e8f0;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        .metric-value-mid {
+            margin: 0;
+            font-size: 1.35rem;
+            line-height: 1.1;
+            color: #00bcd4;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        .section-heading {
+            margin: 0;
+            color: var(--app-heading);
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        .section-title-row {
+            margin-bottom: 14px;
+        }
+        .export-section {
+            margin-bottom: 14px;
+        }
+        .export-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .selected-items-panel {
+            overflow: auto;
+            border: 1px solid var(--app-border);
+            border-radius: 10px;
+            background: #111827;
+        }
+        .selected-items-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 760px;
+            background: #111827;
+        }
+        .tabs-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0;
+            margin-bottom: 14px;
+        }
         .tab-button {
-            padding: 0.75rem 1.5rem;
-            border-bottom: 3px solid transparent;
-            font-weight: 500;
+            display: inline-block;
+            padding: 10px 14px;
+            border: 1px solid var(--app-border);
+            border-radius: 8px;
+            background: #4a5568;
+            color: #edf2f7;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
-            color: #a0aec0; /* Lighter gray for inactive tabs */
-            font-size: 0.9rem;
+            transition: filter 0.2s ease;
+            font-size: 0.92rem;
+            margin: 0 8px 8px 0;
         }
         .tab-button.active {
-            border-color: #667eea; /* Indigo for active tab */
-            color: #667eea; /* Indigo for active tab text */
-            background-color: #4a5568; /* Darker background for active tab */
+            background: #00bcd4;
+            color: #0f172a;
+            border-color: #00bcd4;
+        }
+        .tab-button:hover {
+            filter: brightness(1.06);
         }
         .item-card {
-            background-color: #4a5568; /* Darker item card background */
-            border: 1px solid #2d3748; /* Darker border */
+            background-color: #111827;
+            border: 1px solid var(--app-border);
             border-radius: 8px;
             padding: 0.5rem;
             margin-bottom: 0.5rem;
@@ -59,9 +150,9 @@
         .item-card input[type="number"],
         .item-card input[type="date"],
         .item-card textarea {
-            border: 1px solid #4a5568; /* Darker border for inputs */
-            background-color: #2d3748; /* Darker input background */
-            color: #e2e8f0; /* Light text for inputs */
+            border: 1px solid var(--app-border);
+            background-color: #0b1220;
+            color: var(--app-text);
             border-radius: 6px;
             padding: 0.3rem 0.5rem;
             width: 100%;
@@ -71,8 +162,8 @@
         .item-card input:focus,
         .item-card textarea:focus {
             outline: none;
-            border-color: #667eea; /* Indigo focus border */
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3); /* Indigo focus shadow */
+            border-color: #00bcd4;
+            box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.25);
         }
 
         #adventureTitle {
@@ -85,59 +176,54 @@
             background-color: #1f2937;
             color: #f9fafb;
         }
-        .btn-primary {
-            background-color: #667eea; /* Indigo primary button */
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: background-color 0.2s, transform 0.1s;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-            font-size: 0.8rem;
-        }
-        .btn-primary:hover {
-            background-color: #5a67d8; /* Darker indigo on hover */
-            transform: translateY(-1px);
-        }
-        .btn-secondary {
-            background-color: #4a5568; /* Dark gray secondary button */
-            color: white;
-            padding: 0.3rem 0.6rem;
-            border-radius: 6px;
-            font-weight: 500;
-            transition: background-color 0.2s;
-            font-size: 0.75rem;
-        }
-        .btn-secondary:hover {
-            background-color: #2d3748; /* Even darker gray on hover */
-        }
+        .btn-primary,
+        .btn-secondary,
         .btn-danger {
-            background-color: #e53e3e; /* Red danger button */
-            color: white;
-            padding: 0.3rem 0.6rem;
-            border-radius: 6px;
-            font-weight: 500;
-            transition: background-color 0.2s;
-            font-size: 0.75rem;
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: filter 0.2s ease;
+            font-size: 0.92rem;
         }
+
+        .btn-primary {
+            background: #00bcd4;
+            color: #0f172a;
+        }
+
+        .btn-secondary {
+            background: #4a5568;
+            color: #edf2f7;
+        }
+
+        .btn-danger {
+            background: #b91c1c;
+            color: #ffffff;
+        }
+
+        .btn-primary:hover,
+        .btn-secondary:hover,
         .btn-danger:hover {
-            background-color: #c53030; /* Darker red on hover */
+            filter: brightness(1.06);
         }
         .table-header th {
-            padding: 0.5rem 0.6rem;
+            padding: 10px 12px;
             text-align: left;
-            background-color: #4a5568; /* Darker table header background */
-            font-weight: 600;
-            color: #cbd5e0; /* Lighter text for table headers */
-            border-bottom: 2px solid #2d3748; /* Darker border */
-            font-size: 0.7rem;
+            background-color: #0f172a;
+            font-weight: 700;
+            color: #d1d5db;
+            border-bottom: 1px solid var(--app-border);
+            font-size: 0.9rem;
+            white-space: nowrap;
         }
         .table-row td {
-            padding: 0.5rem 0.6rem;
-            border-bottom: 1px solid #2d3748; /* Darker border */
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--app-border);
             vertical-align: top;
-            font-size: 0.75rem;
-            color: #e2e8f0; /* Light text for table cells */
+            font-size: 0.93rem;
+            color: var(--app-text);
         }
         .modal {
             display: none;
@@ -153,15 +239,16 @@
             align-items: center;
         }
         .modal-content {
-            background-color: #2d3748; /* Darker modal background */
+            background-color: #0f172a;
             margin: auto;
             padding: 1.2rem;
             border-radius: 8px;
             width: 90%;
             max-width: 400px;
+            border: 1px solid var(--app-border);
             box-shadow: 0 5px 15px rgba(0,0,0,0.5); /* Darker modal shadow */
             position: relative;
-            color: #e2e8f0; /* Light text for modal content */
+            color: var(--app-text);
         }
         .modal-content h3 {
             font-size: 1.4rem;
@@ -172,9 +259,9 @@
         .modal-content input[type="date"],
         .modal-content textarea,
         .modal-content select {
-            border: 1px solid #4a5568;
-            background-color: #1f2937;
-            color: #e2e8f0;
+            border: 1px solid var(--app-border);
+            background-color: #0b1220;
+            color: var(--app-text);
             border-radius: 6px;
             padding: 0.35rem 0.5rem;
             width: 100%;
@@ -185,8 +272,8 @@
         .modal-content textarea:focus,
         .modal-content select:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+            border-color: #00bcd4;
+            box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.25);
         }
         .close-button {
             color: #a0aec0; /* Lighter gray for close button */
@@ -205,7 +292,7 @@
         .main-content-area {
             display: flex;
             flex-direction: column; /* Always column */
-            gap: 2rem;
+            gap: 14px;
         }
 
         /* New class for table cell content to preserve newlines without fixed dimensions */
@@ -278,16 +365,22 @@ border: 1px solid #4a5568;
                         .scroll-cell .duration-field {
                             margin-top: auto; /* Pushes it to the bottom */
                         }
-                        th { background-color: #4a5568; color: #cbd5e0; } /* Darker table header */
+                        .scroll-table th { background-color: #0f172a; color: #d1d5db; }
+
+        @media (max-width: 980px) {
+            .header-layout {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
                     </style>
 </head>
 <body>
     <div class="container">
         <!-- Header Section -->
-        <header class="mb-8 p-6 bg-gradient-to-r from-gray-700 to-gray-900 text-white rounded-lg shadow-lg">
-            <h1 class="text-4xl font-bold mb-4 text-center">Adventure Loot Creator</h1>
-            <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-                <div class="w-full md:w-1/2">
+        <header class="mb-8 p-6 rounded-lg shadow-lg">
+            <h1 class="page-title">Adventure Loot Creator</h1>
+            <div class="header-layout">
+                <div class="w-full">
                     <div class="flex items-center mb-2">
                         <label for="adventureTitle" class="block text-lg font-medium mr-2">Adventure Title:</label>
                         <button id="clearTitleBtn" class="btn-secondary text-xs px-2 py-1 rounded-md">Clear Title</button>
@@ -295,17 +388,19 @@ border: 1px solid #4a5568;
                     <select id="adventureTitle"
                             class="w-full p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-white"></select>
                 </div>
-                <div class="w-full md:w-1/2 md:text-right">
-                    <p class="text-lg font-medium mb-2">Total Production Cost:</p>
-                    <p id="totalProductionCost" class="text-5xl font-extrabold text-yellow-300">S0</p>
+                <div class="metric-card">
+                    <p class="metric-title">Total Production Cost</p>
+                    <p id="totalProductionCost" class="metric-value-large">S0</p>
+                    <p class="metric-title">Adventure Production Amount</p>
+                    <p id="adventureProductionAmount" class="metric-value-mid">S0</p>
                 </div>
             </div>
         </header>
 
         <!-- Export Section (Moved to top) -->
-        <section class="mb-8">
-            <h2 class="text-3xl font-semibold mb-6 text-gray-200">Export Options</h2>
-            <div class="flex flex-wrap gap-4">
+        <section class="export-section mb-8">
+            <h2 class="section-heading">Export Options</h2>
+            <div class="export-actions">
                 <button id="exportPdfBtn" class="btn-primary">Export as PDF</button>
                 <button id="exportHtmlBtn" class="btn-primary">Export as HTML</button>
                 <button id="exportXlsxBtn" class="btn-primary">Export as XLSX</button>
@@ -316,12 +411,12 @@ border: 1px solid #4a5568;
         <div class="main-content-area">
             <!-- Selected Items (Loot) Display Section -->
             <section class="selected-items-section">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-3xl font-semibold text-gray-200">Selected Loot Items</h2>
+                <div class="section-title-row flex justify-between items-center mb-6">
+                    <h2 class="section-heading">Selected Loot Items</h2>
                     <button id="clearSelectedItemsBtn" class="btn-danger text-sm px-3 py-1 rounded-md">Clear All Selected</button>
                 </div>
-                <div class="bg-gray-700 rounded-lg shadow-md">
-                    <table class="min-w-full divide-y divide-gray-600">
+                <div class="selected-items-panel rounded-lg shadow-md">
+                    <table class="selected-items-table min-w-full divide-y divide-gray-600">
                         <thead class="bg-blue-900 table-header">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Details</th>
@@ -340,15 +435,15 @@ border: 1px solid #4a5568;
 
             <!-- Item Selection Section -->
             <section class="mb-8 md:mb-0 item-categories-section">
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
-                    <h2 class="text-3xl font-semibold text-gray-200">Item Categories</h2>
+                <div class="section-title-row flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+                    <h2 class="section-heading">Item Categories</h2>
                     <div class="flex items-center gap-2">
                         <span class="text-xs text-gray-300">Sort listed items:</span>
                         <button id="sortByCostBtn" class="btn-secondary">Production Cost</button>
                         <button id="sortByNameBtn" class="btn-secondary">Name</button>
                     </div>
                 </div>
-                <div class="flex border-b border-gray-600 mb-6">
+                <div class="tabs-row flex border-b border-gray-600 mb-6">
                     <button class="tab-button active" data-category="potions">Potions</button>
                     <button class="tab-button" data-category="scrolls">Scrolls</button>
                     <button class="tab-button" data-category="alchemy">Alchemy</button>
@@ -579,6 +674,7 @@ border: 1px solid #4a5568;
         // UI Elements
         const adventureTitleInput = document.getElementById('adventureTitle');
         const totalProductionCostDisplay = document.getElementById('totalProductionCost');
+        const adventureProductionAmountDisplay = document.getElementById('adventureProductionAmount');
         const tabButtons = document.querySelectorAll('.tab-button');
         const categoryContent = document.getElementById('categoryContent');
         const selectedItemsTableBody = document.getElementById('selectedItemsTableBody');
@@ -710,6 +806,57 @@ border: 1px solid #4a5568;
                 console.error('Production: failed to read adventure listing data', error);
                 return [];
             }
+        }
+
+        function getAdventureRowsFromListing() {
+            try {
+                const raw = localStorage.getItem('adventureLevelling.v1');
+                const parsed = raw ? JSON.parse(raw) : { rows: [] };
+                const rows = Array.isArray(parsed?.rows) ? parsed.rows : [];
+
+                return rows.map((row, index) => {
+                    const no = String(row?.no || '').trim();
+                    const title = String(row?.title || '').trim();
+                    const label = no && title ? `A${no} - ${title}` : (title || `Adventure ${index + 1}`);
+                    const parsedProduction = Number(row?.production);
+                    const production = Number.isFinite(parsedProduction) ? parsedProduction : 0;
+                    return {
+                        no,
+                        title,
+                        label,
+                        production
+                    };
+                });
+            } catch (error) {
+                console.error('Production: failed to read adventure rows', error);
+                return [];
+            }
+        }
+
+        function getSelectedAdventureProductionAmount() {
+            const selectedValue = String(adventureTitleInput?.value || '').trim();
+            if (!selectedValue) return 0;
+
+            const rows = getAdventureRowsFromListing();
+            if (!rows.length) return 0;
+
+            const directMatch = rows.find((row) => row.label === selectedValue);
+            if (directMatch) return directMatch.production;
+
+            const match = selectedValue.match(/^A\s*(\d+)\s*-\s*(.+)$/i);
+            if (!match) return 0;
+
+            const selectedNo = match[1].trim();
+            const selectedTitle = match[2].trim().toLowerCase();
+            const fallbackMatch = rows.find((row) => row.no === selectedNo && String(row.title || '').trim().toLowerCase() === selectedTitle);
+
+            return fallbackMatch ? fallbackMatch.production : 0;
+        }
+
+        function updateAdventureProductionAmountDisplay() {
+            if (!adventureProductionAmountDisplay) return;
+            const amount = getSelectedAdventureProductionAmount();
+            adventureProductionAmountDisplay.textContent = `S${amount.toFixed(0)}`;
         }
 
         function populateAdventureSelector() {
@@ -1755,6 +1902,7 @@ border: 2px solid #4a5568;
         // Clear Adventure Title button functionality
         clearTitleBtn.addEventListener('click', () => {
             adventureTitleInput.value = ''; // Clear the input field
+            updateAdventureProductionAmountDisplay();
             saveProductionState();
         });
 
@@ -1770,7 +1918,10 @@ border: 2px solid #4a5568;
             renderItems();
         });
 
-        adventureTitleInput.addEventListener('change', saveProductionState);
+        adventureTitleInput.addEventListener('change', () => {
+            updateAdventureProductionAmountDisplay();
+            saveProductionState();
+        });
 
 
         // Initial render
@@ -1805,6 +1956,7 @@ border: 2px solid #4a5568;
             renderItems();
             updateSelectedItemsDisplay();
             calculateTotalCost();
+            updateAdventureProductionAmountDisplay();
             saveProductionState();
         });
     </script>

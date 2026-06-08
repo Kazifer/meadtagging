@@ -225,6 +225,82 @@
             color: var(--app-muted);
             min-height: 1.2em;
         }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.78);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 60;
+        }
+
+        .modal-backdrop.hidden {
+            display: none;
+        }
+
+        .modal-panel {
+            width: min(520px, 100%);
+            border: 1px solid var(--app-border);
+            border-radius: 12px;
+            background: #0f172a;
+            padding: 14px;
+        }
+
+        .modal-title {
+            margin: 0 0 10px;
+            color: var(--app-text);
+            font-size: 1.02rem;
+        }
+
+        .modal-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .modal-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .modal-field label {
+            color: #cbd5e1;
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+
+        .modal-input {
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--app-border);
+            background: #0b1220;
+            color: var(--app-text);
+            font-size: 0.9rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .modal-input:focus {
+            outline: 2px solid #00bcd4;
+            outline-offset: 1px;
+        }
+
+        .modal-actions {
+            margin-top: 12px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        @media (max-width: 700px) {
+            .modal-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -269,6 +345,7 @@
         </div>
 
         <div class="actions">
+            <button id="editTotalAplBtn" class="btn btn-secondary" type="button">Edit APL Formula</button>
             <button id="resetPageBtn" class="btn btn-secondary" type="button">Clear Adventure Levelling Data</button>
         </div>
 
@@ -341,6 +418,26 @@
         </div>
 
         <p id="statusMessage" class="status"></p>
+
+        <div id="totalAplModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="totalAplModalTitle">
+            <div class="modal-panel">
+                <h2 id="totalAplModalTitle" class="modal-title">Edit APL Formula Multipliers</h2>
+                <div class="modal-grid">
+                    <div class="modal-field">
+                        <label for="modalMediumMultiplier">Medium Multiplier (easy * x)</label>
+                        <input id="modalMediumMultiplier" class="modal-input" type="number" min="0.01" step="0.01" inputmode="decimal" />
+                    </div>
+                    <div class="modal-field">
+                        <label for="modalHardMultiplier">Hard Multiplier (easy * x)</label>
+                        <input id="modalHardMultiplier" class="modal-input" type="number" min="0.01" step="0.01" inputmode="decimal" />
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button id="cancelTotalAplBtn" class="btn btn-secondary" type="button">Cancel</button>
+                    <button id="saveTotalAplBtn" class="btn btn-secondary" type="button">Save</button>
+                </div>
+            </div>
+        </div>
     </main>
 
     <script src="event-variables.js"></script>
@@ -350,6 +447,7 @@
         const eventTitleEl = document.getElementById('eventTitle');
         const expectedCountEl = document.getElementById('expectedCount');
         const eventLevelEl = document.getElementById('eventLevel');
+        const editTotalAplBtn = document.getElementById('editTotalAplBtn');
         const resetPageBtn = document.getElementById('resetPageBtn');
         const statusMessage = document.getElementById('statusMessage');
         const totalEventAplEasyEl = document.getElementById('totalEventAplEasy');
@@ -375,8 +473,17 @@
         const metricAverageBuildEl = document.getElementById('metricAverageBuild');
         const metricAverageLevelEl = document.getElementById('metricAverageLevel');
         const metricLevelsPerAdventureEl = document.getElementById('metricLevelsPerAdventure');
+        const totalAplModalEl = document.getElementById('totalAplModal');
+        const modalMediumMultiplierEl = document.getElementById('modalMediumMultiplier');
+        const modalHardMultiplierEl = document.getElementById('modalHardMultiplier');
+        const cancelTotalAplBtn = document.getElementById('cancelTotalAplBtn');
+        const saveTotalAplBtn = document.getElementById('saveTotalAplBtn');
 
         let rows = [];
+        let aplMultipliers = {
+            medium: 1.2,
+            hard: 1.5
+        };
 
         function showStatus(message) {
             statusMessage.textContent = message;
@@ -431,15 +538,28 @@
                 const parsed = raw ? JSON.parse(raw) : { rows: [] };
                 const loadedRows = Array.isArray(parsed?.rows) ? parsed.rows : [];
                 rows = loadedRows.map((row, i) => normalizeRow(row, i));
+
+                const savedMultipliers = parsed?.aplMultipliers || {};
+                aplMultipliers = {
+                    medium: Number.isFinite(Number(savedMultipliers.medium)) && Number(savedMultipliers.medium) > 0 ? Number(savedMultipliers.medium) : 1.2,
+                    hard: Number.isFinite(Number(savedMultipliers.hard)) && Number(savedMultipliers.hard) > 0 ? Number(savedMultipliers.hard) : 1.5
+                };
             } catch (error) {
                 console.error('AdventureLevelling: failed to load data', error);
                 rows = [];
+                aplMultipliers = {
+                    medium: 1.2,
+                    hard: 1.5
+                };
             }
         }
 
         function saveRows() {
             try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify({ rows }));
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                    rows,
+                    aplMultipliers
+                }));
             } catch (error) {
                 console.error('AdventureLevelling: failed to save data', error);
             }
@@ -452,6 +572,12 @@
 
         function roundInt(value) {
             return Math.round(value || 0);
+        }
+
+        function parseMultiplier(value, fallbackValue) {
+            const parsed = Number(value);
+            if (!Number.isFinite(parsed) || parsed <= 0) return fallbackValue;
+            return parsed;
         }
 
         function formatDecimal(value) {
@@ -481,12 +607,47 @@
             }
         }
 
+        function getComputedTotalEventAplValues() {
+            const vars = window.EventVariables?.get?.() || {};
+            const totalBuild = Math.max(0, parseNumber(vars.totalEventBuild));
+            const players = Math.max(0, parseNumber(vars.players));
+            const totalAdventures = parseAdventureCount(vars.totalAdventures);
+            const playersPerAdventure = Math.max(0, parseNumber(metricPlayersPerAdventureInputEl.value));
+
+            const averageBuild = players > 0 ? (totalBuild / players) : 0;
+            const averageLevel = Math.floor((averageBuild / 10) - 4);
+            const levelsPerAdventure = averageLevel * playersPerAdventure;
+            const easy = levelsPerAdventure * totalAdventures;
+            const medium = easy * parseMultiplier(aplMultipliers.medium, 1.2);
+            const hard = easy * parseMultiplier(aplMultipliers.hard, 1.5);
+
+            return { easy, medium, hard };
+        }
+
+        function openTotalAplModal() {
+            modalMediumMultiplierEl.value = String(parseMultiplier(aplMultipliers.medium, 1.2));
+            modalHardMultiplierEl.value = String(parseMultiplier(aplMultipliers.hard, 1.5));
+            totalAplModalEl.classList.remove('hidden');
+        }
+
+        function closeTotalAplModal() {
+            totalAplModalEl.classList.add('hidden');
+        }
+
+        function saveTotalAplModal() {
+            aplMultipliers.medium = parseMultiplier(modalMediumMultiplierEl.value, 1.2);
+            aplMultipliers.hard = parseMultiplier(modalHardMultiplierEl.value, 1.5);
+            saveRows();
+            updateDifficultySummary();
+            closeTotalAplModal();
+            showStatus('APL formula multipliers updated.');
+        }
+
         function updateDerivedMetrics(levelledCount, difficultyCounts) {
             const vars = window.EventVariables?.get?.() || {};
             const totalBuild = Math.max(0, parseNumber(vars.totalEventBuild));
             const players = Math.max(0, parseNumber(vars.players));
             const eventDays = Math.max(0, parseNumber(vars.eventDays));
-            const totalAdventures = parseAdventureCount(vars.totalAdventures);
             const playersPerAdventure = Math.max(0, parseNumber(metricPlayersPerAdventureInputEl.value));
             const eventLevel = normalizeEventLevel(vars.eventDifficulty || 'medium');
             updateSelectedEventLevelHighlight(eventLevel);
@@ -494,13 +655,15 @@
             const averageBuild = players > 0 ? (totalBuild / players) : 0;
             const averageLevel = Math.floor((averageBuild / 10) - 4);
             const levelsPerAdventure = averageLevel * playersPerAdventure;
-            const totalEventAplEasy = levelsPerAdventure * totalAdventures;
-            const totalEventAplMedium = totalEventAplEasy * 1.2;
-            const totalEventAplHard = totalEventAplEasy * 1.5;
+            const computedApl = getComputedTotalEventAplValues();
 
-            let selectedTotalGoal = totalEventAplMedium;
-            if (eventLevel === 'hard') selectedTotalGoal = totalEventAplHard;
-            else if (eventLevel === 'easy') selectedTotalGoal = totalEventAplEasy;
+            const effectiveTotalEventAplEasy = computedApl.easy;
+            const effectiveTotalEventAplMedium = computedApl.medium;
+            const effectiveTotalEventAplHard = computedApl.hard;
+
+            let selectedTotalGoal = effectiveTotalEventAplMedium;
+            if (eventLevel === 'hard') selectedTotalGoal = effectiveTotalEventAplHard;
+            else if (eventLevel === 'easy') selectedTotalGoal = effectiveTotalEventAplEasy;
 
             const totalSilver = Math.ceil(totalBuild * 1.5);
             const silverPerApl = selectedTotalGoal > 0 ? (totalSilver / selectedTotalGoal) : 0;
@@ -522,17 +685,13 @@
             const hardScore = hardCount * 3;
             const totalScore = easyScore + mediumScore + hardScore;
 
-            const easyGoal = totalScore > 0 ? (selectedTotalGoal * easyScore / totalScore) : 0;
-            const mediumGoal = totalScore > 0 ? (selectedTotalGoal * mediumScore / totalScore) : 0;
-            const hardGoal = totalScore > 0 ? (selectedTotalGoal * hardScore / totalScore) : 0;
+            const aplPerAdventureEasy = easyCount > 0 ? (effectiveTotalEventAplEasy / easyCount) : 0;
+            const aplPerAdventureMedium = mediumCount > 0 ? (effectiveTotalEventAplMedium / mediumCount) : 0;
+            const aplPerAdventureHard = hardCount > 0 ? (effectiveTotalEventAplHard / hardCount) : 0;
 
-            const aplPerAdventureEasy = easyCount > 0 ? (easyGoal / easyCount) : 0;
-            const aplPerAdventureMedium = mediumCount > 0 ? (mediumGoal / mediumCount) : 0;
-            const aplPerAdventureHard = hardCount > 0 ? (hardGoal / hardCount) : 0;
-
-            totalEventAplEasyEl.value = String(roundInt(totalEventAplEasy));
-            totalEventAplMediumEl.value = String(roundInt(totalEventAplMedium));
-            totalEventAplHardEl.value = String(roundInt(totalEventAplHard));
+            totalEventAplEasyEl.value = String(roundInt(effectiveTotalEventAplEasy));
+            totalEventAplMediumEl.value = String(roundInt(effectiveTotalEventAplMedium));
+            totalEventAplHardEl.value = String(roundInt(effectiveTotalEventAplHard));
 
             metricLevelledAdventuresEl.textContent = String(levelledCount);
             metricTotalBuildEl.textContent = String(roundInt(totalBuild));
@@ -631,6 +790,9 @@
         });
 
         metricPlayersPerAdventureInputEl.addEventListener('input', savePlayersPerAdventureValue);
+        editTotalAplBtn.addEventListener('click', openTotalAplModal);
+        cancelTotalAplBtn.addEventListener('click', closeTotalAplModal);
+        saveTotalAplBtn.addEventListener('click', saveTotalAplModal);
 
         window.EventVariables?.onChange?.(() => {
             syncRowCountToEventVariables();

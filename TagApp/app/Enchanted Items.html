@@ -312,6 +312,7 @@
             </div>
             <div class="actions">
                 <button id="addEntryBtn" class="btn" type="button">Add Enchanted Item</button>
+                <button id="cancelEditBtn" class="btn btn-danger hidden" type="button">Cancel Edit</button>
                 <button id="clearFormBtn" class="btn btn-secondary" type="button">Clear Form</button>
                 <button id="reloadAdventuresBtn" class="btn btn-secondary" type="button">Reload Adventures</button>
             </div>
@@ -321,6 +322,8 @@
         <section class="card">
             <div class="actions">
                 <button id="saveBuilderBtn" class="btn btn-secondary" type="button">Save Builder Items</button>
+                <button id="exportEnchantedItemsBtn" class="btn btn-secondary" type="button">Export Enchanted Items (.xlsx)</button>
+                <button id="importEnchantedItemsBtn" class="btn btn-secondary" type="button">Import Enchanted Items (.xlsx)</button>
                 <button id="pushToItemTagsBtn" class="btn btn-success" type="button">Save All and Add to Item Tags</button>
                 <button id="clearBuilderBtn" class="btn btn-danger" type="button">Clear Builder List</button>
             </div>
@@ -377,7 +380,9 @@
     </div>
 
     <script src="event-variables.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
+        const eventVarsApi = window.EventVariables;
         const BUILDER_STORAGE_KEY = 'enchantedItems.builder.v1';
         const ENCHANTMENTS_STORAGE_KEY = 'enchantedItems.enchantments.v1';
         const ITEM_TAGS_STORAGE_KEY = 'itemTags.items.v2';
@@ -406,7 +411,8 @@
             { id: 'spirit_lock', name: 'Spirit Lock', level: 9, targetType: 'Item / Spirit', description: 'Absolute bond. Item only works for that spirit. Can unravel permanently if resurrection fails or on specific destroy effects.' },
             { id: 'extend_enchantment', name: 'Extend Enchantment', level: 3, targetType: 'Formal Batch', description: 'Modifies duration; extends all enchantments in the current batch to last for 6 months.' },
             { id: 'extend_formal_magic', name: 'Extend Formal Magic', level: 5, targetType: 'Formal Batch', description: 'Modifies duration; extends all enchantments in the current batch to last for 1 year.' },
-            { id: 'greater_extension', name: 'Greater Extension', level: 9, targetType: 'Formal Batch', description: 'Modifies duration; extends all enchantments in the current batch to last for 2 years.' }
+            { id: 'greater_extension', name: 'Greater Extension', level: 9, targetType: 'Formal Batch', description: 'Modifies duration; extends all enchantments in the current batch to last for 2 years.' },
+            { id: 'tyrran_aura', name: 'Tyrran Aura', level: 4, targetType: 'Weapon', description: 'This will allow the wielder to use the Tyrran carrier when desired.' }
         ];
 
         const enchantmentSelectEl = document.getElementById('enchantmentSelect');
@@ -435,12 +441,209 @@
         const enchantmentDetails3El = document.getElementById('enchantmentDetails3');
         const statusMessageEl = document.getElementById('statusMessage');
         const entriesBodyEl = document.getElementById('entriesBody');
+        const addEntryBtnEl = document.getElementById('addEntryBtn');
+        const cancelEditBtnEl = document.getElementById('cancelEditBtn');
+        const exportEnchantedItemsBtnEl = document.getElementById('exportEnchantedItemsBtn');
+        const importEnchantedItemsBtnEl = document.getElementById('importEnchantedItemsBtn');
 
         let builderRows = [];
-    let enchantments = [];
+        let enchantments = [];
+        let editingRowIndex = -1;
 
         function showStatus(message) {
             statusMessageEl.textContent = message;
+        }
+
+        function toYesNoBoolean(value) {
+            const normalized = String(value || '').trim().toLowerCase();
+            return normalized === 'yes' || normalized === 'true' || normalized === '1';
+        }
+
+        function safeFilePart(value) {
+            return String(value || '')
+                .trim()
+                .replace(/[^a-z0-9-_ ]/gi, '')
+                .replace(/\s+/g, '_')
+                .replace(/_+/g, '_')
+                .replace(/^_+|_+$/g, '') || 'Event';
+        }
+
+        function getXlsx() {
+            if (!window.XLSX) {
+                showStatus('XLSX library failed to load. Please refresh and try again.');
+                return null;
+            }
+            return window.XLSX;
+        }
+
+        function pickWorkbookFile() {
+            return new Promise((resolve) => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                input.style.display = 'none';
+                input.addEventListener('change', () => {
+                    const file = input.files && input.files[0] ? input.files[0] : null;
+                    input.remove();
+                    resolve(file);
+                }, { once: true });
+                document.body.appendChild(input);
+                input.click();
+            });
+        }
+
+        async function readWorkbookFromPicker() {
+            const xlsx = getXlsx();
+            if (!xlsx) return null;
+            const file = await pickWorkbookFile();
+            if (!file) return null;
+            const buffer = await file.arrayBuffer();
+            return xlsx.read(buffer, { type: 'array' });
+        }
+
+        function getSheetRows(workbook, preferredName) {
+            const xlsx = getXlsx();
+            if (!xlsx || !workbook) return [];
+            const sheetName = (preferredName && workbook.Sheets[preferredName]) ? preferredName : workbook.SheetNames[0];
+            if (!sheetName || !workbook.Sheets[sheetName]) return [];
+            return xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
+        }
+
+        function parseNumberOrNull(value) {
+            const trimmed = String(value ?? '').trim();
+            if (!trimmed) return null;
+            const parsed = Number(trimmed);
+            return Number.isFinite(parsed) ? parsed : null;
+        }
+
+        function buildEnchantedItemsExportRows() {
+            return builderRows.map((row) => {
+                const additional = Array.isArray(row.additionalEnchantments) ? row.additionalEnchantments : [];
+                const second = additional[0] || {};
+                const third = additional[1] || {};
+                return {
+                    ItemName: row.itemName || '',
+                    Identified: row.identified ? 'Yes' : 'No',
+                    Adventure: row.adventure || '',
+                    PrimaryEnchantmentId: row.enchantmentId || '',
+                    PrimaryEnchantmentName: row.enchantmentName || '',
+                    PrimaryLevel: row.level ?? '',
+                    PrimaryTargetType: row.targetType || '',
+                    PrimaryDescription: row.description || '',
+                    ItemNotes: row.notes || '',
+                    Expiry: row.expiry || '',
+                    SecondEnchantmentId: second.enchantmentId || '',
+                    SecondEnchantmentName: second.enchantmentName || '',
+                    SecondLevel: second.level ?? '',
+                    SecondTargetType: second.targetType || '',
+                    SecondDescription: second.description || '',
+                    SecondNotes: second.notes || '',
+                    ThirdEnchantmentId: third.enchantmentId || '',
+                    ThirdEnchantmentName: third.enchantmentName || '',
+                    ThirdLevel: third.level ?? '',
+                    ThirdTargetType: third.targetType || '',
+                    ThirdDescription: third.description || '',
+                    ThirdNotes: third.notes || ''
+                };
+            });
+        }
+
+        function normalizeEnchantedItemRowFromImport(row) {
+            const primaryName = String(row.PrimaryEnchantmentName ?? row.primaryEnchantmentName ?? '').trim();
+            const secondName = String(row.SecondEnchantmentName ?? row.secondEnchantmentName ?? '').trim();
+            const thirdName = String(row.ThirdEnchantmentName ?? row.thirdEnchantmentName ?? '').trim();
+            const additionalEnchantments = [];
+
+            if (secondName) {
+                additionalEnchantments.push({
+                    enchantmentId: String(row.SecondEnchantmentId ?? row.secondEnchantmentId ?? '').trim(),
+                    enchantmentName: secondName,
+                    level: parseNumberOrNull(row.SecondLevel ?? row.secondLevel),
+                    targetType: String(row.SecondTargetType ?? row.secondTargetType ?? '').trim(),
+                    description: String(row.SecondDescription ?? row.secondDescription ?? '').trim(),
+                    notes: String(row.SecondNotes ?? row.secondNotes ?? '').trim()
+                });
+            }
+
+            if (thirdName) {
+                additionalEnchantments.push({
+                    enchantmentId: String(row.ThirdEnchantmentId ?? row.thirdEnchantmentId ?? '').trim(),
+                    enchantmentName: thirdName,
+                    level: parseNumberOrNull(row.ThirdLevel ?? row.thirdLevel),
+                    targetType: String(row.ThirdTargetType ?? row.thirdTargetType ?? '').trim(),
+                    description: String(row.ThirdDescription ?? row.thirdDescription ?? '').trim(),
+                    notes: String(row.ThirdNotes ?? row.thirdNotes ?? '').trim()
+                });
+            }
+
+            return {
+                itemName: String(row.ItemName ?? row.itemName ?? '').trim(),
+                identified: toYesNoBoolean(row.Identified ?? row.identified),
+                enchantmentId: String(row.PrimaryEnchantmentId ?? row.primaryEnchantmentId ?? '').trim(),
+                enchantmentName: primaryName,
+                level: parseNumberOrNull(row.PrimaryLevel ?? row.primaryLevel),
+                targetType: String(row.PrimaryTargetType ?? row.primaryTargetType ?? '').trim(),
+                description: String(row.PrimaryDescription ?? row.primaryDescription ?? '').trim(),
+                additionalEnchantments,
+                adventure: String(row.Adventure ?? row.adventure ?? '').trim(),
+                notes: String(row.ItemNotes ?? row.itemNotes ?? '').trim(),
+                expiry: String(row.Expiry ?? row.expiry ?? '').trim()
+            };
+        }
+
+        function exportEnchantedItems() {
+            const xlsx = getXlsx();
+            if (!xlsx) return;
+
+            const rows = buildEnchantedItemsExportRows();
+            if (!rows.length) {
+                showStatus('No enchanted items to export.');
+                return;
+            }
+
+            const workbook = xlsx.utils.book_new();
+            const worksheet = xlsx.utils.json_to_sheet(rows);
+            xlsx.utils.book_append_sheet(workbook, worksheet, 'Enchanted Items');
+
+            const vars = eventVarsApi?.get?.() || {};
+            const fileName = `${safeFilePart(vars.eventName)}_Enchanted_Items.xlsx`;
+            xlsx.writeFile(workbook, fileName);
+            showStatus(`Exported ${fileName}`);
+        }
+
+        async function importEnchantedItems() {
+            try {
+                const workbook = await readWorkbookFromPicker();
+                if (!workbook) {
+                    showStatus('Import cancelled.');
+                    return;
+                }
+
+                const rows = getSheetRows(workbook, 'Enchanted Items');
+                if (!rows.length) {
+                    showStatus('No Enchanted Items rows found in workbook.');
+                    return;
+                }
+
+                const normalizedRows = rows
+                    .map((row) => normalizeEnchantedItemRowFromImport(row))
+                    .filter((row) => row.itemName && row.enchantmentName)
+                    .map((row) => normalizeBuilderRow(row));
+
+                if (!normalizedRows.length) {
+                    showStatus('No valid enchanted items found to import.');
+                    return;
+                }
+
+                builderRows = normalizedRows;
+                saveBuilderRows();
+                renderRows();
+                clearForm();
+                showStatus(`Imported ${normalizedRows.length} enchanted items.`);
+            } catch (error) {
+                console.error('Failed to import Enchanted Items workbook:', error);
+                showStatus('Could not import Enchanted Items workbook.');
+            }
         }
 
         function openAddEnchantmentModal() {
@@ -770,6 +973,42 @@
             identifiedInputEl.checked = false;
             updateAdditionalEnchantmentVisibility();
             renderEnchantmentDetails();
+            editingRowIndex = -1;
+            addEntryBtnEl.textContent = 'Add Enchanted Item';
+            cancelEditBtnEl.classList.add('hidden');
+        }
+
+        function startEditRow(index) {
+            const row = builderRows[index];
+            if (!row) return;
+
+            editingRowIndex = index;
+
+            itemNameInputEl.value = row.itemName || '';
+            identifiedInputEl.checked = Boolean(row.identified);
+            adventureSelectEl.value = row.adventure || '';
+            customNotesInputEl.value = row.notes || '';
+            expiryDateInputEl.value = row.expiry || getDefaultExpiryDate();
+
+            enchantmentSelectEl.value = row.enchantmentId || '';
+
+            const secondEnchantment = row.additionalEnchantments?.[0] || null;
+            const thirdEnchantment = row.additionalEnchantments?.[1] || null;
+
+            addSecondEnchantmentToggleEl.checked = Boolean(secondEnchantment);
+            addThirdEnchantmentToggleEl.checked = Boolean(secondEnchantment && thirdEnchantment);
+            updateAdditionalEnchantmentVisibility();
+
+            enchantmentSelect2El.value = secondEnchantment?.enchantmentId || '';
+            enchantmentSelect3El.value = thirdEnchantment?.enchantmentId || '';
+            customNotesInput2El.value = secondEnchantment?.notes || '';
+            customNotesInput3El.value = thirdEnchantment?.notes || '';
+
+            renderEnchantmentDetails();
+
+            addEntryBtnEl.textContent = 'Update Enchanted Item';
+            cancelEditBtnEl.classList.remove('hidden');
+            showStatus('Editing enchanted item. Save to update this entry.');
         }
 
         function buildRowEnchantmentsSummary(row) {
@@ -830,16 +1069,31 @@
 
                 const actionTd = document.createElement('td');
                 actionTd.className = 'action-cell';
+
+                const editBtn = document.createElement('button');
+                editBtn.type = 'button';
+                editBtn.className = 'mini-btn';
+                editBtn.textContent = 'Edit';
+                editBtn.addEventListener('click', () => {
+                    startEditRow(index);
+                });
+
                 const removeBtn = document.createElement('button');
                 removeBtn.type = 'button';
                 removeBtn.className = 'mini-btn delete';
                 removeBtn.textContent = 'Remove';
                 removeBtn.addEventListener('click', () => {
                     builderRows.splice(index, 1);
+                    if (editingRowIndex === index) {
+                        clearForm();
+                    } else if (editingRowIndex > index) {
+                        editingRowIndex -= 1;
+                    }
                     saveBuilderRows();
                     renderRows();
                     showStatus('Entry removed.');
                 });
+                actionTd.appendChild(editBtn);
                 actionTd.appendChild(removeBtn);
                 tr.appendChild(actionTd);
                 entriesBodyEl.appendChild(tr);
@@ -920,6 +1174,7 @@
             const secondNotes = String(additional[0]?.notes || '').trim();
             const thirdNotes = String(additional[1]?.notes || '').trim();
             const descriptionLines = [`Enchantment Notes: `];
+            descriptionLines.push(`${notes}`);
 
             if (secondNotes) {
                 descriptionLines.push(`${secondNotes}`);
@@ -943,7 +1198,7 @@
                 itemValue: '',
                 encodedValue: '',
                 persistantProp: false,
-                enchantment: enchantmentWithNotes,
+                enchantment: enchantmentList,
                 expiry: row.expiry
             });
         }
@@ -969,7 +1224,7 @@
             showStatus(`Saved ${builderRows.length} builder items and added them to Item Tags.`);
         }
 
-        document.getElementById('addEntryBtn').addEventListener('click', () => {
+        addEntryBtnEl.addEventListener('click', () => {
             const selectedEnchantments = getSelectedEnchantmentsForEntry();
             const itemName = String(itemNameInputEl.value || '').trim();
             const adventure = String(adventureSelectEl.value || '').trim();
@@ -1006,7 +1261,7 @@
 
             const [primary, ...additional] = selectedEnchantments;
 
-            builderRows.unshift(normalizeBuilderRow({
+            const nextRow = normalizeBuilderRow({
                 itemName,
                 identified,
                 enchantmentId: primary.id,
@@ -1025,12 +1280,25 @@
                 adventure,
                 notes,
                 expiry
-            }));
+            });
+
+            const wasEditing = editingRowIndex >= 0 && editingRowIndex < builderRows.length;
+
+            if (wasEditing) {
+                builderRows[editingRowIndex] = nextRow;
+            } else {
+                builderRows.unshift(nextRow);
+            }
 
             saveBuilderRows();
             renderRows();
             clearForm();
-            showStatus('Enchanted item added to builder list.');
+            showStatus(wasEditing ? 'Enchanted item updated.' : 'Enchanted item added to builder list.');
+        });
+
+        cancelEditBtnEl.addEventListener('click', () => {
+            clearForm();
+            showStatus('Edit cancelled.');
         });
 
         document.getElementById('clearFormBtn').addEventListener('click', () => {
@@ -1047,6 +1315,9 @@
             saveBuilderRows();
             showStatus(`Saved ${builderRows.length} builder items.`);
         });
+
+        exportEnchantedItemsBtnEl.addEventListener('click', exportEnchantedItems);
+        importEnchantedItemsBtnEl.addEventListener('click', importEnchantedItems);
 
         document.getElementById('pushToItemTagsBtn').addEventListener('click', () => {
             saveBuilderRows();

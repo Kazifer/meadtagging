@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cantrip Production Calculator</title>
+    <title>Cantrip Creator</title>
     <link rel="stylesheet" href="theme.css">
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- html2pdf.js CDN for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -32,12 +31,10 @@
     </style>
 </head>
 <body class="bg-gray-900 min-h-screen p-4 md:p-8 font-sans text-gray-100">
-
     <div id="app" class="max-w-6xl mx-auto bg-gray-800 rounded-xl shadow-2xl p-6 md:p-10">
-
         <!-- Header and Cost Summary -->
         <header class="mb-8 border-b-4 border-indigo-500 pb-4">
-            <h1 class="text-4xl font-extrabold text-indigo-400 mb-4">Cantrip Production Tool</h1>
+            <h1 class="text-4xl font-extrabold text-indigo-400 mb-4">Cantrip Creator</h1>
             <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div class="w-full md:w-1/2">
                     <label for="adventureTitle" class="block text-sm font-normal text-gray-200 mb-1">Adventure </label>
@@ -47,7 +44,7 @@
                 </div>
                 <div class="w-full md:w-1/4">
                     <div class="bg-indigo-900/50 p-4 rounded-lg text-center shadow-inner">
-                        <p class="text-sm font-medium text-indigo-200">Total Production Cost</p>
+                        <p class="text-sm font-medium text-indigo-200">Total Component Cost</p>
                         <p id="totalCost" class="text-3xl font-bold text-indigo-400 mt-1">0</p>
                     </div>
                 </div>

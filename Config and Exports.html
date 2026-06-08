@@ -19,6 +19,9 @@
         .btn-primary { background: #00bcd4; color: #0f172a; }
         .btn-secondary { background: #4a5568; color: #edf2f7; }
         .status { margin-top: 12px; color: var(--app-muted); min-height: 1.2em; }
+        .debug-panel { margin-top: 12px; border: 1px dashed var(--app-border); border-radius: 8px; padding: 8px; background: #0b1220; }
+        .debug-panel summary { cursor: pointer; color: #cbd5e1; font-weight: 600; }
+        .debug-output { margin-top: 8px; white-space: pre-wrap; font-size: 0.82rem; color: #94a3b8; max-height: 220px; overflow: auto; }
         .hint { margin-top: 8px; font-size: 0.92rem; }
     </style>
 </head>
@@ -31,9 +34,9 @@
             <table class="io-table" aria-label="Import and export options">
                 <thead>
                     <tr>
-                        <th>Title</th>
-                        <th>Export</th>
-                        <th>Import</th>
+                        <th>Event</th>
+                        <th></th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -47,6 +50,30 @@
                         <td><button id="exportLootCalcBtn" class="btn btn-secondary" type="button">Export (.xlsx)</button></td>
                         <td><button id="importLootCalcBtn" class="btn btn-secondary" type="button">Import (.xlsx)</button></td>
                     </tr>
+                    
+                    <tr>
+                        <td>Template Builds</td>
+                        <td><button id="exportTemplatesBtn" class="btn btn-secondary" type="button">Export (.xlsx)</button></td>
+                        <td><button id="importTemplatesBtn" class="btn btn-secondary" type="button">Import (.xlsx)</button></td>
+                    </tr>
+                    <tr>
+                        <td>Feedback Sheet</td>
+                        <td><button id="exportFeedbackSheetBtn" class="btn btn-secondary" type="button">Export (.xlsx)</button></td>
+                        <td>-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="io-table-wrap">
+            <table class="io-table" aria-label="Import and export options">
+                <thead>
+                    <tr>
+                        <th>Adventures</th>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
                     <tr>
                         <td>Adventure Listing</td>
                         <td><button id="exportAdventureListingBtn" class="btn btn-secondary" type="button">Export (.xlsx)</button></td>
@@ -62,31 +89,20 @@
                         <td><button id="exportAdventureSpecialReqsBtn" class="btn btn-secondary" type="button">Export (.xlsx)</button></td>
                         <td><button id="importAdventureSpecialReqsBtn" class="btn btn-secondary" type="button">Import (.xlsx)</button></td>
                     </tr>
-                    <tr>
-                        <td>Template Builds</td>
-                        <td><button id="exportTemplatesBtn" class="btn btn-secondary" type="button">Export (.xlsx)</button></td>
-                        <td><button id="importTemplatesBtn" class="btn btn-secondary" type="button">Import (.xlsx)</button></td>
-                    </tr>
-                    <tr>
-                        <td>Enchanted Items</td>
-                        <td><button id="exportEnchantedItemsBtn" class="btn btn-secondary" type="button">Export (.xlsx)</button></td>
-                        <td><button id="importEnchantedItemsBtn" class="btn btn-secondary" type="button">Import (.xlsx)</button></td>
-                    </tr>
-                    <tr>
-                        <td>Feedback Sheet</td>
-                        <td><button id="exportFeedbackSheetBtn" class="btn btn-secondary" type="button">Export (.xlsx)</button></td>
-                        <td>-</td>
-                    </tr>
-                </tbody>
+              </tbody>
             </table>
         </div>
-
         <div class="actions">
             <button id="exportAllBtn" class="btn btn-primary" type="button">Export All (.xlsx)</button>
         </div>
 
+        <details class="debug-panel">
+            <summary>Import Debug Info</summary>
+            <pre id="importDebugOutput" class="debug-output">No import debug output yet.</pre>
+        </details>
+
         <p id="statusMessage" class="status"></p>
-        <p class="hint">Tip: Event settings come from Event Variables and are used to name and calculate exports.</p>
+
     </main>
 
     <script src="event-variables.js"></script>
@@ -98,7 +114,6 @@
         const lootAllocationsStorageKey = 'lootCalcAllocated.v1';
         const scheduleStorageKey = 'adventureScheduling.v1';
         const templateBuildLogStorageKey = 'templateBuilder.eventLog.v1';
-        const enchantedItemsStorageKey = 'enchantedItems.builder.v1';
 
         const exportEventVarsBtn = document.getElementById('exportEventVarsBtn');
         const exportLootCalcBtn = document.getElementById('exportLootCalcBtn');
@@ -106,7 +121,6 @@
         const exportAdventureLevellingBtn = document.getElementById('exportAdventureLevellingBtn');
         const exportAdventureSpecialReqsBtn = document.getElementById('exportAdventureSpecialReqsBtn');
         const exportTemplatesBtn = document.getElementById('exportTemplatesBtn');
-        const exportEnchantedItemsBtn = document.getElementById('exportEnchantedItemsBtn');
         const exportFeedbackSheetBtn = document.getElementById('exportFeedbackSheetBtn');
         const exportAllBtn = document.getElementById('exportAllBtn');
         const importEventVarsBtn = document.getElementById('importEventVarsBtn');
@@ -115,10 +129,16 @@
         const importAdventureLevellingBtn = document.getElementById('importAdventureLevellingBtn');
         const importAdventureSpecialReqsBtn = document.getElementById('importAdventureSpecialReqsBtn');
         const importTemplatesBtn = document.getElementById('importTemplatesBtn');
-        const importEnchantedItemsBtn = document.getElementById('importEnchantedItemsBtn');
         const statusMessage = document.getElementById('statusMessage');
+        const importDebugOutput = document.getElementById('importDebugOutput');
 
         function showStatus(message) { statusMessage.textContent = message; }
+        function showImportDebug(lines) {
+            const output = Array.isArray(lines) && lines.length
+                ? lines.join('\n')
+                : 'No import debug output yet.';
+            importDebugOutput.textContent = output;
+        }
         function parseNumber(value) { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : 0; }
         function parseAdventureCount(value) { const parsed = Number(value); if (!Number.isFinite(parsed)) return 0; return Math.max(0, Math.floor(parsed)); }
         function normalizeEventLevel(value) { const level = String(value || '').trim().toLowerCase(); if (level === 'min' || level === 'easy') return 'easy'; if (level === 'max' || level === 'hard') return 'hard'; return 'medium'; }
@@ -325,11 +345,6 @@
             catch (error) { console.error('Failed to read template builds:', error); return []; }
         }
 
-        function readEnchantedItemsRows() {
-            try { const raw = localStorage.getItem(enchantedItemsStorageKey); const parsed = raw ? JSON.parse(raw) : []; return Array.isArray(parsed) ? parsed : []; }
-            catch (error) { console.error('Failed to read enchanted items:', error); return []; }
-        }
-
         function writeTemplateBuildRows(rows) {
             localStorage.setItem(templateBuildLogStorageKey, JSON.stringify(rows));
             window.dispatchEvent(new CustomEvent('template-build-log-changed', { detail: rows }));
@@ -341,20 +356,6 @@
                 Level: row.level || '', RaceId: row.raceId || '', ClassId: row.classId || '', UsedBP: row.usedBP || '', Body: row.body || '',
                 ArmourValue: row.armourValue ?? '', BuildJson: JSON.stringify(row.build || {}), CreatedAt: row.createdAt || '', UpdatedAt: row.updatedAt || ''
             }));
-        }
-
-        function buildEnchantedItemsExportRows() {
-            return readEnchantedItemsRows().map((row) => {
-                const additional = Array.isArray(row.additionalEnchantments) ? row.additionalEnchantments : [];
-                const second = additional[0] || {};
-                const third = additional[1] || {};
-                return {
-                    ItemName: row.itemName || '', Identified: row.identified ? 'Yes' : 'No', Adventure: row.adventure || '',
-                    PrimaryEnchantmentId: row.enchantmentId || '', PrimaryEnchantmentName: row.enchantmentName || '', PrimaryLevel: row.level ?? '', PrimaryTargetType: row.targetType || '', PrimaryDescription: row.description || '', ItemNotes: row.notes || '', Expiry: row.expiry || '',
-                    SecondEnchantmentId: second.enchantmentId || '', SecondEnchantmentName: second.enchantmentName || '', SecondLevel: second.level ?? '', SecondTargetType: second.targetType || '', SecondDescription: second.description || '', SecondNotes: second.notes || '',
-                    ThirdEnchantmentId: third.enchantmentId || '', ThirdEnchantmentName: third.enchantmentName || '', ThirdLevel: third.level ?? '', ThirdTargetType: third.targetType || '', ThirdDescription: third.description || '', ThirdNotes: third.notes || ''
-                };
-            });
         }
 
         function normalizeTemplateRowFromImport(row, index) {
@@ -383,29 +384,6 @@
             };
         }
 
-        function normalizeEnchantedItemRowFromImport(row) {
-            const parseNumberOrNull = (value) => { const trimmed = String(value ?? '').trim(); if (!trimmed) return null; const parsed = Number(trimmed); return Number.isFinite(parsed) ? parsed : null; };
-            const primaryName = String(row.PrimaryEnchantmentName ?? row.primaryEnchantmentName ?? '').trim();
-            const secondName = String(row.SecondEnchantmentName ?? row.secondEnchantmentName ?? '').trim();
-            const thirdName = String(row.ThirdEnchantmentName ?? row.thirdEnchantmentName ?? '').trim();
-            const additionalEnchantments = [];
-            if (secondName) additionalEnchantments.push({ enchantmentId: String(row.SecondEnchantmentId ?? row.secondEnchantmentId ?? '').trim(), enchantmentName: secondName, level: parseNumberOrNull(row.SecondLevel ?? row.secondLevel), targetType: String(row.SecondTargetType ?? row.secondTargetType ?? '').trim(), description: String(row.SecondDescription ?? row.secondDescription ?? '').trim(), notes: String(row.SecondNotes ?? row.secondNotes ?? '').trim() });
-            if (thirdName) additionalEnchantments.push({ enchantmentId: String(row.ThirdEnchantmentId ?? row.thirdEnchantmentId ?? '').trim(), enchantmentName: thirdName, level: parseNumberOrNull(row.ThirdLevel ?? row.thirdLevel), targetType: String(row.ThirdTargetType ?? row.thirdTargetType ?? '').trim(), description: String(row.ThirdDescription ?? row.thirdDescription ?? '').trim(), notes: String(row.ThirdNotes ?? row.thirdNotes ?? '').trim() });
-            return {
-                itemName: String(row.ItemName ?? row.itemName ?? '').trim(),
-                identified: toYesNoBoolean(row.Identified ?? row.identified),
-                enchantmentId: String(row.PrimaryEnchantmentId ?? row.primaryEnchantmentId ?? '').trim(),
-                enchantmentName: primaryName,
-                level: parseNumberOrNull(row.PrimaryLevel ?? row.primaryLevel),
-                targetType: String(row.PrimaryTargetType ?? row.primaryTargetType ?? '').trim(),
-                description: String(row.PrimaryDescription ?? row.primaryDescription ?? '').trim(),
-                additionalEnchantments,
-                adventure: String(row.Adventure ?? row.adventure ?? '').trim(),
-                notes: String(row.ItemNotes ?? row.itemNotes ?? '').trim(),
-                expiry: String(row.Expiry ?? row.expiry ?? '').trim()
-            };
-        }
-
         function exportEventVariables() {
             const vars = eventVarsApi?.get?.() || {};
             const row = {
@@ -425,17 +403,6 @@
             if (!prepared) return;
             const vars = eventVarsApi?.get?.() || {};
             const fileName = `${safeFilePart(vars.eventName)}_Templates.xlsx`;
-            prepared.xlsx.writeFile(prepared.workbook, fileName);
-            showStatus(`Exported ${fileName}`);
-        }
-
-        function exportEnchantedItems() {
-            const rows = buildEnchantedItemsExportRows();
-            if (!rows.length) { showStatus('No enchanted items to export.'); return; }
-            const prepared = createWorkbookFromRows('Enchanted Items', rows);
-            if (!prepared) return;
-            const vars = eventVarsApi?.get?.() || {};
-            const fileName = `${safeFilePart(vars.eventName)}_Enchanted_Items.xlsx`;
             prepared.xlsx.writeFile(prepared.workbook, fileName);
             showStatus(`Exported ${fileName}`);
         }
@@ -693,9 +660,17 @@
         async function importEventVariables() {
             try {
                 const workbook = await readWorkbookFromPicker();
-                if (!workbook) { showStatus('Import cancelled.'); return; }
+                if (!workbook) {
+                    showImportDebug(['Import: Event Variables', 'Status: Cancelled before file selection completed.']);
+                    showStatus('Import cancelled.');
+                    return;
+                }
                 const rows = getSheetRows(workbook, 'Event Variables');
-                if (!rows.length) { showStatus('No Event Variables rows found in workbook.'); return; }
+                if (!rows.length) {
+                    showImportDebug(['Import: Event Variables', 'Sheet: Event Variables', 'Rows found: 0']);
+                    showStatus('No Event Variables rows found in workbook.');
+                    return;
+                }
                 const row = rows[0] || {};
                 const payload = {
                     eventName: row.EventName ?? row.eventName ?? '',
@@ -708,9 +683,16 @@
                     playersPerAdventure: row.PlayersPerAdventure ?? row.playersPerAdventure ?? ''
                 };
                 eventVarsApi?.set?.(payload);
+                showImportDebug([
+                    'Import: Event Variables',
+                    'Sheet: Event Variables',
+                    `Rows found: ${rows.length}`,
+                    `Imported event name: ${String(payload.eventName || '(blank)')}`
+                ]);
                 showStatus('Imported Event Variables workbook.');
             } catch (error) {
                 console.error('Failed to import Event Variables workbook:', error);
+                showImportDebug(['Import: Event Variables', `Error: ${String(error?.message || error)}`]);
                 showStatus('Could not import Event Variables workbook.');
             }
         }
@@ -718,9 +700,17 @@
         async function importLootCalculation() {
             try {
                 const workbook = await readWorkbookFromPicker();
-                if (!workbook) { showStatus('Import cancelled.'); return; }
+                if (!workbook) {
+                    showImportDebug(['Import: Loot Calculation', 'Status: Cancelled before file selection completed.']);
+                    showStatus('Import cancelled.');
+                    return;
+                }
                 const rows = getSheetRows(workbook, 'Loot Calculation');
-                if (!rows.length) { showStatus('No Loot Calculation rows found in workbook.'); return; }
+                if (!rows.length) {
+                    showImportDebug(['Import: Loot Calculation', 'Sheet: Loot Calculation', 'Rows found: 0']);
+                    showStatus('No Loot Calculation rows found in workbook.');
+                    return;
+                }
                 const allocations = {};
                 rows.forEach((row) => {
                     const label = String(row.ItemType ?? row.itemType ?? '').trim();
@@ -734,9 +724,17 @@
                 const first = rows[0] || {};
                 const selectedDifficulty = first.SelectedDifficulty ?? first.selectedDifficulty;
                 if (selectedDifficulty) eventVarsApi?.set?.({ eventDifficulty: parseDisplayDifficulty(selectedDifficulty) });
+                showImportDebug([
+                    'Import: Loot Calculation',
+                    'Sheet: Loot Calculation',
+                    `Rows found: ${rows.length}`,
+                    `Allocations imported: ${Object.keys(allocations).length}`,
+                    `Selected difficulty: ${String(selectedDifficulty || '(not provided)')}`
+                ]);
                 showStatus('Imported Loot Calculation workbook.');
             } catch (error) {
                 console.error('Failed to import Loot Calculation workbook:', error);
+                showImportDebug(['Import: Loot Calculation', `Error: ${String(error?.message || error)}`]);
                 showStatus('Could not import Loot Calculation workbook.');
             }
         }
@@ -744,14 +742,29 @@
         async function importAdventureListing() {
             try {
                 const workbook = await readWorkbookFromPicker();
-                if (!workbook) { showStatus('Import cancelled.'); return; }
+                if (!workbook) {
+                    showImportDebug(['Import: Adventure Listing', 'Status: Cancelled before file selection completed.']);
+                    showStatus('Import cancelled.');
+                    return;
+                }
                 const rows = getSheetRows(workbook, 'Adventure Listing');
-                if (!rows.length) { showStatus('No Adventure Listing rows found in workbook.'); return; }
+                if (!rows.length) {
+                    showImportDebug(['Import: Adventure Listing', 'Sheet: Adventure Listing', 'Rows found: 0']);
+                    showStatus('No Adventure Listing rows found in workbook.');
+                    return;
+                }
                 const mappedRows = rows.map((row, index) => normalizeAdventureRowFromImport(row, index));
                 localStorage.setItem(adventureStorageKey, JSON.stringify({ rows: mappedRows }));
+                showImportDebug([
+                    'Import: Adventure Listing',
+                    'Sheet: Adventure Listing',
+                    `Rows found: ${rows.length}`,
+                    `Rows imported: ${mappedRows.length}`
+                ]);
                 showStatus('Imported Adventure Listing workbook.');
             } catch (error) {
                 console.error('Failed to import Adventure Listing workbook:', error);
+                showImportDebug(['Import: Adventure Listing', `Error: ${String(error?.message || error)}`]);
                 showStatus('Could not import Adventure Listing workbook.');
             }
         }
@@ -759,7 +772,11 @@
         async function importAdventureLevelling() {
             try {
                 const workbook = await readWorkbookFromPicker();
-                if (!workbook) { showStatus('Import cancelled.'); return; }
+                if (!workbook) {
+                    showImportDebug(['Import: Adventure Levelling', 'Status: Cancelled before file selection completed.']);
+                    showStatus('Import cancelled.');
+                    return;
+                }
                 const summaryRows = getSheetRows(workbook, 'Summary');
                 const adventureRows = getSheetRows(workbook, 'Adventures');
                 if (summaryRows.length) {
@@ -776,10 +793,20 @@
                     const mappedRows = adventureRows.map((row, index) => normalizeAdventureRowFromImport(row, index));
                     localStorage.setItem(adventureStorageKey, JSON.stringify({ rows: mappedRows }));
                 }
-                if (!summaryRows.length && !adventureRows.length) { showStatus('No Summary or Adventures sheets found in workbook.'); return; }
+                if (!summaryRows.length && !adventureRows.length) {
+                    showImportDebug(['Import: Adventure Levelling', 'Sheets checked: Summary, Adventures', 'Rows found: 0']);
+                    showStatus('No Summary or Adventures sheets found in workbook.');
+                    return;
+                }
+                showImportDebug([
+                    'Import: Adventure Levelling',
+                    `Summary rows: ${summaryRows.length}`,
+                    `Adventure rows: ${adventureRows.length}`
+                ]);
                 showStatus('Imported Adventure Levelling workbook.');
             } catch (error) {
                 console.error('Failed to import Adventure Levelling workbook:', error);
+                showImportDebug(['Import: Adventure Levelling', `Error: ${String(error?.message || error)}`]);
                 showStatus('Could not import Adventure Levelling workbook.');
             }
         }
@@ -799,16 +826,28 @@
         async function importAdventureSpecialRequirements() {
             try {
                 const workbook = await readWorkbookFromPicker();
-                if (!workbook) { showStatus('Import cancelled.'); return; }
+                if (!workbook) {
+                    showImportDebug(['Import: Adventure Special Requirements', 'Status: Cancelled before file selection completed.']);
+                    showStatus('Import cancelled.');
+                    return;
+                }
                 const importedRows = getSheetRows(workbook, 'Adventure Special Requirements');
-                if (!importedRows.length) { showStatus('No Adventure Special Requirements rows found in workbook.'); return; }
+                if (!importedRows.length) {
+                    showImportDebug(['Import: Adventure Special Requirements', 'Sheet: Adventure Special Requirements', 'Rows found: 0']);
+                    showStatus('No Adventure Special Requirements rows found in workbook.');
+                    return;
+                }
                 const normalizedRows = importedRows.map((row, index) => ({
                     no: String(row.No ?? row.no ?? index + 1),
                     title: String(row.Title ?? row.title ?? ''),
                     author: String(row.Author ?? row.author ?? ''),
                     specialRequirements: String(row.SpecialRequirements ?? row['Special Requirements'] ?? row.specialRequirements ?? '').trim()
                 })).filter((row) => row.specialRequirements !== '');
-                if (!normalizedRows.length) { showStatus('No rows had Special Requirements, nothing was imported.'); return; }
+                if (!normalizedRows.length) {
+                    showImportDebug(['Import: Adventure Special Requirements', `Rows found: ${importedRows.length}`, 'Rows with special requirements: 0']);
+                    showStatus('No rows had Special Requirements, nothing was imported.');
+                    return;
+                }
                 const existingRows = readStoredAdventureRows();
                 const updatedRows = existingRows.map((row) => ({ ...row }));
                 normalizedRows.forEach((row) => {
@@ -820,9 +859,16 @@
                     }
                 });
                 localStorage.setItem(adventureStorageKey, JSON.stringify({ rows: updatedRows }));
+                showImportDebug([
+                    'Import: Adventure Special Requirements',
+                    `Rows found: ${importedRows.length}`,
+                    `Rows imported: ${normalizedRows.length}`,
+                    `Rows after merge: ${updatedRows.length}`
+                ]);
                 showStatus(`Imported ${normalizedRows.length} Special Requirements rows.`);
             } catch (error) {
                 console.error('Failed to import Adventure Special Requirements workbook:', error);
+                showImportDebug(['Import: Adventure Special Requirements', `Error: ${String(error?.message || error)}`]);
                 showStatus('Could not import Adventure Special Requirements workbook.');
             }
         }
@@ -830,32 +876,34 @@
         async function importTemplates() {
             try {
                 const workbook = await readWorkbookFromPicker();
-                if (!workbook) { showStatus('Import cancelled.'); return; }
+                if (!workbook) {
+                    showImportDebug(['Import: Templates', 'Status: Cancelled before file selection completed.']);
+                    showStatus('Import cancelled.');
+                    return;
+                }
                 const rows = getSheetRows(workbook, 'Templates');
-                if (!rows.length) { showStatus('No Templates rows found in workbook.'); return; }
+                if (!rows.length) {
+                    showImportDebug(['Import: Templates', 'Sheet: Templates', 'Rows found: 0']);
+                    showStatus('No Templates rows found in workbook.');
+                    return;
+                }
                 const normalizedRows = rows.map((row, index) => normalizeTemplateRowFromImport(row, index)).filter((row) => row.name);
-                if (!normalizedRows.length) { showStatus('No valid templates found to import.'); return; }
+                if (!normalizedRows.length) {
+                    showImportDebug(['Import: Templates', `Rows found: ${rows.length}`, 'Valid rows: 0']);
+                    showStatus('No valid templates found to import.');
+                    return;
+                }
                 writeTemplateBuildRows(normalizedRows);
+                showImportDebug([
+                    'Import: Templates',
+                    `Rows found: ${rows.length}`,
+                    `Rows imported: ${normalizedRows.length}`
+                ]);
                 showStatus(`Imported ${normalizedRows.length} templates.`);
             } catch (error) {
                 console.error('Failed to import Templates workbook:', error);
+                showImportDebug(['Import: Templates', `Error: ${String(error?.message || error)}`]);
                 showStatus('Could not import Templates workbook.');
-            }
-        }
-
-        async function importEnchantedItems() {
-            try {
-                const workbook = await readWorkbookFromPicker();
-                if (!workbook) { showStatus('Import cancelled.'); return; }
-                const rows = getSheetRows(workbook, 'Enchanted Items');
-                if (!rows.length) { showStatus('No Enchanted Items rows found in workbook.'); return; }
-                const normalizedRows = rows.map((row) => normalizeEnchantedItemRowFromImport(row)).filter((row) => row.itemName && row.enchantmentName);
-                if (!normalizedRows.length) { showStatus('No valid enchanted items found to import.'); return; }
-                localStorage.setItem(enchantedItemsStorageKey, JSON.stringify(normalizedRows));
-                showStatus(`Imported ${normalizedRows.length} enchanted items.`);
-            } catch (error) {
-                console.error('Failed to import Enchanted Items workbook:', error);
-                showStatus('Could not import Enchanted Items workbook.');
             }
         }
 
@@ -866,7 +914,6 @@
                 exportAdventureListing();
                 exportAdventureLevelling();
                 exportTemplates();
-                exportEnchantedItems();
                 await exportAdventureSpecialRequirements();
                 await exportFeedbackSheet();
                 showStatus('Export All complete. Check your downloads for all workbook files.');
@@ -882,7 +929,6 @@
         exportAdventureLevellingBtn.addEventListener('click', exportAdventureLevelling);
         exportAdventureSpecialReqsBtn.addEventListener('click', exportAdventureSpecialRequirements);
         exportTemplatesBtn.addEventListener('click', exportTemplates);
-        exportEnchantedItemsBtn.addEventListener('click', exportEnchantedItems);
         exportFeedbackSheetBtn.addEventListener('click', exportFeedbackSheet);
         exportAllBtn.addEventListener('click', exportAllWorkbooks);
         importEventVarsBtn.addEventListener('click', importEventVariables);
@@ -891,8 +937,8 @@
         importAdventureLevellingBtn.addEventListener('click', importAdventureLevelling);
         importAdventureSpecialReqsBtn.addEventListener('click', importAdventureSpecialRequirements);
         importTemplatesBtn.addEventListener('click', importTemplates);
-        importEnchantedItemsBtn.addEventListener('click', importEnchantedItems);
 
+        showImportDebug([]);
         showStatus('Ready.');
     </script>
 </body>
