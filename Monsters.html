@@ -183,6 +183,10 @@
                     <label for="adventure-title" class="block mb-2 text-sm font-medium text-slate-300">Adventure Title</label>
                     <select id="adventure-title" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5"></select>
                 </div>
+
+                <div class="mt-3 bg-slate-700/60 border border-slate-600 rounded-lg px-3 py-2">
+                    <p class="text-sm text-slate-300">Roster Total APL: <span id="roster-total-apl" class="font-bold text-amber-400">0</span></p>
+                </div>
                 
                 <div id="adventure-roster-list" class="mt-4 space-y-3 max-h-96 overflow-y-auto pr-2">
                    <!-- JS will populate this -->
@@ -401,6 +405,7 @@
         const cancelModifierEditBtn = document.getElementById('cancel-modifier-edit-btn');
         const rosterList = document.getElementById('adventure-roster-list');
         const rosterPlaceholder = document.getElementById('roster-placeholder');
+        const rosterTotalAPL = document.getElementById('roster-total-apl');
         const adventureTitleInput = document.getElementById('adventure-title');
         
         const modal = document.getElementById('monster-modal');
@@ -477,6 +482,29 @@
             }
 
             currentAdventure.title = adventureTitleInput.value;
+        };
+
+        const getFormattedAdventureExportTitle = () => {
+            const vars = window.EventVariables?.get?.() || {};
+            const rawEventNumber = String(vars.eventNumber || '').trim();
+            const eventDigits = rawEventNumber.replace(/\D+/g, '');
+            const parsedEventNumber = parseInt(eventDigits, 10);
+            const eventNumber = Number.isFinite(parsedEventNumber)
+                ? String(parsedEventNumber).padStart(2, '0')
+                : '00';
+
+            const selectedAdventure = String(currentAdventure.title || '').trim();
+            const match = selectedAdventure.match(/^A\s*(\d+)\s*-\s*(.+)$/i);
+
+            let adventureNumber = '00';
+            let adventureName = selectedAdventure || 'Untitled Adventure';
+
+            if (match) {
+                adventureNumber = String(parseInt(match[1], 10)).padStart(2, '0');
+                adventureName = String(match[2] || '').trim() || 'Untitled Adventure';
+            }
+
+            return `E${eventNumber} - A${adventureNumber} - ${adventureName}`;
         };
 
         const createModifierId = (name) => {
@@ -905,6 +933,12 @@
                 `;
                 rosterList.appendChild(card);
             });
+
+            const totalAPL = currentAdventure.monsters.reduce((sum, advMonster) => {
+                const baseMonster = monsterDatabase.find((m) => m.id === advMonster.baseMonsterId);
+                return sum + ((Number(baseMonster?.APL) || 0) * (Number(advMonster.quantity) || 0));
+            }, 0);
+            rosterTotalAPL.textContent = String(totalAPL);
         };
         
         const renderTypeChart = () => {
@@ -1146,6 +1180,11 @@
                 const id = e.target.dataset.id;
                 const monster = currentAdventure.monsters.find(m => m.id === id);
                 if(monster) monster.quantity = parseInt(e.target.value) || 1;
+                const totalAPL = currentAdventure.monsters.reduce((sum, advMonster) => {
+                    const baseMonster = monsterDatabase.find((m) => m.id === advMonster.baseMonsterId);
+                    return sum + ((Number(baseMonster?.APL) || 0) * (Number(advMonster.quantity) || 0));
+                }, 0);
+                rosterTotalAPL.textContent = String(totalAPL);
             }
         });
 
@@ -1280,6 +1319,7 @@
 
         // --- EXPORT LOGIC ---
         const getExportData = () => {
+            const formattedAdventureTitle = getFormattedAdventureExportTitle();
             // Calculate summary data
             const totalMonsters = currentAdventure.monsters.reduce((sum, monster) => sum + monster.quantity, 0);
             const totalAPL = currentAdventure.monsters.reduce((sum, advMonster) => { 
@@ -1288,7 +1328,7 @@
             }, 0);
 
             const summary = {
-                adventureName: currentAdventure.title,
+                adventureName: formattedAdventureTitle,
                 totalMonsters: totalMonsters,
                 totalAPL: totalAPL
             };
@@ -1509,7 +1549,7 @@
                 }
             });
 
-            doc.save(`${currentAdventure.title.replace(/\s+/g, '_')}.pdf`);
+            doc.save(`${summary.adventureName.replace(/\s+/g, '_')}.pdf`);
         });
 
         document.getElementById('export-xlsx-btn').addEventListener('click', () => {
@@ -1549,7 +1589,7 @@
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, 'Encounter Details');
 
-            XLSX.writeFile(workbook, `${currentAdventure.title.replace(/\s+/g, '_')}.xlsx`);
+            XLSX.writeFile(workbook, `${summary.adventureName.replace(/\s+/g, '_')}.xlsx`);
         });
 
         document.getElementById('export-html-btn').addEventListener('click', () => {
