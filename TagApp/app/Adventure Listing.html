@@ -16,11 +16,44 @@
         }
 
         .page-header {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) 360px;
+            display: flex;
+            flex-direction: column;
             gap: 14px;
-            align-items: start;
             margin-bottom: 12px;
+        }
+
+        .page-header > :first-child {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .page-header-copy {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .header-progress {
+            min-width: 190px;
+            min-height: 128px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 18px;
+            border: 1px solid var(--app-border);
+            border-radius: 14px;
+            background: linear-gradient(135deg, rgba(21, 45, 96, 0.9), rgba(11, 18, 32, 0.96));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        }
+
+        .header-progress-value {
+            font-size: clamp(2.3rem, 4vw, 3.6rem);
+            font-weight: 800;
+            line-height: 1;
+            color: #17ae00;
+            font-variant-numeric: tabular-nums;
         }
 
         .page-header h1 {
@@ -32,11 +65,11 @@
         }
 
         .metric-stack {
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 10px;
-            justify-self: end;
             width: 100%;
+            align-items: stretch;
         }
 
         .stats {
@@ -62,7 +95,7 @@
         .stat-chip-metric {
             background:#0b1220;
             width: 100%;
-            max-width: 360px;
+            max-width: none;
         }
 
         .metric-title {
@@ -106,6 +139,10 @@
 
         .metric-bar-over {
             background: #38bdf8;
+        }
+
+        .metric-bar-blue {
+            background: #3b82f6;
         }
 
         .actions {
@@ -402,16 +439,27 @@
         }
 
         @media (max-width: 980px) {
-            .page-header {
-                grid-template-columns: 1fr;
+            .page-header > :first-child {
+                flex-direction: column;
+            }
+
+            .header-progress {
+                width: 100%;
+                min-height: 96px;
             }
 
             .metric-stack {
-                justify-self: stretch;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
             .stat-chip-metric {
                 max-width: none;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .metric-stack {
+                grid-template-columns: minmax(0, 1fr);
             }
         }
     </style>
@@ -420,8 +468,13 @@
     <main class="container">
         <section class="page-header">
             <div>
-                <h1>Adventure Listing</h1>
-                <p class="intro">Manage adventure rows here. This table is shared with Adventure Levelling metrics.</p>
+                <div class="page-header-copy">
+                    <h1>Adventure Listing</h1>
+                    <p class="intro">Manage adventure rows here. This table is shared with Adventure Levelling metrics.</p>
+                </div>
+                <div class="header-progress" aria-label="Overall completion progress">
+                    <span id="overallProgress" class="header-progress-value">0%</span>
+                </div>
             </div>
             
             <div class="metric-stack">
@@ -442,6 +495,21 @@
                     <div class="metric-title">Total Production vs Goal</div>
                     <div id="totalProduction" class="metric-value">0 / 0 (0%)</div>
                     <div class="metric-bar" aria-hidden="true"><span id="totalProductionBar" class="metric-bar-fill metric-bar-low"></span></div>
+                </div>
+                <div class="stat-chip stat-chip-metric">
+                    <div class="metric-title">Received / Total</div>
+                    <div id="receivedCount" class="metric-value">0 / 0 (0%)</div>
+                    <div class="metric-bar" aria-hidden="true"><span id="receivedCountBar" class="metric-bar-fill metric-bar-blue"></span></div>
+                </div>
+                <div class="stat-chip stat-chip-metric">
+                    <div class="metric-title">Processed / Total</div>
+                    <div id="processedCount" class="metric-value">0 / 0 (0%)</div>
+                    <div class="metric-bar" aria-hidden="true"><span id="processedCountBar" class="metric-bar-fill metric-bar-blue"></span></div>
+                </div>
+                <div class="stat-chip stat-chip-metric">
+                    <div class="metric-title">Tagged / Total</div>
+                    <div id="taggedCount" class="metric-value">0 / 0 (0%)</div>
+                    <div class="metric-bar" aria-hidden="true"><span id="taggedCountBar" class="metric-bar-fill metric-bar-blue"></span></div>
                 </div>
 
             </div>
@@ -521,12 +589,19 @@
         const eventTitleEl = document.getElementById('eventTitle');
         const expectedCountEl = document.getElementById('expectedCount');
         const eventLevelEl = document.getElementById('eventLevel');
+        const overallProgressEl = document.getElementById('overallProgress');
         const totalAplEl = document.getElementById('totalApl');
         const totalSilverEl = document.getElementById('totalSilver');
         const totalProductionEl = document.getElementById('totalProduction');
+        const receivedCountEl = document.getElementById('receivedCount');
+        const processedCountEl = document.getElementById('processedCount');
+        const taggedCountEl = document.getElementById('taggedCount');
         const totalAplBarEl = document.getElementById('totalAplBar');
         const totalSilverBarEl = document.getElementById('totalSilverBar');
         const totalProductionBarEl = document.getElementById('totalProductionBar');
+        const receivedCountBarEl = document.getElementById('receivedCountBar');
+        const processedCountBarEl = document.getElementById('processedCountBar');
+        const taggedCountBarEl = document.getElementById('taggedCountBar');
         const selectTemplateBtn = document.getElementById('selectTemplateBtn');
         const resetPageBtn = document.getElementById('resetPageBtn');
         const statusMessage = document.getElementById('statusMessage');
@@ -891,6 +966,9 @@
                 schedulingNotes: '',
                 description: '',
                 specialRequirements: '',
+                specialRequirementsSource: '',
+                specialRequirementsNotes: '',
+                specialRequirementsCompleted: false,
                 received: false,
                 processed: false,
                 tagged: false
@@ -899,6 +977,8 @@
 
         function normalizeRow(row, index) {
             const src = row || {};
+            const hasSilverManualFlag = Object.prototype.hasOwnProperty.call(src, 'silverManual');
+            const hasProductionManualFlag = Object.prototype.hasOwnProperty.call(src, 'productionManual');
             return {
                 no: src.no ?? String(index + 1),
                 title: src.title ?? '',
@@ -909,13 +989,16 @@
                 apl: src.apl ?? '',
                 silver: src.silver ?? '',
                 production: src.production ?? '',
-                silverManual: Boolean(src.silverManual),
-                productionManual: Boolean(src.productionManual),
+                silverManual: hasSilverManualFlag ? src.silverManual === true || src.silverManual === 'true' : false,
+                productionManual: hasProductionManualFlag ? src.productionManual === true || src.productionManual === 'true' : false,
                 notes: src.notes ?? '',
                 wc: src.wc ?? '',
                 schedulingNotes: src.schedulingNotes ?? '',
                 description: src.description ?? '',
                 specialRequirements: src.specialRequirements ?? '',
+                specialRequirementsSource: src.specialRequirementsSource ?? '',
+                specialRequirementsNotes: src.specialRequirementsNotes ?? '',
+                specialRequirementsCompleted: src.specialRequirementsCompleted === true || src.specialRequirementsCompleted === 'true' || String(src.specialRequirementsCompleted || '').trim().toLowerCase() === 'yes',
                 received: Boolean(src.received),
                 processed: Boolean(src.processed),
                 tagged: Boolean(src.tagged)
@@ -1071,7 +1154,7 @@
         function updateMetricDisplay(valueEl, barEl, current, goal) {
             const percent = calculatePercent(current, goal);
             const clampedWidth = Math.max(0, Math.min(100, percent));
-            const colorClass = getProgressClass(percent);
+            const colorClass = barEl.classList.contains('metric-bar-blue') ? 'metric-bar-blue' : getProgressClass(percent);
 
             valueEl.textContent = `${formatAutoAmount(current)} / ${formatAutoAmount(goal)} (${formatPercent(current, goal)})`;
             barEl.className = `metric-bar-fill ${colorClass}`;
@@ -1119,18 +1202,35 @@
             let totalApl = 0;
             let totalSilver = 0;
             let totalProduction = 0;
+            let receivedCount = 0;
+            let processedCount = 0;
+            let taggedCount = 0;
+            const totalRows = rows.length;
 
             rows.forEach((row) => {
                 totalApl += parseNumber(row.apl);
                 totalSilver += parseNumber(row.silver);
                 totalProduction += parseNumber(row.production);
+                if (row.received) receivedCount += 1;
+                if (row.processed) processedCount += 1;
+                if (row.tagged) taggedCount += 1;
             });
 
             const goals = computeGoalTotals();
+            const expectedAdventures = parseAdventureCount((window.EventVariables?.get?.() || {}).totalAdventures);
+            const totalProgressSteps = expectedAdventures * 3;
+            const completedProgressSteps = receivedCount + processedCount + taggedCount;
+            const overallProgressPercent = totalProgressSteps > 0
+                ? ((completedProgressSteps / totalProgressSteps) * 100)
+                : 0;
 
             updateMetricDisplay(totalAplEl, totalAplBarEl, totalApl, goals.aplGoal);
             updateMetricDisplay(totalSilverEl, totalSilverBarEl, totalSilver, goals.silverGoal);
             updateMetricDisplay(totalProductionEl, totalProductionBarEl, totalProduction, goals.productionGoal);
+            updateMetricDisplay(receivedCountEl, receivedCountBarEl, receivedCount, totalRows);
+            updateMetricDisplay(processedCountEl, processedCountBarEl, processedCount, totalRows);
+            updateMetricDisplay(taggedCountEl, taggedCountBarEl, taggedCount, totalRows);
+            overallProgressEl.textContent = `${formatAutoAmount(overallProgressPercent)}%`;
         }
 
         function computePerAplRatios() {
@@ -1139,6 +1239,7 @@
             const productionPerApl = goals.aplGoal > 0 ? (goals.productionGoal / goals.aplGoal) : 0;
 
             return {
+                canAutoCalculate: goals.aplGoal > 0,
                 silverPerApl,
                 productionPerApl
             };
@@ -1148,14 +1249,21 @@
             const ratios = computePerAplRatios();
 
             rows.forEach((row) => {
+                const hasAplValue = String(row.apl ?? '').trim() !== '';
                 const aplValue = parseNumber(row.apl);
+                const hasExistingSilver = String(row.silver ?? '').trim() !== '';
+                const hasExistingProduction = String(row.production ?? '').trim() !== '';
 
-                if (!row.silverManual) {
+                if (!row.silverManual && hasAplValue && (ratios.canAutoCalculate || !hasExistingSilver)) {
                     row.silver = formatAutoAmount(aplValue * ratios.silverPerApl);
+                } else if (!row.silverManual && !hasAplValue && !hasExistingSilver) {
+                    row.silver = '';
                 }
 
-                if (!row.productionManual) {
+                if (!row.productionManual && hasAplValue && (ratios.canAutoCalculate || !hasExistingProduction)) {
                     row.production = formatAutoAmount(aplValue * ratios.productionPerApl);
+                } else if (!row.productionManual && !hasAplValue && !hasExistingProduction) {
+                    row.production = '';
                 }
             });
         }
@@ -1457,16 +1565,19 @@
 
                 tr.appendChild(makeCheckboxCell(row.received, (e) => {
                     rows[index].received = e.target.checked;
+                    updateSummaryTotals();
                     saveRows();
                 }));
 
                 tr.appendChild(makeCheckboxCell(row.processed, (e) => {
                     rows[index].processed = e.target.checked;
+                    updateSummaryTotals();
                     saveRows();
                 }));
 
                 tr.appendChild(makeCheckboxCell(row.tagged, (e) => {
                     rows[index].tagged = e.target.checked;
+                    updateSummaryTotals();
                     saveRows();
                 }));
 

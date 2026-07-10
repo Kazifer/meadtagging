@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monster Slots</title>
+    <link rel="stylesheet" href="theme.css">
+    <script src="https://unpkg.com/xlsx@0.17.0/dist/xlsx.full.min.js"></script>
+    <style>
+        .container {
+            max-width: 1400px;
+        }
+
+        .intro {
+            color: var(--app-muted);
+            margin-bottom: 14px;
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 14px;
+            align-items: center;
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 8px;
+            padding: 9px 14px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.92rem;
+            transition: filter 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            filter: brightness(1.08);
+        }
+
+        .btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            filter: none;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background: #4a5568;
+            color: #edf2f7;
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            color: #fff;
+        }
+
+        .stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .chip {
+            background: #152d60;
+            border: 1px solid var(--app-border);
+            border-radius: 8px;
+            padding: 8px 14px;
+            color: var(--app-text);
+            font-size: 0.92rem;
+        }
+
+        .chip strong {
+            color: #93c5fd;
+        }
+
+        .status {
+            min-height: 1.2em;
+            color: var(--app-muted);
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+
+        /* Slot grid */
+        .day-group {
+            margin-bottom: 20px;
+        }
+
+        .day-group-header {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin: 0 0 8px;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        .day-group--friday .day-group-header {
+            background: #1e3a8a;
+            color: #bfdbfe;
+        }
+
+        .day-group--saturday .day-group-header {
+            background: #0f3d3e;
+            color: #99f6e4;
+        }
+
+        .day-group--sunday .day-group-header {
+            background: #3f2b10;
+            color: #fde68a;
+        }
+
+        .day-group--other .day-group-header {
+            background: #3b0764;
+            color: #e9d5ff;
+        }
+
+        .day-slots {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .slot-card {
+            border-radius: 10px;
+            padding: 10px;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            transition: box-shadow 0.15s ease, border-color 0.15s ease;
+        }
+
+        .day-group--friday .slot-card {
+            background: #0f172a;
+            border: 1px solid #1d4ed8;
+        }
+
+        .day-group--saturday .slot-card {
+            background: #0b1f1f;
+            border: 1px solid #0ea5a6;
+        }
+
+        .day-group--sunday .slot-card {
+            background: #1a1205;
+            border: 1px solid #a16207;
+        }
+
+        .day-group--other .slot-card {
+            background: #0f0821;
+            border: 1px solid #9333ea;
+        }
+
+        .slot-card.drag-over {
+            border-color: #00e5ff;
+            box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.25) inset;
+        }
+
+        .slot-time {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #cbd5e1;
+            margin: 0;
+        }
+
+        .slot-count {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin: 0;
+        }
+
+        .slot-players {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+        }
+
+        .drop-hint {
+            font-size: 0.78rem;
+            color: #475569;
+            margin-top: 4px;
+            text-align: center;
+            padding: 6px 0;
+        }
+
+        /* Player chip */
+        .player-chip {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 5px 8px;
+            font-size: 0.8rem;
+            color: #e2e8f0;
+            cursor: grab;
+            user-select: none;
+            transition: background 0.1s ease, border-color 0.1s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            min-width: 0;
+        }
+
+        .player-chip:hover {
+            background: #263548;
+            border-color: #4a90d9;
+        }
+
+        .player-chip:active {
+            cursor: grabbing;
+        }
+
+        .player-chip.dragging {
+            opacity: 0.4;
+        }
+
+        .player-chip .player-text {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .player-chip .player-name {
+            font-weight: 600;
+        }
+
+        .player-chip .player-char {
+            color: #94a3b8;
+            font-size: 0.75rem;
+        }
+
+        .player-chip-delete {
+            flex-shrink: 0;
+            background: none;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            font-size: 0.9rem;
+            line-height: 1;
+            padding: 0 2px;
+            border-radius: 4px;
+            transition: color 0.1s ease, background 0.1s ease;
+        }
+
+        .player-chip-delete:hover {
+            color: #f87171;
+            background: rgba(239,68,68,0.12);
+        }
+
+        /* Add-player row */
+        .slot-add-row {
+            display: flex;
+            gap: 4px;
+            margin-top: 4px;
+        }
+
+        .slot-add-input {
+            flex: 1;
+            min-width: 0;
+            padding: 4px 7px;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            background: #0f172a;
+            color: #e2e8f0;
+            font-size: 0.78rem;
+        }
+
+        .slot-add-input::placeholder {
+            color: #475569;
+        }
+
+        .slot-add-btn {
+            flex-shrink: 0;
+            background: #1e40af;
+            border: none;
+            border-radius: 6px;
+            color: #bfdbfe;
+            font-size: 1rem;
+            font-weight: 700;
+            line-height: 1;
+            padding: 4px 9px;
+            cursor: pointer;
+            transition: filter 0.1s ease;
+        }
+
+        .slot-add-btn:hover {
+            filter: brightness(1.15);
+        }
+
+        /* Player load table */
+        .section-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #e5e7eb;
+            margin: 20px 0 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--app-border);
+        }
+
+        .player-load-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 8px;
+        }
+
+        .player-load-card {
+            background: #0f172a;
+            border: 1px solid #1f2937;
+            border-radius: 8px;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .player-load-name {
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            font-weight: 600;
+        }
+
+        .player-load-badge {
+            background: #1e40af;
+            color: #bfdbfe;
+            border-radius: 999px;
+            padding: 2px 9px;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        .player-load-badge.load-high {
+            background: #7f1d1d;
+            color: #fca5a5;
+        }
+
+        .player-load-badge.load-med {
+            background: #78350f;
+            color: #fde68a;
+        }
+
+        .player-load-badge.load-low {
+            background: #14532d;
+            color: #86efac;
+        }
+
+        .empty-state {
+            color: var(--app-muted);
+            text-align: center;
+            padding: 40px 20px;
+            font-size: 0.95rem;
+        }
+
+        @media (max-width: 640px) {
+            .day-slots {
+                grid-template-columns: 1fr;
+            }
+
+            .player-load-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>Monster Slots</h1>
+        <p class="intro">Import a monster player schedule from an XLSX file. Move players between time slots via drag-and-drop, then export the updated schedule in the same format.</p>
+
+        <div class="toolbar">
+            <label class="btn btn-primary" for="importFile" tabindex="0" role="button">Import XLSX</label>
+            <input id="importFile" type="file" accept=".xlsx,.xls" aria-label="Import XLSX file" hidden>
+            <button id="exportBtn" class="btn btn-secondary" type="button" disabled>Export XLSX</button>
+            <button id="clearBtn" class="btn btn-danger" type="button" disabled>Clear</button>
+        </div>
+
+        <div id="statsBar" class="stats" hidden>
+            <div class="chip">Slots: <strong id="statSlots">0</strong></div>
+            <div class="chip">Total Assignments: <strong id="statAssignments">0</strong></div>
+            <div class="chip">Unique Players: <strong id="statPlayers">0</strong></div>
+        </div>
+
+        <p id="statusMsg" class="status"></p>
+
+        <div id="slotsRoot"></div>
+
+        <section id="playerLoadSection" hidden>
+            <h2 class="section-title">Player Load</h2>
+            <div id="playerLoadGrid" class="player-load-grid"></div>
+        </section>
+    </main>
+
+    <script>
+        // ─── Constants ─────────────────────────────────────────────────────────────
+        const STORAGE_KEY = 'monsterSlots.v1';
+
+        // ─── State ─────────────────────────────────────────────────────────────────
+        // groups: array of { slots: [ { id, label, players: string[] } ] }
+        let groups = [];
+        let importedSheetName = 'Schedule';
+        let dragging = null; // { sourceSlotId: string, playerIndex: number }
+
+        // ─── DOM refs ──────────────────────────────────────────────────────────────
+        const importFile   = document.getElementById('importFile');
+        const exportBtn    = document.getElementById('exportBtn');
+        const clearBtn     = document.getElementById('clearBtn');
+        const statusMsg    = document.getElementById('statusMsg');
+        const statsBar     = document.getElementById('statsBar');
+        const statSlots    = document.getElementById('statSlots');
+        const statAssign   = document.getElementById('statAssignments');
+        const statPlayers  = document.getElementById('statPlayers');
+        const slotsRoot    = document.getElementById('slotsRoot');
+        const playerLoadSec= document.getElementById('playerLoadSection');
+        const playerLoadGrd= document.getElementById('playerLoadGrid');
+
+        // ─── Utilities ─────────────────────────────────────────────────────────────
+        function showStatus(msg) {
+            statusMsg.textContent = msg;
+        }
+
+        function setHasData(has) {
+            exportBtn.disabled = !has;
+            clearBtn.disabled  = !has;
+            statsBar.hidden    = !has;
+            playerLoadSec.hidden = !has;
+        }
+
+        function allSlots() {
+            return groups.flatMap(g => g.slots);
+        }
+
+        function slotById(id) {
+            return allSlots().find(s => s.id === id) || null;
+        }
+
+        function nextId() {
+            return 'slot-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+        }
+
+        // ─── Label formatting ──────────────────────────────────────────────────────
+        function formatSlotLabel(raw) {
+            const s = String(raw).trim();
+            // "Fri 24/07/2026 22:00:00" → "Fri 22:00"
+            const m = s.match(/^(\w{3})\s+\d{2}\/\d{2}\/\d{4}\s+(\d{2}:\d{2})/);
+            if (m) return `${m[1]} ${m[2]}`;
+            // Excel date serial (number) handled upstream – just return as-is
+            return s;
+        }
+
+        function getDayFromLabel(raw) {
+            const s = String(raw).trim().toLowerCase();
+            if (s.startsWith('fri')) return 'Friday';
+            if (s.startsWith('sat')) return 'Saturday';
+            if (s.startsWith('sun')) return 'Sunday';
+            // Fallback: try to extract a date and compute the day
+            const m = s.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+            if (m) {
+                const d = new Date(`${m[3]}-${m[2]}-${m[1]}`);
+                if (!isNaN(d)) return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()];
+            }
+            return 'Other';
+        }
+
+        function parseName(raw) {
+            // "Lisa Galvin(Lior'a)" → { name: "Lisa Galvin", char: "Lior'a" }
+            const m = String(raw).match(/^(.+?)\((.+)\)\s*$/);
+            if (m) return { name: m[1].trim(), char: m[2].trim() };
+            return { name: String(raw).trim(), char: '' };
+        }
+
+        // ─── Parsing ───────────────────────────────────────────────────────────────
+        function isBlankRow(row) {
+            return !row || row.every(cell => cell === '' || cell === null || cell === undefined);
+        }
+
+        function isCountRow(row) {
+            // A count row has only numbers (or empty) in every cell
+            return row.length > 0 && row.every(cell => cell === '' || cell === null || typeof cell === 'number' || (typeof cell === 'string' && cell.trim() === '') || (typeof cell === 'string' && /^\d+$/.test(cell.trim())));
+        }
+
+        function parseSheet(aoa) {
+            // Split into sections separated by blank rows
+            const sections = [];
+            let current = [];
+
+            for (const row of aoa) {
+                if (isBlankRow(row)) {
+                    if (current.length > 0) {
+                        sections.push(current);
+                        current = [];
+                    }
+                } else {
+                    current.push(row);
+                }
+            }
+            if (current.length > 0) sections.push(current);
+
+            const newGroups = [];
+            let slotCounter = 0;
+
+            for (const section of sections) {
+                if (section.length < 2) continue; // need at least header + 1 data row
+
+                // Last row: count row (numbers)?  First row: header (date strings)?
+                const headerRow = section[0];
+                const lastRow   = section[section.length - 1];
+
+                const dataRows = isCountRow(lastRow)
+                    ? section.slice(1, -1)
+                    : section.slice(1);
+
+                // Determine column count from header row (skip empty header cells)
+                const colCount = headerRow.filter(h => h !== '' && h !== null && h !== undefined).length;
+                if (colCount === 0) continue;
+
+                const groupSlots = [];
+
+                for (let c = 0; c < colCount; c++) {
+                    const label = String(headerRow[c] || '').trim();
+                    if (!label) continue;
+
+                    const players = dataRows
+                        .map(row => String(row[c] || '').trim())
+                        .filter(v => v !== '');
+
+                    groupSlots.push({
+                        id: 'slot-' + (slotCounter++),
+                        label,
+                        players
+                    });
+                }
+
+                if (groupSlots.length > 0) {
+                    newGroups.push({ slots: groupSlots });
+                }
+            }
+
+            return newGroups;
+        }
+
+        // ─── Export ────────────────────────────────────────────────────────────────
+        function buildExportAoa() {
+            const rows = [];
+
+            groups.forEach((group, gi) => {
+                // Header row: slot labels
+                const headerRow = group.slots.map(s => s.label);
+                rows.push(headerRow);
+
+                // Player rows: zip slot player arrays
+                const maxPlayers = Math.max(...group.slots.map(s => s.players.length), 0);
+                for (let i = 0; i < maxPlayers; i++) {
+                    rows.push(group.slots.map(s => s.players[i] || ''));
+                }
+
+                // Count row
+                rows.push(group.slots.map(s => s.players.length));
+
+                // Blank separator (except after last group)
+                if (gi < groups.length - 1) {
+                    rows.push(group.slots.map(() => ''));
+                }
+            });
+
+            return rows;
+        }
+
+        // ─── Persistence ───────────────────────────────────────────────────────────
+        function saveState() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({ groups, sheetName: importedSheetName }));
+            } catch (e) {
+                console.error('Monster Slots: save failed', e);
+            }
+        }
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return;
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed?.groups) && parsed.groups.length > 0) {
+                    groups = parsed.groups;
+                    importedSheetName = parsed.sheetName || 'Schedule';
+                }
+            } catch (e) {
+                console.error('Monster Slots: load failed', e);
+            }
+        }
+
+        // ─── Rendering ─────────────────────────────────────────────────────────────
+        function renderAll() {
+            renderStats();
+            renderSlots();
+            renderPlayerLoad();
+        }
+
+        function renderStats() {
+            const slots = allSlots();
+            const totalAssign = slots.reduce((s, sl) => s + sl.players.length, 0);
+            const uniquePlayers = new Set(slots.flatMap(sl => sl.players.map(p => parseName(p).name))).size;
+
+            statSlots.textContent   = String(slots.length);
+            statAssign.textContent  = String(totalAssign);
+            statPlayers.textContent = String(uniquePlayers);
+            setHasData(slots.length > 0);
+        }
+
+        function createPlayerChip(slotId, playerIndex, rawName) {
+            const { name, char } = parseName(rawName);
+
+            const chip = document.createElement('div');
+            chip.className = 'player-chip';
+            chip.draggable = true;
+            chip.title = rawName;
+
+            const textWrap = document.createElement('span');
+            textWrap.className = 'player-text';
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'player-name';
+            nameSpan.textContent = name;
+            textWrap.appendChild(nameSpan);
+
+            if (char) {
+                const charSpan = document.createElement('span');
+                charSpan.className = 'player-char';
+                charSpan.textContent = ` (${char})`;
+                textWrap.appendChild(charSpan);
+            }
+
+            chip.appendChild(textWrap);
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'player-chip-delete';
+            delBtn.type = 'button';
+            delBtn.title = `Remove ${name}`;
+            delBtn.textContent = '×';
+            delBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const slot = slotById(slotId);
+                if (!slot) return;
+                slot.players.splice(playerIndex, 1);
+                saveState();
+                renderAll();
+                showStatus(`Removed ${name} from ${formatSlotLabel(slot.label)}.`);
+            });
+            chip.appendChild(delBtn);
+
+            chip.addEventListener('dragstart', (e) => {
+                if (e.target === delBtn) { e.preventDefault(); return; }
+                dragging = { sourceSlotId: slotId, playerIndex };
+                e.dataTransfer.setData('text/plain', rawName);
+                e.dataTransfer.effectAllowed = 'move';
+                chip.classList.add('dragging');
+            });
+
+            chip.addEventListener('dragend', () => {
+                dragging = null;
+                chip.classList.remove('dragging');
+            });
+
+            return chip;
+        }
+
+        function buildSlotCard(slot, dayClass) {
+            const card = document.createElement('div');
+            card.className = 'slot-card';
+            card.dataset.slotId = slot.id;
+
+            // Time label
+            const timeEl = document.createElement('p');
+            timeEl.className = 'slot-time';
+            timeEl.textContent = formatSlotLabel(slot.label);
+            card.appendChild(timeEl);
+
+            // Count
+            const countEl = document.createElement('p');
+            countEl.className = 'slot-count';
+            countEl.id = `count-${slot.id}`;
+            countEl.textContent = `${slot.players.length} player${slot.players.length !== 1 ? 's' : ''}`;
+            card.appendChild(countEl);
+
+            // Players
+            const playersEl = document.createElement('div');
+            playersEl.className = 'slot-players';
+
+            if (slot.players.length === 0) {
+                const hint = document.createElement('p');
+                hint.className = 'drop-hint';
+                hint.textContent = 'Drop player here';
+                playersEl.appendChild(hint);
+            } else {
+                slot.players.forEach((p, i) => {
+                    playersEl.appendChild(createPlayerChip(slot.id, i, p));
+                });
+            }
+
+            card.appendChild(playersEl);
+
+            // Add-player row
+            const addRow = document.createElement('div');
+            addRow.className = 'slot-add-row';
+
+            const addInput = document.createElement('input');
+            addInput.type = 'text';
+            addInput.className = 'slot-add-input';
+            addInput.placeholder = 'Name(Character)';
+            addInput.setAttribute('aria-label', `Add player to ${formatSlotLabel(slot.label)}`);
+
+            const addBtn = document.createElement('button');
+            addBtn.type = 'button';
+            addBtn.className = 'slot-add-btn';
+            addBtn.textContent = '+';
+            addBtn.title = 'Add player';
+
+            function commitAdd() {
+                const val = addInput.value.trim();
+                if (!val) return;
+                slot.players.push(val);
+                addInput.value = '';
+                saveState();
+                renderAll();
+                showStatus(`Added ${parseName(val).name} to ${formatSlotLabel(slot.label)}.`);
+            }
+
+            addBtn.addEventListener('click', commitAdd);
+            addInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); commitAdd(); }
+            });
+
+            addRow.appendChild(addInput);
+            addRow.appendChild(addBtn);
+            card.appendChild(addRow);
+
+            // Drag-over target
+            card.addEventListener('dragover', (e) => {
+                if (!dragging) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                card.classList.add('drag-over');
+            });
+
+            card.addEventListener('dragleave', (e) => {
+                // Only remove if leaving the card itself, not a child
+                if (!card.contains(e.relatedTarget)) {
+                    card.classList.remove('drag-over');
+                }
+            });
+
+            card.addEventListener('drop', (e) => {
+                e.preventDefault();
+                card.classList.remove('drag-over');
+
+                if (!dragging) return;
+                const { sourceSlotId, playerIndex } = dragging;
+
+                if (sourceSlotId === slot.id) return; // dropped on same slot
+
+                const sourceSlot = slotById(sourceSlotId);
+                if (!sourceSlot) return;
+
+                const [playerName] = sourceSlot.players.splice(playerIndex, 1);
+                slot.players.push(playerName);
+
+                saveState();
+                renderAll();
+                showStatus(`Moved ${parseName(playerName).name} to ${formatSlotLabel(slot.label)}.`);
+            });
+
+            return card;
+        }
+
+        function renderSlots() {
+            slotsRoot.innerHTML = '';
+
+            if (groups.length === 0) {
+                const empty = document.createElement('p');
+                empty.className = 'empty-state';
+                empty.textContent = 'No data loaded. Import an XLSX file to begin.';
+                slotsRoot.appendChild(empty);
+                return;
+            }
+
+            // Collect all slots and group by day
+            const dayOrder = ['Friday', 'Saturday', 'Sunday', 'Other'];
+            const byDay = {};
+            dayOrder.forEach(d => { byDay[d] = []; });
+
+            allSlots().forEach(slot => {
+                const day = getDayFromLabel(slot.label);
+                if (!byDay[day]) byDay[day] = [];
+                byDay[day].push(slot);
+            });
+
+            dayOrder.forEach(day => {
+                const slots = byDay[day];
+                if (!slots || slots.length === 0) return;
+
+                const groupEl = document.createElement('div');
+                groupEl.className = `day-group day-group--${day.toLowerCase()}`;
+
+                const header = document.createElement('h2');
+                header.className = 'day-group-header';
+                header.textContent = day;
+                groupEl.appendChild(header);
+
+                const slotsRow = document.createElement('div');
+                slotsRow.className = 'day-slots';
+                slots.forEach(slot => {
+                    slotsRow.appendChild(buildSlotCard(slot, day.toLowerCase()));
+                });
+
+                groupEl.appendChild(slotsRow);
+                slotsRoot.appendChild(groupEl);
+            });
+        }
+
+        function renderPlayerLoad() {
+            playerLoadGrd.innerHTML = '';
+
+            const counts = {};
+            allSlots().forEach(slot => {
+                slot.players.forEach(p => {
+                    const name = parseName(p).name;
+                    counts[name] = (counts[name] || 0) + 1;
+                });
+            });
+
+            const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+            const maxLoad = sorted.length > 0 ? sorted[0][1] : 0;
+
+            sorted.forEach(([name, count]) => {
+                const card = document.createElement('div');
+                card.className = 'player-load-card';
+
+                const nameEl = document.createElement('span');
+                nameEl.className = 'player-load-name';
+                nameEl.textContent = name;
+
+                const badge = document.createElement('span');
+                const ratio = maxLoad > 0 ? count / maxLoad : 0;
+                badge.className = 'player-load-badge' +
+                    (ratio >= 0.8 ? ' load-high' : ratio >= 0.5 ? ' load-med' : ' load-low');
+                badge.textContent = `${count} slot${count !== 1 ? 's' : ''}`;
+
+                card.appendChild(nameEl);
+                card.appendChild(badge);
+                playerLoadGrd.appendChild(card);
+            });
+        }
+
+        // ─── Import ────────────────────────────────────────────────────────────────
+        importFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (typeof XLSX === 'undefined') {
+                showStatus('XLSX library not loaded. Please check your internet connection.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const wb = XLSX.read(data, { type: 'array', cellDates: false });
+                    const sheetName = wb.SheetNames[0];
+                    importedSheetName = sheetName || 'Schedule';
+                    const ws = wb.Sheets[sheetName];
+                    const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+                    const parsed = parseSheet(aoa);
+                    if (parsed.length === 0) {
+                        showStatus('No valid slot data found in the file.');
+                        return;
+                    }
+
+                    groups = parsed;
+                    saveState();
+                    renderAll();
+                    showStatus(`Imported ${allSlots().length} slots from "${file.name}".`);
+                } catch (err) {
+                    console.error('Monster Slots: import error', err);
+                    showStatus('Failed to read file. Please check the format and try again.');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+
+            // Reset so the same file can be re-imported
+            e.target.value = '';
+        });
+
+        // ─── Export ────────────────────────────────────────────────────────────────
+        exportBtn.addEventListener('click', () => {
+            if (typeof XLSX === 'undefined') {
+                showStatus('XLSX library not loaded.');
+                return;
+            }
+
+            const aoa = buildExportAoa();
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            XLSX.utils.book_append_sheet(wb, ws, importedSheetName);
+            XLSX.writeFile(wb, 'MonsterSlots_Updated.xlsx');
+            showStatus('Exported updated schedule.');
+        });
+
+        // ─── Clear ─────────────────────────────────────────────────────────────────
+        clearBtn.addEventListener('click', () => {
+            if (!confirm('Clear all slot data?')) return;
+            groups = [];
+            importedSheetName = 'Schedule';
+            localStorage.removeItem(STORAGE_KEY);
+            renderAll();
+            setHasData(false);
+            showStatus('Cleared.');
+        });
+
+        // ─── Init ──────────────────────────────────────────────────────────────────
+        loadState();
+        renderAll();
+    </script>
+</body>
+</html>

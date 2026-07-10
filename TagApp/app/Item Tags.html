@@ -276,6 +276,13 @@
         .edit-btn:hover {
             color: #a5b4fc;
         }
+        .copy-btn {
+            color: #22d3ee;
+            margin-right: 8px;
+        }
+        .copy-btn:hover {
+            color: #67e8f9;
+        }
         .delete-btn {
             color: #ef4444;
         }
@@ -826,6 +833,7 @@
                     <td class="cell-muted">${item.adventure || item.code}</td>
                     <td class="cell-subtle">${item.persistantProp ? 'True' : 'False'}</td>
                     <td class="cell-right">
+                        <button class="copy-btn icon-btn" data-index="${index}" title="Copy">&#10697;</button>
                         <button class="edit-btn icon-btn" data-index="${index}" title="Edit">&#9998;</button>
                         <button class="delete-btn icon-btn" data-index="${index}" title="Delete">&#10006;</button>
                     </td>
@@ -956,6 +964,14 @@
                 adventureItems.splice(index, 1);
                 renderItems();
                 persistItems();
+            } else if (target.classList.contains('copy-btn')) {
+                const index = Number(target.dataset.index);
+                const item = adventureItems[index];
+                const copiedItem = { ...item, name: `${item.name}` };
+                adventureItems.splice(index + 1, 0, copiedItem);
+                renderItems();
+                persistItems();
+                showNotification('Item duplicated.', false);
             } else if (target.classList.contains('edit-btn')) {
                 const index = target.dataset.index;
                 const item = adventureItems[index];

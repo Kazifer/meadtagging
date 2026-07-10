@@ -1065,6 +1065,62 @@
         exportPdfBtn.addEventListener('click', exportSchedulePdf);
         exportXlsxBtn.addEventListener('click', exportScheduleXlsx);
 
+        // ─── Monster Slots sync ────────────────────────────────────────────────
+        const MONSTER_SLOTS_KEY = 'monsterSlots.v1';
+
+        function matchMonsterSlotToScheduleIndex(monsterLabel) {
+            const s = String(monsterLabel).trim();
+            // e.g. "Fri 24/07/2026 22:00:00"  or  "Sat 25/07/2026 08:00:00"
+            const m = s.match(/^(\w{3})\s+\d{2}\/\d{2}\/\d{4}\s+(\d{2}):\d{2}/);
+            if (!m) return -1;
+            const dayMap = { fri: 'Friday', sat: 'Saturday', sun: 'Sunday' };
+            const dayFull = dayMap[m[1].toLowerCase()];
+            if (!dayFull) return -1;
+            const startHour = parseInt(m[2], 10);
+            // SLOT_DEFS labels look like "Saturday 8 - 10"
+            return SLOT_DEFS.findIndex((def) => {
+                if (!def.label.startsWith(dayFull + ' ')) return false;
+                const hourPart = def.label.slice(dayFull.length + 1);
+                const slotHour = parseInt(hourPart.split('-')[0].trim(), 10);
+                return slotHour === startHour;
+            });
+        }
+
+        function syncPlayersFromMonsterSlots() {
+            try {
+                const raw = localStorage.getItem(MONSTER_SLOTS_KEY);
+                if (!raw) return;
+                const data = JSON.parse(raw);
+                const monsterSlots = (data?.groups || []).flatMap((g) => g.slots || []);
+                if (monsterSlots.length === 0) return;
+
+                let changed = false;
+                monsterSlots.forEach((ms) => {
+                    const idx = matchMonsterSlotToScheduleIndex(ms.label);
+                    if (idx === -1) return;
+                    const count = String(ms.players.length);
+                    if (slotPlayers[idx] !== count) {
+                        slotPlayers[idx] = count;
+                        changed = true;
+                    }
+                });
+
+                if (changed) {
+                    saveSchedule();
+                    renderAll();
+                    showStatus('Player counts updated from Monster Slots.');
+                }
+            } catch (e) {
+                console.error('Scheduling: Monster Slots sync failed', e);
+            }
+        }
+
+        window.addEventListener('storage', (e) => {
+            if (e.key === MONSTER_SLOTS_KEY) {
+                syncPlayersFromMonsterSlots();
+            }
+        });
+
         function initialize() {
             loadAdventures();
             loadSchedule();
@@ -1076,6 +1132,7 @@
                     .slice(0, slotCapacity);
             });
 
+            syncPlayersFromMonsterSlots();
             renderAll();
             showStatus('Scheduling loaded.');
         }

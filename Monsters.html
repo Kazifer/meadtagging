@@ -84,10 +84,12 @@
         <section class="bg-slate-800 p-4 rounded-lg shadow-lg mb-6">
             <h2 class="text-xl font-bold text-amber-500 mb-2">Monster Modifiers</h2>
             <p class="text-sm text-slate-400 mb-3">Select modifiers to include as a separate table in exported output files.</p>
-            <div class="mb-3 grid grid-cols-1 md:grid-cols-5 gap-2">
+            <div class="mb-3 grid grid-cols-1 md:grid-cols-6 gap-2">
                 <input id="modifier-name-input" type="text" placeholder="Modifier name" class="md:col-span-1 p-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-100">
-                <input id="modifier-description-input" type="text" placeholder="Modifier description" class="md:col-span-3 p-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-100">
-                <button id="add-modifier-btn" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-lg transition-colors" type="button">Add Modifier</button>
+                <input id="modifier-description-input" type="text" placeholder="Modifier description" class="md:col-span-2 p-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-100">
+                <input id="modifier-limit-input" type="number" min="0" step="1" placeholder="Limit" class="md:col-span-1 p-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-100">
+                <select id="modifier-type-input" class="md:col-span-1 p-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-200"><option value="Any">Any</option></select>
+                <button id="add-modifier-btn" class="md:col-span-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-lg transition-colors" type="button">Add Modifier</button>
             </div>
             <div class="mb-3 flex gap-2 flex-wrap">
                 <button id="export-modifiers-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm" type="button">Export Modifiers XLSX</button>
@@ -100,6 +102,8 @@
                         <tr>
                             <th class="p-3">Modifier</th>
                             <th class="p-3">Description</th>
+                            <th class="p-3 text-center">Limit</th>
+                            <th class="p-3">Type</th>
                             <th class="p-3 text-center">Include</th>
                             <th class="p-3 text-center">Actions</th>
                         </tr>
@@ -351,6 +355,16 @@
                             <label for="modifier-edit-description" class="block mb-2 text-sm font-medium text-slate-300">Modifier Description</label>
                             <textarea id="modifier-edit-description" rows="3" class="block p-2.5 w-full text-sm text-slate-200 bg-slate-700 rounded-lg border border-slate-600 focus:ring-amber-500 focus:border-amber-500" required></textarea>
                         </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="modifier-edit-limit" class="block mb-2 text-sm font-medium text-slate-300">Limit</label>
+                                <input id="modifier-edit-limit" type="number" min="0" step="1" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5" placeholder="0 = unlimited">
+                            </div>
+                            <div>
+                                <label for="modifier-edit-type" class="block mb-2 text-sm font-medium text-slate-300">Type</label>
+                                <select id="modifier-edit-type" class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5"><option value="Any">Any</option></select>
+                            </div>
+                        </div>
                     </div>
                     <div class="flex items-center space-x-4">
                         <button type="submit" class="text-white bg-amber-600 hover:bg-amber-700 focus:ring-4 focus:outline-none focus:ring-amber-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">
@@ -392,6 +406,8 @@
         const modifierTableBody = document.getElementById('modifier-table-body');
         const modifierNameInput = document.getElementById('modifier-name-input');
         const modifierDescriptionInput = document.getElementById('modifier-description-input');
+        const modifierLimitInput = document.getElementById('modifier-limit-input');
+        const modifierTypeInput = document.getElementById('modifier-type-input');
         const addModifierBtn = document.getElementById('add-modifier-btn');
         const exportModifiersBtn = document.getElementById('export-modifiers-btn');
         const importModifiersBtn = document.getElementById('import-modifiers-btn');
@@ -401,6 +417,8 @@
         const modifierEditIdInput = document.getElementById('modifier-edit-id');
         const modifierEditNameInput = document.getElementById('modifier-edit-name');
         const modifierEditDescriptionInput = document.getElementById('modifier-edit-description');
+        const modifierEditLimitInput = document.getElementById('modifier-edit-limit');
+        const modifierEditTypeInput = document.getElementById('modifier-edit-type');
         const closeModifierEditModalBtn = document.getElementById('close-modifier-edit-modal-btn');
         const cancelModifierEditBtn = document.getElementById('cancel-modifier-edit-btn');
         const rosterList = document.getElementById('adventure-roster-list');
@@ -419,11 +437,11 @@
         const modifiersCatalogStorageKey = 'monsterModifiersCatalog.v1';
         const adventureListingStorageKey = 'adventureLevelling.v1';
         const defaultModifierCatalog = [
-            { id: 'elite', name: 'Elite', description: 'Increase Body by 25% and APL by 2.' },
-            { id: 'berserk', name: 'Berserk', description: 'Monster gains +2 Strength and cannot retreat.' },
-            { id: 'armored', name: 'Armored', description: 'Add +4 Armour or improve natural defenses.' },
-            { id: 'arcane', name: 'Arcane Surge', description: 'Monster gains one additional spell use per encounter.' },
-            { id: 'swift', name: 'Swift', description: 'Monster can take one extra movement action each round.' }
+            { id: 'elite', name: 'Elite', description: 'Increase Body by 25% and APL by 2.', limit: 0, type: 'Any' },
+            { id: 'berserk', name: 'Berserk', description: 'Monster gains +2 Strength and cannot retreat.', limit: 0, type: 'Any' },
+            { id: 'armored', name: 'Armored', description: 'Add +4 Armour or improve natural defenses.', limit: 0, type: 'Any' },
+            { id: 'arcane', name: 'Arcane Surge', description: 'Monster gains one additional spell use per encounter.', limit: 0, type: 'Any' },
+            { id: 'swift', name: 'Swift', description: 'Monster can take one extra movement action each round.', limit: 0, type: 'Any' }
         ];
         let modifierCatalog = [...defaultModifierCatalog];
         let selectedModifierIds = new Set();
@@ -533,7 +551,9 @@
                         .map((item) => ({
                             id: String(item?.id || '').trim() || createModifierId(item?.name),
                             name: String(item?.name || '').trim(),
-                            description: String(item?.description || '').trim()
+                            description: String(item?.description || '').trim(),
+                            limit: Number.isFinite(Number(item?.limit)) ? Math.max(0, Number(item.limit)) : 0,
+                            type: String(item?.type || 'Any').trim() || 'Any'
                         }))
                         .filter((item) => item.name && item.description);
                 } else {
@@ -643,10 +663,38 @@
 
         const getSelectedModifiers = () => modifierCatalog.filter((m) => selectedModifierIds.has(m.id));
 
+        const rebuildModifierTypeDropdowns = () => {
+            const mergedTypes = new Set(
+                monsterTypesData
+                    .map((t) => (t && t.Type ? String(t.Type).trim() : ''))
+                    .filter(Boolean)
+            );
+            monsterDatabase.forEach((m) => {
+                const type = String(m.Type || '').trim();
+                if (type) mergedTypes.add(type);
+            });
+            const sortedTypes = Array.from(mergedTypes).sort((a, b) => a.localeCompare(b));
+            [modifierTypeInput, modifierEditTypeInput].forEach((sel) => {
+                if (!sel) return;
+                const prev = sel.value;
+                sel.innerHTML = '<option value="Any">Any</option>';
+                sortedTypes.forEach((type) => {
+                    const opt = document.createElement('option');
+                    opt.value = type;
+                    opt.textContent = type;
+                    sel.appendChild(opt);
+                });
+                if (prev && (prev === 'Any' || sortedTypes.includes(prev))) sel.value = prev;
+            });
+        };
+
         const openModifierEditModal = (modifier) => {
             modifierEditIdInput.value = modifier.id;
             modifierEditNameInput.value = modifier.name;
             modifierEditDescriptionInput.value = modifier.description;
+            modifierEditLimitInput.value = modifier.limit > 0 ? String(modifier.limit) : '';
+            rebuildModifierTypeDropdowns();
+            modifierEditTypeInput.value = modifier.type || 'Any';
             modifierEditModal.classList.remove('hidden');
             modifierEditModal.classList.add('flex');
             modifierEditNameInput.focus();
@@ -673,6 +721,14 @@
                 const descriptionTd = document.createElement('td');
                 descriptionTd.className = 'p-3 text-slate-300';
                 descriptionTd.textContent = modifier.description;
+
+                const limitTd = document.createElement('td');
+                limitTd.className = 'p-3 text-center text-slate-300';
+                limitTd.textContent = modifier.limit > 0 ? String(modifier.limit) : '—';
+
+                const typeTd = document.createElement('td');
+                typeTd.className = 'p-3 text-slate-300';
+                typeTd.textContent = modifier.type || 'Any';
 
                 const includeTd = document.createElement('td');
                 includeTd.className = 'p-3 text-center';
@@ -722,6 +778,8 @@
 
                 tr.appendChild(nameTd);
                 tr.appendChild(descriptionTd);
+                tr.appendChild(limitTd);
+                tr.appendChild(typeTd);
                 tr.appendChild(includeTd);
                 tr.appendChild(actionsTd);
                 modifierTableBody.appendChild(tr);
@@ -734,12 +792,12 @@
                 return;
             }
             const aoa = [
-                ['Modifier', 'Description'],
-                ...modifierCatalog.map((m) => [m.name, m.description])
+                ['Modifier', 'Description', 'Limit', 'Type'],
+                ...modifierCatalog.map((m) => [m.name, m.description, m.limit > 0 ? m.limit : '', m.type || 'Any'])
             ];
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.aoa_to_sheet(aoa);
-            ws['!cols'] = [{ wch: 24 }, { wch: 60 }];
+            ws['!cols'] = [{ wch: 24 }, { wch: 60 }, { wch: 10 }, { wch: 20 }];
             XLSX.utils.book_append_sheet(wb, ws, 'Monster Modifiers');
             XLSX.writeFile(wb, 'Monster_Modifiers.xlsx');
         });
@@ -769,8 +827,10 @@
                             Object.keys(row).forEach((k) => { keyMap[k.trim().toLowerCase()] = row[k]; });
                             const name = String(keyMap.modifier || keyMap.name || '').trim();
                             const description = String(keyMap.description || '').trim();
+                            const limit = Math.max(0, parseInt(String(keyMap.limit || '0'), 10) || 0);
+                            const type = String(keyMap.type || 'Any').trim() || 'Any';
                             return (name && description)
-                                ? { id: createModifierId(name), name, description }
+                                ? { id: createModifierId(name), name, description, limit, type }
                                 : null;
                         })
                         .filter(Boolean);
@@ -792,6 +852,8 @@
         addModifierBtn.addEventListener('click', () => {
             const name = String(modifierNameInput.value || '').trim();
             const description = String(modifierDescriptionInput.value || '').trim();
+            const limit = Math.max(0, parseInt(modifierLimitInput.value || '0', 10) || 0);
+            const type = String(modifierTypeInput.value || 'Any').trim() || 'Any';
 
             if (!name || !description) {
                 showCustomConfirm('Enter both modifier name and description.', () => {});
@@ -801,13 +863,17 @@
             modifierCatalog.push({
                 id: createModifierId(name),
                 name,
-                description
+                description,
+                limit,
+                type
             });
 
             saveModifierCatalog();
             renderModifierTable();
             modifierNameInput.value = '';
             modifierDescriptionInput.value = '';
+            modifierLimitInput.value = '';
+            modifierTypeInput.value = 'Any';
             modifierNameInput.focus();
         });
 
@@ -817,6 +883,8 @@
             const id = String(modifierEditIdInput.value || '').trim();
             const nextName = String(modifierEditNameInput.value || '').trim();
             const nextDescription = String(modifierEditDescriptionInput.value || '').trim();
+            const nextLimit = Math.max(0, parseInt(modifierEditLimitInput.value || '0', 10) || 0);
+            const nextType = String(modifierEditTypeInput.value || 'Any').trim() || 'Any';
 
             if (!id) {
                 closeModifierEditModal();
@@ -836,6 +904,8 @@
 
             targetModifier.name = nextName;
             targetModifier.description = nextDescription;
+            targetModifier.limit = nextLimit;
+            targetModifier.type = nextType;
             saveModifierCatalog();
             renderModifierTable();
             closeModifierEditModal();
@@ -1333,7 +1403,20 @@
                 totalAPL: totalAPL
             };
 
-            const selectedModifiers = getSelectedModifiers();
+            // Collect the distinct monster Types present in the current roster
+            const rosterTypes = new Set(
+                currentAdventure.monsters
+                    .map((am) => {
+                        const base = monsterDatabase.find((m) => m.id === am.baseMonsterId);
+                        return base ? String(base.Type || '').trim() : '';
+                    })
+                    .filter(Boolean)
+            );
+
+            // Include a selected modifier only if its type is "Any" or matches a type in the roster
+            const selectedModifiers = getSelectedModifiers().filter(
+                (mod) => !mod.type || mod.type === 'Any' || rosterTypes.has(mod.type)
+            );
 
             // Define the order of fields for export and their display names, mapping to internal keys
             const exportFields = [
@@ -1434,8 +1517,8 @@
                 doc.autoTable({
                     startY: currentSummaryY + 2,
                     margin: { left: summaryStartX + summaryPadding, right: summaryStartX + summaryPadding },
-                    head: [['Name', 'Description']],
-                    body: selectedModifiers.map((modifier) => [modifier.name, modifier.description]),
+                    head: [['Type', 'Name', 'Description', 'Limit']],
+                    body: selectedModifiers.map((modifier) => [modifier.type || 'Any', modifier.name, modifier.description, modifier.limit > 0 ? String(modifier.limit) : '—']),
                     theme: 'grid',
                     styles: { fontSize: 8, cellPadding: 2 },
                     headStyles: { fillColor: [45, 55, 72], textColor: [237, 242, 247] }
@@ -1568,9 +1651,9 @@
 
             worksheetData.push(['Selected Modifiers']);
             if (selectedModifiers.length > 0) {
-                worksheetData.push(['Name', 'Description']);
+                worksheetData.push(['Type', 'Name', 'Description', 'Limit']);
                 selectedModifiers.forEach((modifier) => {
-                    worksheetData.push([modifier.name, modifier.description]);
+                    worksheetData.push([modifier.type || 'Any', modifier.name, modifier.description, modifier.limit > 0 ? modifier.limit : '']);
                 });
             } else {
                 worksheetData.push(['(None selected)']);
@@ -1663,15 +1746,19 @@
                         <table style="width:100%; border-collapse: collapse; margin-bottom: 20px;">
                             <thead>
                                 <tr>
+                                    <th style="border: 1px solid #475569; padding: 8px; text-align: left; color: #fcd34d;">Type</th>
                                     <th style="border: 1px solid #475569; padding: 8px; text-align: left; color: #fcd34d;">Name</th>
                                     <th style="border: 1px solid #475569; padding: 8px; text-align: left; color: #fcd34d;">Description</th>
+                                    <th style="border: 1px solid #475569; padding: 8px; text-align: left; color: #fcd34d;">Limit</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${selectedModifiers.map(modifier => `
                                 <tr>
+                                    <td style="border: 1px solid #475569; padding: 8px;">${modifier.type || 'Any'}</td>
                                     <td style="border: 1px solid #475569; padding: 8px;">${modifier.name}</td>
                                     <td style="border: 1px solid #475569; padding: 8px;">${modifier.description}</td>
+                                    <td style="border: 1px solid #475569; padding: 8px; text-align: center;">${modifier.limit > 0 ? modifier.limit : '—'}</td>
                                 </tr>
                                 `).join('')}
                             </tbody>
@@ -1721,6 +1808,7 @@
             loadSelectedModifiers();
             populateAdventureTitleSelect();
             rebuildTypeControls();
+            rebuildModifierTypeDropdowns();
             renderModifierTable();
             
             renderMonsterTable();

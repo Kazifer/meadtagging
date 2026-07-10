@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Special Requirements</title>
+    <link rel="stylesheet" href="theme.css">
+    <style>
+        .container {
+            max-width: 1240px;
+        }
+
+        .intro {
+            color: var(--app-muted);
+            margin-bottom: 14px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .stat-chip {
+            border: 1px solid var(--app-border);
+            border-radius: 10px;
+            background: #152d60;
+            color: var(--app-text);
+            padding: 12px 14px;
+        }
+
+        .stat-label {
+            color: #cbd5e1;
+            font-size: 0.86rem;
+            margin-bottom: 6px;
+        }
+
+        .stat-value {
+            font-size: 1.55rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .card {
+            border: 1px solid var(--app-border);
+            border-radius: 10px;
+            background: #111827;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+
+        .card-title {
+            margin: 0 0 12px;
+            font-size: 1rem;
+        }
+
+        .compact-form-card {
+            padding: 12px;
+        }
+
+        .compact-form-card .card-title {
+            margin-bottom: 10px;
+        }
+
+        .field-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .compact-form-card .field-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .compact-form-card .field {
+            gap: 4px;
+        }
+
+        .field-full {
+            grid-column: 1 / -1;
+        }
+
+        .compact-span-2 {
+            grid-column: span 2;
+        }
+
+        .compact-span-3 {
+            grid-column: span 3;
+        }
+
+        .compact-span-4 {
+            grid-column: span 4;
+        }
+
+        .field label {
+            color: var(--app-muted);
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .field input,
+        .field select,
+        .field textarea {
+            border: 1px solid var(--app-border);
+            border-radius: 8px;
+            background: #0b1220;
+            color: var(--app-text);
+            padding: 10px 12px;
+            font-size: 0.92rem;
+        }
+
+        .field textarea {
+            min-height: 140px;
+            resize: vertical;
+        }
+
+        .compact-form-card .field input,
+        .compact-form-card .field select,
+        .compact-form-card .field textarea {
+            padding: 8px 10px;
+            font-size: 0.88rem;
+        }
+
+        .compact-form-card .field textarea {
+            min-height: 72px;
+        }
+
+        .field textarea.notes-textarea {
+            min-height: 110px;
+        }
+
+        .compact-form-card .field textarea.notes-textarea {
+            min-height: 72px;
+        }
+
+        .preview-box {
+            min-height: 44px;
+            padding: 10px 12px;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            background: #0b1220;
+            color: #cbd5e1;
+        }
+
+        .compact-form-card .preview-box {
+            min-height: 38px;
+            padding: 8px 10px;
+            font-size: 0.88rem;
+        }
+
+        .compact-form-card .field label {
+            font-size: 0.84rem;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .compact-form-card .actions {
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #f8fafc;
+            background: #2563eb;
+        }
+
+        .compact-form-card .btn {
+            padding: 8px 12px;
+        }
+
+        .btn-secondary {
+            background: #334155;
+        }
+
+        .btn-danger {
+            background: #991b1b;
+        }
+
+        .status {
+            margin-top: 10px;
+            color: var(--app-muted);
+            min-height: 1.2em;
+        }
+
+        .table-wrap {
+            overflow: auto;
+            border: 1px solid var(--app-border);
+            border-radius: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 980px;
+            background: #111827;
+        }
+
+        th,
+        td {
+            border-bottom: 1px solid var(--app-border);
+            padding: 10px;
+            text-align: left;
+            vertical-align: top;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: #0f172a;
+            color: #d1d5db;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .requirement-cell {
+            white-space: pre-wrap;
+        }
+
+        .empty-text {
+            color: #64748b;
+            font-style: italic;
+        }
+
+        .action-cell {
+            white-space: nowrap;
+        }
+
+        .mini-btn {
+            border: 0;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 0.82rem;
+            cursor: pointer;
+            color: #fff;
+            background: #475569;
+            margin-right: 6px;
+        }
+
+        .mini-btn.delete {
+            background: #b91c1c;
+        }
+
+        @media (max-width: 900px) {
+            .stats,
+            .field-grid,
+            .compact-form-card .field-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .compact-span-2,
+            .compact-span-3,
+            .compact-span-4 {
+                grid-column: 1 / -1;
+            }
+
+            table {
+                min-width: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>Special Requirements</h1>
+        <p class="intro">Manage the Special Requirements text stored on Adventure Listing rows. Changes here update the same adventure data used by template generation and scheduling.</p>
+
+<!--         <section class="stats" aria-label="Special requirements summary">
+            <div class="stat-chip">
+                <div class="stat-label">Total Adventures</div>
+                <div id="totalAdventures" class="stat-value">0</div>
+            </div>
+            <div class="stat-chip">
+                <div class="stat-label">With Requirements</div>
+                <div id="filledRequirements" class="stat-value">0</div>
+            </div>
+            <div class="stat-chip">
+                <div class="stat-label">Without Requirements</div>
+                <div id="emptyRequirements" class="stat-value">0</div>
+            </div>
+        </section> -->
+
+        <section class="card compact-form-card">
+            <h2 class="card-title">Create Or Update</h2>
+            <div class="field-grid">
+                <div class="field">
+                    <label for="adventureSelect">Adventure</label>
+                    <select id="adventureSelect"></select>
+                </div>
+                <div class="field compact-span-3">
+                    <label>Selected Adventure</label>
+                    <div id="adventurePreview" class="preview-box">Select an adventure to edit its special requirements.</div>
+                </div>
+                <div class="field compact-span-2">
+                    <label for="adventureAuthorInput">Adventure Author</label>
+                    <input id="adventureAuthorInput" type="text" placeholder="Enter the adventure author">
+                </div>
+                <div class="field compact-span-4">
+                    <label for="specialRequirementsInput">Special Requirements</label>
+                    <textarea id="specialRequirementsInput" placeholder="Enter the special requirements for the selected adventure"></textarea>
+                </div>
+                <div class="field">
+                    <label for="specialRequirementsSourceInput">Source</label>
+                    <input id="specialRequirementsSourceInput" type="text" placeholder="Where this requirement came from">
+                </div>
+                <div class="field">
+                    <label for="specialRequirementsCompletedInput">Completed (Y/N)</label>
+                    <select id="specialRequirementsCompletedInput">
+                        <option value="No">No</option>
+                        <option value="Yes">Yes</option>
+                    </select>
+                </div>
+                <div class="field compact-span-4">
+                    <label for="specialRequirementsNotesInput">Notes</label>
+                    <textarea id="specialRequirementsNotesInput" class="notes-textarea" placeholder="Add notes for this special requirement"></textarea>
+                </div>
+            </div>
+            <div class="actions">
+                <button id="saveRequirementBtn" class="btn" type="button">Save Requirement</button>
+                <button id="deleteRequirementBtn" class="btn btn-danger" type="button">Delete Requirement</button>
+                <button id="clearFormBtn" class="btn btn-secondary" type="button">Clear Selection</button>
+                <button id="refreshBtn" class="btn btn-secondary" type="button">Reload From Adventure Listing</button>
+            </div>
+            <p id="statusMessage" class="status"></p>
+        </section>
+
+        <section class="card">
+            <h2 class="card-title">Adventure Requirements</h2>
+            <div class="table-wrap">
+                <table aria-label="Adventure special requirements table">
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Title</th>
+                            <th>Author</th>
+                            <th>Type</th>
+                            <th>Special Requirements</th>
+                            <th>Source</th>
+                            <th>Notes</th>
+                            <th>Completed</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requirementsTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const STORAGE_KEY = 'adventureLevelling.v1';
+
+        const totalAdventuresEl = document.getElementById('totalAdventures');
+        const filledRequirementsEl = document.getElementById('filledRequirements');
+        const emptyRequirementsEl = document.getElementById('emptyRequirements');
+        const adventureSelectEl = document.getElementById('adventureSelect');
+        const adventurePreviewEl = document.getElementById('adventurePreview');
+        const adventureAuthorInputEl = document.getElementById('adventureAuthorInput');
+        const specialRequirementsInputEl = document.getElementById('specialRequirementsInput');
+        const specialRequirementsSourceInputEl = document.getElementById('specialRequirementsSourceInput');
+        const specialRequirementsNotesInputEl = document.getElementById('specialRequirementsNotesInput');
+        const specialRequirementsCompletedInputEl = document.getElementById('specialRequirementsCompletedInput');
+        const saveRequirementBtn = document.getElementById('saveRequirementBtn');
+        const deleteRequirementBtn = document.getElementById('deleteRequirementBtn');
+        const clearFormBtn = document.getElementById('clearFormBtn');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const statusMessageEl = document.getElementById('statusMessage');
+        const requirementsTableBody = document.getElementById('requirementsTableBody');
+
+        let rows = [];
+        let selectedIndex = -1;
+
+        function showStatus(message) {
+            statusMessageEl.textContent = message;
+        }
+
+        function normalizeRow(row, index) {
+            const src = row && typeof row === 'object' ? row : {};
+            return {
+                ...src,
+                no: src.no ?? String(index + 1),
+                title: src.title ?? '',
+                author: src.author ?? '',
+                type: src.type ?? '',
+                specialRequirements: String(src.specialRequirements ?? ''),
+                specialRequirementsSource: String(src.specialRequirementsSource ?? ''),
+                specialRequirementsNotes: String(src.specialRequirementsNotes ?? ''),
+                specialRequirementsCompleted: src.specialRequirementsCompleted === true || src.specialRequirementsCompleted === 'true' || String(src.specialRequirementsCompleted || '').trim().toLowerCase() === 'yes'
+            };
+        }
+
+        function loadRows() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : { rows: [] };
+                const loadedRows = Array.isArray(parsed?.rows) ? parsed.rows : [];
+                rows = loadedRows.map((row, index) => normalizeRow(row, index));
+            } catch (error) {
+                console.error('SpecialRequirements: failed to load adventure rows', error);
+                rows = [];
+            }
+        }
+
+        function saveRows() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({ rows }));
+            } catch (error) {
+                console.error('SpecialRequirements: failed to save adventure rows', error);
+            }
+        }
+
+        function getAdventureOptionLabel(row, index) {
+            const no = String(row?.no ?? index + 1).trim() || String(index + 1);
+            const title = String(row?.title || '').trim() || 'Untitled Adventure';
+            return `A${no} - ${title}`;
+        }
+
+        function getRequirementText(row) {
+            return String(row?.specialRequirements ?? '').trim();
+        }
+
+        function getRequirementSource(row) {
+            return String(row?.specialRequirementsSource ?? '').trim();
+        }
+
+        function getRequirementNotes(row) {
+            return String(row?.specialRequirementsNotes ?? '').trim();
+        }
+
+        function isRequirementCompleted(row) {
+            return row?.specialRequirementsCompleted === true;
+        }
+
+        function hasRequirementEntry(row) {
+            return getRequirementText(row) !== ''
+                || getRequirementSource(row) !== ''
+                || getRequirementNotes(row) !== ''
+                || isRequirementCompleted(row);
+        }
+
+        function renderSummary() {
+            const filledCount = rows.reduce((count, row) => count + (hasRequirementEntry(row) ? 1 : 0), 0);
+            if (totalAdventuresEl) totalAdventuresEl.textContent = String(rows.length);
+            if (filledRequirementsEl) filledRequirementsEl.textContent = String(filledCount);
+            if (emptyRequirementsEl) emptyRequirementsEl.textContent = String(Math.max(0, rows.length - filledCount));
+        }
+
+        function renderAdventureSelect() {
+            adventureSelectEl.innerHTML = '';
+
+            const placeholderOption = document.createElement('option');
+            placeholderOption.value = '';
+            placeholderOption.textContent = rows.length ? 'Select an adventure' : 'No adventures available';
+            adventureSelectEl.appendChild(placeholderOption);
+
+            rows.forEach((row, index) => {
+                const option = document.createElement('option');
+                option.value = String(index);
+                option.textContent = getAdventureOptionLabel(row, index);
+                adventureSelectEl.appendChild(option);
+            });
+
+            adventureSelectEl.value = selectedIndex >= 0 ? String(selectedIndex) : '';
+        }
+
+        function renderForm() {
+            if (selectedIndex < 0 || selectedIndex >= rows.length) {
+                adventurePreviewEl.textContent = 'Select an adventure to edit its special requirements.';
+                adventureAuthorInputEl.value = '';
+                specialRequirementsInputEl.value = '';
+                specialRequirementsSourceInputEl.value = '';
+                specialRequirementsNotesInputEl.value = '';
+                specialRequirementsCompletedInputEl.value = 'No';
+                deleteRequirementBtn.disabled = true;
+                return;
+            }
+
+            const row = rows[selectedIndex];
+            const typeText = String(row?.type || '').trim() || 'Unassigned';
+            adventurePreviewEl.textContent = `${getAdventureOptionLabel(row, selectedIndex)} | Type: ${typeText}`;
+            adventureAuthorInputEl.value = row.author ?? '';
+            specialRequirementsInputEl.value = row.specialRequirements ?? '';
+            specialRequirementsSourceInputEl.value = row.specialRequirementsSource ?? '';
+            specialRequirementsNotesInputEl.value = row.specialRequirementsNotes ?? '';
+            specialRequirementsCompletedInputEl.value = isRequirementCompleted(row) ? 'Yes' : 'No';
+            deleteRequirementBtn.disabled = !hasRequirementEntry(row);
+        }
+
+        function openAdventure(index) {
+            selectedIndex = index;
+            adventureSelectEl.value = index >= 0 ? String(index) : '';
+            renderForm();
+        }
+
+        function renderTable() {
+            requirementsTableBody.innerHTML = '';
+
+            if (!rows.length) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.colSpan = 9;
+                td.className = 'empty-text';
+                td.textContent = 'No adventure rows found. Create or sync rows from Adventure Listing first.';
+                tr.appendChild(td);
+                requirementsTableBody.appendChild(tr);
+                return;
+            }
+
+            rows.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                const requirementText = getRequirementText(row);
+                const requirementSource = getRequirementSource(row);
+                const requirementNotes = getRequirementNotes(row);
+                const requirementCompleted = isRequirementCompleted(row);
+
+                const noTd = document.createElement('td');
+                noTd.textContent = String(row.no ?? index + 1);
+                tr.appendChild(noTd);
+
+                const titleTd = document.createElement('td');
+                titleTd.textContent = String(row.title || '').trim() || 'Untitled Adventure';
+                tr.appendChild(titleTd);
+
+                const authorTd = document.createElement('td');
+                authorTd.textContent = String(row.author || '').trim() || '-';
+                tr.appendChild(authorTd);
+
+                const typeTd = document.createElement('td');
+                typeTd.textContent = String(row.type || '').trim() || '-';
+                tr.appendChild(typeTd);
+
+                const requirementTd = document.createElement('td');
+                requirementTd.className = 'requirement-cell';
+                if (requirementText) {
+                    requirementTd.textContent = requirementText;
+                } else {
+                    requirementTd.innerHTML = '<span class="empty-text">No special requirements set</span>';
+                }
+                tr.appendChild(requirementTd);
+
+                const sourceTd = document.createElement('td');
+                sourceTd.className = 'requirement-cell';
+                if (requirementSource) {
+                    sourceTd.textContent = requirementSource;
+                } else {
+                    sourceTd.innerHTML = '<span class="empty-text">-</span>';
+                }
+                tr.appendChild(sourceTd);
+
+                const notesTd = document.createElement('td');
+                notesTd.className = 'requirement-cell';
+                if (requirementNotes) {
+                    notesTd.textContent = requirementNotes;
+                } else {
+                    notesTd.innerHTML = '<span class="empty-text">-</span>';
+                }
+                tr.appendChild(notesTd);
+
+                const completedTd = document.createElement('td');
+                completedTd.textContent = requirementCompleted ? 'Yes' : 'No';
+                tr.appendChild(completedTd);
+
+                const actionTd = document.createElement('td');
+                actionTd.className = 'action-cell';
+
+                const editBtn = document.createElement('button');
+                editBtn.type = 'button';
+                editBtn.className = 'mini-btn';
+                editBtn.textContent = hasRequirementEntry(row) ? 'Edit' : 'Add';
+                editBtn.addEventListener('click', () => {
+                    openAdventure(index);
+                    specialRequirementsInputEl.focus();
+                });
+                actionTd.appendChild(editBtn);
+
+                const clearBtn = document.createElement('button');
+                clearBtn.type = 'button';
+                clearBtn.className = 'mini-btn delete';
+                clearBtn.textContent = 'Clear';
+                clearBtn.disabled = !hasRequirementEntry(row);
+                clearBtn.addEventListener('click', () => {
+                    rows[index].specialRequirements = '';
+                    rows[index].specialRequirementsSource = '';
+                    rows[index].specialRequirementsNotes = '';
+                    rows[index].specialRequirementsCompleted = false;
+                    if (selectedIndex === index) {
+                        adventureAuthorInputEl.value = rows[index].author ?? '';
+                        specialRequirementsInputEl.value = '';
+                        specialRequirementsSourceInputEl.value = '';
+                        specialRequirementsNotesInputEl.value = '';
+                        specialRequirementsCompletedInputEl.value = 'No';
+                    }
+                    saveRows();
+                    renderAll();
+                    showStatus(`Cleared special requirements for ${getAdventureOptionLabel(row, index)}.`);
+                });
+                actionTd.appendChild(clearBtn);
+
+                tr.appendChild(actionTd);
+                requirementsTableBody.appendChild(tr);
+            });
+        }
+
+        function renderAll() {
+            if (selectedIndex >= rows.length) {
+                selectedIndex = -1;
+            }
+            renderSummary();
+            renderAdventureSelect();
+            renderForm();
+            renderTable();
+        }
+
+        function saveSelectedRequirement() {
+            if (selectedIndex < 0 || selectedIndex >= rows.length) {
+                showStatus('Select an adventure before saving special requirements.');
+                return;
+            }
+
+            const nextValue = String(specialRequirementsInputEl.value || '').trim();
+            const nextAuthor = String(adventureAuthorInputEl.value || '').trim();
+            const nextSource = String(specialRequirementsSourceInputEl.value || '').trim();
+            const nextNotes = String(specialRequirementsNotesInputEl.value || '').trim();
+            const nextCompleted = specialRequirementsCompletedInputEl.value === 'Yes';
+            rows[selectedIndex].author = nextAuthor;
+            rows[selectedIndex].specialRequirements = nextValue;
+            rows[selectedIndex].specialRequirementsSource = nextSource;
+            rows[selectedIndex].specialRequirementsNotes = nextNotes;
+            rows[selectedIndex].specialRequirementsCompleted = nextCompleted;
+            saveRows();
+            renderAll();
+            showStatus(`Saved special requirements for ${getAdventureOptionLabel(rows[selectedIndex], selectedIndex)}.`);
+        }
+
+        function deleteSelectedRequirement() {
+            if (selectedIndex < 0 || selectedIndex >= rows.length) {
+                showStatus('Select an adventure before deleting special requirements.');
+                return;
+            }
+
+            rows[selectedIndex].specialRequirements = '';
+            rows[selectedIndex].specialRequirementsSource = '';
+            rows[selectedIndex].specialRequirementsNotes = '';
+            rows[selectedIndex].specialRequirementsCompleted = false;
+            saveRows();
+            renderAll();
+            showStatus(`Deleted special requirements for ${getAdventureOptionLabel(rows[selectedIndex], selectedIndex)}.`);
+        }
+
+        function clearSelection() {
+            selectedIndex = -1;
+            adventureSelectEl.value = '';
+            renderForm();
+            showStatus('Selection cleared.');
+        }
+
+        function initialize() {
+            loadRows();
+            renderAll();
+            showStatus('Special requirements loaded from Adventure Listing.');
+        }
+
+        adventureSelectEl.addEventListener('change', (event) => {
+            const index = Number(event.target.value);
+            if (!Number.isInteger(index) || index < 0 || index >= rows.length) {
+                clearSelection();
+                return;
+            }
+            openAdventure(index);
+            showStatus(`Editing ${getAdventureOptionLabel(rows[index], index)}.`);
+        });
+
+        saveRequirementBtn.addEventListener('click', saveSelectedRequirement);
+        deleteRequirementBtn.addEventListener('click', deleteSelectedRequirement);
+        clearFormBtn.addEventListener('click', clearSelection);
+        refreshBtn.addEventListener('click', initialize);
+
+        window.addEventListener('storage', (event) => {
+            if (event.key !== STORAGE_KEY) return;
+            initialize();
+            showStatus('Adventure data changed in another tab. Special requirements reloaded.');
+        });
+
+        initialize();
+    </script>
+</body>
+</html>

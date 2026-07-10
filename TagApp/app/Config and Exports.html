@@ -97,8 +97,8 @@
         </div>
 
         <details class="debug-panel">
-            <summary>Import Debug Info</summary>
-            <pre id="importDebugOutput" class="debug-output">No import debug output yet.</pre>
+            <summary>Import / Export Debug Info</summary>
+            <pre id="importDebugOutput" class="debug-output">No import or export debug output yet.</pre>
         </details>
 
         <p id="statusMessage" class="status"></p>
@@ -133,12 +133,14 @@
         const importDebugOutput = document.getElementById('importDebugOutput');
 
         function showStatus(message) { statusMessage.textContent = message; }
-        function showImportDebug(lines) {
+        function setDebugOutput(lines) {
             const output = Array.isArray(lines) && lines.length
                 ? lines.join('\n')
-                : 'No import debug output yet.';
+                : 'No import or export debug output yet.';
             importDebugOutput.textContent = output;
         }
+        function showImportDebug(lines) { setDebugOutput(lines); }
+        function showExportDebug(lines) { setDebugOutput(lines); }
         function parseNumber(value) { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : 0; }
         function parseAdventureCount(value) { const parsed = Number(value); if (!Number.isFinite(parsed)) return 0; return Math.max(0, Math.floor(parsed)); }
         function normalizeEventLevel(value) { const level = String(value || '').trim().toLowerCase(); if (level === 'min' || level === 'easy') return 'easy'; if (level === 'max' || level === 'hard') return 'hard'; return 'medium'; }
@@ -254,7 +256,7 @@
         }
 
         function getXlsx() {
-            if (!window.XLSX) { showStatus('XLSX library failed to load. Please refresh and try again.'); return null; }
+            if (!window.XLSX) { showExportDebug(['Export: Workbook Setup', 'Error: XLSX library failed to load. Please refresh and try again.']); showStatus('XLSX library failed to load. Please refresh and try again.'); return null; }
             return window.XLSX;
         }
 
@@ -315,8 +317,9 @@
             const productionRaw = row.Production ?? row.production ?? '';
             const silverManualColumn = row.SilverIsManual ?? row.silverIsManual;
             const productionManualColumn = row.ProductionIsManual ?? row.productionIsManual;
-            const silverManual = String(silverManualColumn || '').trim() !== '' ? toYesNoBoolean(silverManualColumn) : String(silverRaw).trim() !== '';
-            const productionManual = String(productionManualColumn || '').trim() !== '' ? toYesNoBoolean(productionManualColumn) : String(productionRaw).trim() !== '';
+            const silverManual = String(silverManualColumn || '').trim() !== '' ? toYesNoBoolean(silverManualColumn) : false;
+            const productionManual = String(productionManualColumn || '').trim() !== '' ? toYesNoBoolean(productionManualColumn) : false;
+            const specialRequirementsCompletedColumn = row.SpecialRequirementsCompleted ?? row['Special Requirements Completed'] ?? row.specialRequirementsCompleted;
             return {
                 no: String(row.No ?? row.no ?? index + 1),
                 title: String(row.Title ?? row.title ?? ''),
@@ -334,6 +337,9 @@
                 schedulingNotes: String(row.SchedulingNotes ?? row['Scheduling Notes'] ?? row.schedulingNotes ?? ''),
                 description: String(row.Description ?? row.description ?? ''),
                 specialRequirements: String(row.SpecialRequirements ?? row['Special Requirements'] ?? row.specialRequirements ?? ''),
+                specialRequirementsSource: String(row.SpecialRequirementsSource ?? row['Special Requirements Source'] ?? row.specialRequirementsSource ?? ''),
+                specialRequirementsNotes: String(row.SpecialRequirementsNotes ?? row['Special Requirements Notes'] ?? row.specialRequirementsNotes ?? ''),
+                specialRequirementsCompleted: String(specialRequirementsCompletedColumn || '').trim() !== '' ? toYesNoBoolean(specialRequirementsCompletedColumn) : false,
                 received: toYesNoBoolean(row.Received ?? row.received),
                 processed: toYesNoBoolean(row.Processed ?? row.processed),
                 tagged: toYesNoBoolean(row.Tagged ?? row.tagged)
@@ -364,8 +370,10 @@
             try {
                 const rawBuild = row.BuildJson ?? row.buildJson ?? '{}';
                 const parsed = JSON.parse(String(rawBuild || '{}'));
-                build = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
-            } catch (error) { build = {}; }
+                build = parsed && typeof parsed === 'object' ? parsed : {};
+            } catch (error) {
+                build = {};
+            }
             return {
                 id: String(row.Id ?? row.id ?? `template-build-import-${Date.now()}-${index}`).trim(),
                 name: String(row.Name ?? row.name ?? '').trim(),
@@ -384,6 +392,13 @@
             };
         }
 
+        function hasAdventureSpecialRequirementsEntry(row) {
+            return String(row?.specialRequirements ?? '').trim() !== ''
+                || String(row?.specialRequirementsSource ?? '').trim() !== ''
+                || String(row?.specialRequirementsNotes ?? '').trim() !== ''
+                || row?.specialRequirementsCompleted === true;
+        }
+
         function exportEventVariables() {
             const vars = eventVarsApi?.get?.() || {};
             const row = {
@@ -393,17 +408,19 @@
             if (!prepared) return;
             const fileName = `${safeFilePart(vars.eventName)}_Event_Variables.xlsx`;
             prepared.xlsx.writeFile(prepared.workbook, fileName);
+            showExportDebug(['Export: Event Variables', 'Sheet: Event Variables', 'Rows exported: 1', `File: ${fileName}`]);
             showStatus(`Exported ${fileName}`);
         }
 
         function exportTemplates() {
             const rows = buildTemplateExportRows();
-            if (!rows.length) { showStatus('No saved templates to export.'); return; }
+            if (!rows.length) { showExportDebug(['Export: Templates', 'Rows exported: 0']); showStatus('No saved templates to export.'); return; }
             const prepared = createWorkbookFromRows('Templates', rows);
             if (!prepared) return;
             const vars = eventVarsApi?.get?.() || {};
             const fileName = `${safeFilePart(vars.eventName)}_Templates.xlsx`;
             prepared.xlsx.writeFile(prepared.workbook, fileName);
+            showExportDebug(['Export: Templates', 'Sheet: Templates', `Rows exported: ${rows.length}`, `File: ${fileName}`]);
             showStatus(`Exported ${fileName}`);
         }
 
@@ -461,6 +478,7 @@
             if (!prepared) return;
             const fileName = `${safeFilePart(vars.eventName)}_Loot_Calculation.xlsx`;
             prepared.xlsx.writeFile(prepared.workbook, fileName);
+            showExportDebug(['Export: Loot Calculation', 'Sheet: Loot Calculation', `Rows exported: ${output.length}`, `File: ${fileName}`]);
             showStatus(`Exported ${fileName}`);
         }
 
@@ -481,7 +499,7 @@
                 return {
                     No: row?.no ?? '', Title: row?.title ?? '', Type: row?.type ?? '', Author: row?.author ?? '', WC: row?.wc ?? '', NPCs: row?.npcs ?? '', Difficulty: difficulty,
                     TargetApl: formatNumber(targetApl), Apl: row?.apl ?? '', Silver: formatNumber(silverValue), SilverIsManual: silverManual ? 'Yes' : 'No', Production: formatNumber(productionValue), ProductionIsManual: productionManual ? 'Yes' : 'No',
-                    Notes: row?.notes ?? '', SchedulingNotes: row?.schedulingNotes ?? '', Description: row?.description ?? '', SpecialRequirements: row?.specialRequirements ?? '', Received: row?.received ? 'Yes' : 'No', Processed: row?.processed ? 'Yes' : 'No', Tagged: row?.tagged ? 'Yes' : 'No', DifficultyNormalized: normalizedDifficulty
+                    Notes: row?.notes ?? '', SchedulingNotes: row?.schedulingNotes ?? '', Description: row?.description ?? '', SpecialRequirements: row?.specialRequirements ?? '', SpecialRequirementsSource: row?.specialRequirementsSource ?? '', SpecialRequirementsNotes: row?.specialRequirementsNotes ?? '', SpecialRequirementsCompleted: row?.specialRequirementsCompleted ? 'Yes' : 'No', Received: row?.received ? 'Yes' : 'No', Processed: row?.processed ? 'Yes' : 'No', Tagged: row?.tagged ? 'Yes' : 'No', DifficultyNormalized: normalizedDifficulty
                 };
             });
         }
@@ -493,6 +511,7 @@
             if (!prepared) return;
             const fileName = `${safeFilePart(vars.eventName)}_Adventure_Listing.xlsx`;
             prepared.xlsx.writeFile(prepared.workbook, fileName);
+            showExportDebug(['Export: Adventure Listing', 'Sheet: Adventure Listing', `Rows exported: ${output.length}`, `File: ${fileName}`]);
             showStatus(`Exported ${fileName}`);
         }
 
@@ -508,12 +527,13 @@
             xlsx.utils.book_append_sheet(workbook, xlsx.utils.json_to_sheet(output), 'Adventures');
             const fileName = `${safeFilePart(vars.eventName)}_Adventure_Levelling.xlsx`;
             xlsx.writeFile(workbook, fileName);
+            showExportDebug(['Export: Adventure Levelling', 'Sheets: Summary, Adventures', `Adventure rows exported: ${output.length}`, `File: ${fileName}`]);
             showStatus(`Exported ${fileName}`);
         }
 
         function buildAdventureSpecialRequirementsRows() {
             const sourceRows = readStoredAdventureRows();
-            return sourceRows.filter((row) => String(row?.specialRequirements || '').trim() !== '').map((row) => ({ No: row?.no ?? '', Title: row?.title ?? '', Author: row?.author ?? '', SpecialRequirements: row?.specialRequirements ?? '' }));
+            return sourceRows.filter((row) => hasAdventureSpecialRequirementsEntry(row)).map((row) => ({ No: row?.no ?? '', Title: row?.title ?? '', Author: row?.author ?? '', SpecialRequirements: row?.specialRequirements ?? '', Source: row?.specialRequirementsSource ?? '', Notes: row?.specialRequirementsNotes ?? '', Completed: row?.specialRequirementsCompleted ? 'Yes' : 'No' }));
         }
 
         function downloadBufferAsFile(buffer, fileName) {
@@ -531,23 +551,27 @@
         async function exportAdventureSpecialRequirements() {
             const vars = eventVarsApi?.get?.() || {};
             const output = buildAdventureSpecialRequirementsRows();
-            if (!output.length) { showStatus('No adventures with Special Requirements to export.'); return; }
+            if (!output.length) { showExportDebug(['Export: Adventure Special Requirements', 'Rows exported: 0']); showStatus('No adventures with Special Requirements to export.'); return; }
             const fileName = `${safeFilePart(vars.eventName)}_Adventure_Special_Requirements.xlsx`;
             if (window.ExcelJS?.Workbook) {
                 const workbook = new window.ExcelJS.Workbook();
                 const sheet = workbook.addWorksheet('Adventure Special Requirements');
-                sheet.columns = [ { header: 'No', key: 'No', width: 10 }, { header: 'Title', key: 'Title', width: 26 }, { header: 'Author', key: 'Author', width: 20 }, { header: 'SpecialRequirements', key: 'SpecialRequirements', width: 72 } ];
-                output.forEach((row) => sheet.addRow({ No: row.No, Title: row.Title, Author: row.Author, SpecialRequirements: normalizeMultilineText(row.SpecialRequirements) }));
+                sheet.columns = [ { header: 'No', key: 'No', width: 10 }, { header: 'Title', key: 'Title', width: 26 }, { header: 'Author', key: 'Author', width: 20 }, { header: 'SpecialRequirements', key: 'SpecialRequirements', width: 44 }, { header: 'Source', key: 'Source', width: 24 }, { header: 'Notes', key: 'Notes', width: 36 }, { header: 'Completed', key: 'Completed', width: 14 } ];
+                output.forEach((row) => sheet.addRow({ No: row.No, Title: row.Title, Author: row.Author, SpecialRequirements: normalizeMultilineText(row.SpecialRequirements), Source: normalizeMultilineText(row.Source), Notes: normalizeMultilineText(row.Notes), Completed: row.Completed }));
                 sheet.getRow(1).font = { bold: true };
                 for (let i = 2; i <= sheet.rowCount; i++) {
-                    const cell = sheet.getCell(`D${i}`);
-                    const text = normalizeMultilineText(cell.value || '');
-                    const lineCount = Math.max(1, String(text).split('\n').length);
-                    cell.alignment = { wrapText: true, vertical: 'top' };
+                    const requirementText = normalizeMultilineText(sheet.getCell(`D${i}`).value || '');
+                    const sourceText = normalizeMultilineText(sheet.getCell(`E${i}`).value || '');
+                    const notesText = normalizeMultilineText(sheet.getCell(`F${i}`).value || '');
+                    const lineCount = Math.max(1, requirementText.split('\n').length, sourceText.split('\n').length, notesText.split('\n').length);
+                    sheet.getCell(`D${i}`).alignment = { wrapText: true, vertical: 'top' };
+                    sheet.getCell(`E${i}`).alignment = { wrapText: true, vertical: 'top' };
+                    sheet.getCell(`F${i}`).alignment = { wrapText: true, vertical: 'top' };
                     sheet.getRow(i).height = Math.min(220, 16 * lineCount);
                 }
                 const buffer = await workbook.xlsx.writeBuffer();
                 downloadBufferAsFile(buffer, fileName);
+                showExportDebug(['Export: Adventure Special Requirements', 'Sheet: Adventure Special Requirements', `Rows exported: ${output.length}`, `File: ${fileName}`]);
                 showStatus(`Exported ${fileName}`);
                 return;
             }
@@ -556,27 +580,32 @@
             const workbook = xlsx.utils.book_new();
             const worksheet = xlsx.utils.json_to_sheet(output);
             output.forEach((row, index) => {
-                const cellRef = `D${index + 2}`;
-                if (!worksheet[cellRef]) return;
-                const text = normalizeMultilineText(row.SpecialRequirements);
-                worksheet[cellRef].v = text;
-                worksheet[cellRef].t = 's';
-                worksheet[cellRef].s = { alignment: { wrapText: true, vertical: 'top' } };
+                const rowNumber = index + 2;
+                [
+                    { ref: `D${rowNumber}`, value: row.SpecialRequirements },
+                    { ref: `E${rowNumber}`, value: row.Source },
+                    { ref: `F${rowNumber}`, value: row.Notes }
+                ].forEach((cellDef) => {
+                    if (!worksheet[cellDef.ref]) return;
+                    worksheet[cellDef.ref].v = normalizeMultilineText(cellDef.value);
+                    worksheet[cellDef.ref].t = 's';
+                    worksheet[cellDef.ref].s = { alignment: { wrapText: true, vertical: 'top' } };
+                });
             });
             worksheet['!rows'] = [{ hpt: 20 }].concat(output.map((row) => {
-                const text = normalizeMultilineText(row.SpecialRequirements);
-                const lineCount = Math.max(1, text.split('\n').length);
+                const lineCount = Math.max(1, normalizeMultilineText(row.SpecialRequirements).split('\n').length, normalizeMultilineText(row.Source).split('\n').length, normalizeMultilineText(row.Notes).split('\n').length);
                 return { hpt: Math.min(220, 16 * lineCount) };
             }));
-            worksheet['!cols'] = [ { wch: 10 }, { wch: 26 }, { wch: 20 }, { wch: 72 } ];
+            worksheet['!cols'] = [ { wch: 10 }, { wch: 26 }, { wch: 20 }, { wch: 44 }, { wch: 24 }, { wch: 36 }, { wch: 14 } ];
             xlsx.utils.book_append_sheet(workbook, worksheet, 'Adventure Special Requirements');
             xlsx.writeFile(workbook, fileName, { cellStyles: true });
+            showExportDebug(['Export: Adventure Special Requirements', 'Sheet: Adventure Special Requirements', `Rows exported: ${output.length}`, `File: ${fileName}`]);
             showStatus(`Exported ${fileName}`);
         }
 
         async function exportFeedbackSheet() {
             const vars = eventVarsApi?.get?.() || {};
-            if (!window.ExcelJS?.Workbook) { showStatus('ExcelJS failed to load. Please refresh and try again.'); return; }
+            if (!window.ExcelJS?.Workbook) { showExportDebug(['Export: Feedback Sheet', 'Error: ExcelJS failed to load. Please refresh and try again.']); showStatus('ExcelJS failed to load. Please refresh and try again.'); return; }
             const sourceRows = readStoredAdventureRows();
             const scheduleSlots = readScheduleSlots();
             const keyToAdventure = new Map();
@@ -654,6 +683,7 @@
             const fileName = `${safeFilePart(vars.eventName)}_Feedback_Sheet.xlsx`;
             const buffer = await workbook.xlsx.writeBuffer();
             downloadBufferAsFile(buffer, fileName);
+            showExportDebug(['Export: Feedback Sheet', 'Sheet: P - Feedback Sheet', `Scheduled adventures exported: ${sourceRows.length}`, `File: ${fileName}`]);
             showStatus(`Exported ${fileName}`);
         }
 
@@ -841,8 +871,11 @@
                     no: String(row.No ?? row.no ?? index + 1),
                     title: String(row.Title ?? row.title ?? ''),
                     author: String(row.Author ?? row.author ?? ''),
-                    specialRequirements: String(row.SpecialRequirements ?? row['Special Requirements'] ?? row.specialRequirements ?? '').trim()
-                })).filter((row) => row.specialRequirements !== '');
+                    specialRequirements: String(row.SpecialRequirements ?? row['Special Requirements'] ?? row.specialRequirements ?? '').trim(),
+                    specialRequirementsSource: String(row.Source ?? row.SpecialRequirementsSource ?? row['Special Requirements Source'] ?? row.specialRequirementsSource ?? '').trim(),
+                    specialRequirementsNotes: String(row.Notes ?? row.SpecialRequirementsNotes ?? row['Special Requirements Notes'] ?? row.specialRequirementsNotes ?? '').trim(),
+                    specialRequirementsCompleted: toYesNoBoolean(row.Completed ?? row['Completed (Y/N)'] ?? row.SpecialRequirementsCompleted ?? row['Special Requirements Completed'] ?? row.specialRequirementsCompleted)
+                })).filter((row) => row.specialRequirements !== '' || row.specialRequirementsSource !== '' || row.specialRequirementsNotes !== '' || row.specialRequirementsCompleted);
                 if (!normalizedRows.length) {
                     showImportDebug(['Import: Adventure Special Requirements', `Rows found: ${importedRows.length}`, 'Rows with special requirements: 0']);
                     showStatus('No rows had Special Requirements, nothing was imported.');
@@ -854,8 +887,11 @@
                     const matchIndex = findAdventureRowIndex(updatedRows, row);
                     if (matchIndex >= 0) {
                         updatedRows[matchIndex].specialRequirements = row.specialRequirements;
+                        updatedRows[matchIndex].specialRequirementsSource = row.specialRequirementsSource;
+                        updatedRows[matchIndex].specialRequirementsNotes = row.specialRequirementsNotes;
+                        updatedRows[matchIndex].specialRequirementsCompleted = row.specialRequirementsCompleted;
                     } else {
-                        updatedRows.push({ no: row.no, title: row.title, author: row.author, specialRequirements: row.specialRequirements, type: '', npcs: '', difficulty: '', apl: '', silver: '', production: '', silverManual: false, productionManual: false, notes: '', wc: '', schedulingNotes: '', description: '', received: false, processed: false, tagged: false });
+                        updatedRows.push({ no: row.no, title: row.title, author: row.author, specialRequirements: row.specialRequirements, specialRequirementsSource: row.specialRequirementsSource, specialRequirementsNotes: row.specialRequirementsNotes, specialRequirementsCompleted: row.specialRequirementsCompleted, type: '', npcs: '', difficulty: '', apl: '', silver: '', production: '', silverManual: false, productionManual: false, notes: '', wc: '', schedulingNotes: '', description: '', received: false, processed: false, tagged: false });
                     }
                 });
                 localStorage.setItem(adventureStorageKey, JSON.stringify({ rows: updatedRows }));
@@ -916,9 +952,11 @@
                 exportTemplates();
                 await exportAdventureSpecialRequirements();
                 await exportFeedbackSheet();
+                showExportDebug(['Export: All', 'Status: Complete', 'Files attempted: Event Variables, Loot Calculation, Adventure Listing, Adventure Levelling, Templates, Adventure Special Requirements, Feedback Sheet']);
                 showStatus('Export All complete. Check your downloads for all workbook files.');
             } catch (error) {
                 console.error('Failed during Export All:', error);
+                showExportDebug(['Export: All', 'Status: Error', `Error: ${String(error?.message || error)}`]);
                 showStatus('Export All encountered an error. Some files may still have exported.');
             }
         }

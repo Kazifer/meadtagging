@@ -1,6 +1,6 @@
 {
   "name": "meadtagging-desktop",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "description": "Desktop wrapper for Mead Tagging tools",
   "main": "main.js",
   "author": "",
@@ -17,7 +17,7 @@
   },
   "build": {
     "appId": "com.meadtagging.desktop",
-    "productName": "Mead Tagging",
+    "productName": "Mead Adventure Manager",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -28,6 +28,7 @@
       "app/**/*"
     ],
     "win": {
+    "icon": "build/icon.png",
       "signAndEditExecutable": false,
       "target": [
         {
@@ -35,6 +36,7 @@
           "arch": [
             "x64"
           ]
+
         }
       ],
       "artifactName": "${productName}-Setup-${version}.${ext}"
