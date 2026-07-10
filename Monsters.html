@@ -81,37 +81,9 @@
             <p class="text-slate-400 mt-1">Browse the library, build your adventure, and export your encounter sheet.</p>
         </header>
 
-        <section class="bg-slate-800 p-4 rounded-lg shadow-lg mb-6">
-            <h2 class="text-xl font-bold text-amber-500 mb-2">Monster Modifiers</h2>
-            <p class="text-sm text-slate-400 mb-3">Select modifiers to include as a separate table in exported output files.</p>
-            <div class="mb-3 grid grid-cols-1 md:grid-cols-6 gap-2">
-                <input id="modifier-name-input" type="text" placeholder="Modifier name" class="md:col-span-1 p-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-100">
-                <input id="modifier-description-input" type="text" placeholder="Modifier description" class="md:col-span-2 p-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-100">
-                <input id="modifier-limit-input" type="number" min="0" step="1" placeholder="Limit" class="md:col-span-1 p-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-100">
-                <select id="modifier-type-input" class="md:col-span-1 p-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-200"><option value="Any">Any</option></select>
-                <button id="add-modifier-btn" class="md:col-span-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-lg transition-colors" type="button">Add Modifier</button>
-            </div>
-            <div class="mb-3 flex gap-2 flex-wrap">
-                <button id="export-modifiers-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm" type="button">Export Modifiers XLSX</button>
-                <button id="import-modifiers-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm" type="button">Import Modifiers XLSX</button>
-                <input id="modifier-import-file" type="file" accept=".xlsx,.xls" hidden>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm text-left text-slate-300 modifiers-table">
-                    <thead class="text-xs text-amber-400 uppercase bg-slate-700">
-                        <tr>
-                            <th class="p-3">Modifier</th>
-                            <th class="p-3">Description</th>
-                            <th class="p-3 text-center">Limit</th>
-                            <th class="p-3">Type</th>
-                            <th class="p-3 text-center">Include</th>
-                            <th class="p-3 text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="modifier-table-body"></tbody>
-                </table>
-            </div>
-        </section>
+        <div class="mb-6 flex justify-end">
+            <button id="open-modifiers-modal-btn" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-5 rounded-lg transition-colors" type="button">Manage Modifiers</button>
+        </div>
 
         <main class="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
@@ -331,6 +303,48 @@
         </div>
     </div> 
 
+    <!-- Modifiers Modal -->
+    <div id="modifiers-modal" class="fixed inset-0 z-40 hidden items-start justify-center p-4 modal-backdrop">
+        <div class="relative w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-slate-800 rounded-lg shadow-xl mt-10">
+            <div class="p-4 md:p-6">
+                <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-600">
+                    <h3 class="text-xl font-semibold text-amber-400">Monster Modifiers</h3>
+                    <button type="button" id="close-modifiers-modal-btn" class="text-slate-400 bg-transparent hover:bg-slate-600 hover:text-white rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center">
+                        <span class="sr-only">Close</span>x
+                    </button>
+                </div>
+                <p class="text-sm text-slate-400 mb-4">Select modifiers to include as a separate table in exported output files.</p>
+                <div class="mb-3 grid grid-cols-1 md:grid-cols-6 gap-2">
+                    <input id="modifier-name-input" type="text" placeholder="Modifier name" class="md:col-span-1 p-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-100">
+                    <input id="modifier-description-input" type="text" placeholder="Modifier description" class="md:col-span-2 p-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-100">
+                    <input id="modifier-limit-input" type="number" min="0" step="1" placeholder="Limit" class="md:col-span-1 p-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-100">
+                    <select id="modifier-type-input" class="md:col-span-1 p-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-200"><option value="Any">Any</option></select>
+                    <button id="add-modifier-btn" class="md:col-span-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-lg transition-colors" type="button">Add Modifier</button>
+                </div>
+                <div class="mb-4 flex gap-2 flex-wrap">
+                    <button id="export-modifiers-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm" type="button">Export Modifiers XLSX</button>
+                    <button id="import-modifiers-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm" type="button">Import Modifiers XLSX</button>
+                    <input id="modifier-import-file" type="file" accept=".xlsx,.xls" hidden>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-slate-300 modifiers-table">
+                        <thead class="text-xs text-amber-400 uppercase bg-slate-700">
+                            <tr>
+                                <th class="p-3">Modifier</th>
+                                <th class="p-3">Description</th>
+                                <th class="p-3 text-center">Limit</th>
+                                <th class="p-3">Type</th>
+                                <th class="p-3 text-center">Include</th>
+                                <th class="p-3 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modifier-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modifier Edit Modal -->
     <div id="modifier-edit-modal" class="fixed inset-0 z-50 justify-center p-4 hidden modal-backdrop">
         <div class="relative w-full max-w-xl max-h-[90vh] overflow-y-auto">
@@ -421,6 +435,9 @@
         const modifierEditTypeInput = document.getElementById('modifier-edit-type');
         const closeModifierEditModalBtn = document.getElementById('close-modifier-edit-modal-btn');
         const cancelModifierEditBtn = document.getElementById('cancel-modifier-edit-btn');
+        const modifiersModal = document.getElementById('modifiers-modal');
+        const openModifiersModalBtn = document.getElementById('open-modifiers-modal-btn');
+        const closeModifiersModalBtn = document.getElementById('close-modifiers-modal-btn');
         const rosterList = document.getElementById('adventure-roster-list');
         const rosterPlaceholder = document.getElementById('roster-placeholder');
         const rosterTotalAPL = document.getElementById('roster-total-apl');
@@ -916,6 +933,22 @@
         modifierEditModal.addEventListener('click', (event) => {
             if (event.target === modifierEditModal) {
                 closeModifierEditModal();
+            }
+        });
+
+        openModifiersModalBtn.addEventListener('click', () => {
+            rebuildModifierTypeDropdowns();
+            modifiersModal.classList.remove('hidden');
+            modifiersModal.classList.add('flex');
+        });
+        closeModifiersModalBtn.addEventListener('click', () => {
+            modifiersModal.classList.add('hidden');
+            modifiersModal.classList.remove('flex');
+        });
+        modifiersModal.addEventListener('click', (event) => {
+            if (event.target === modifiersModal) {
+                modifiersModal.classList.add('hidden');
+                modifiersModal.classList.remove('flex');
             }
         });
 
