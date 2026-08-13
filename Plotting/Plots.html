@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plots</title>
+    <link rel="stylesheet" href="theme.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body class="bg-gray-900 min-h-screen p-4 md:p-8 text-gray-100">
+<div class="max-w-6xl mx-auto">
+
+    <header class="mb-6 flex items-center justify-between flex-wrap gap-3">
+        <h1 class="text-3xl font-bold text-teal-400">Plots</h1>
+        <div class="flex gap-2 flex-wrap">
+            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="hidden">
+            <button id="btnImport" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition-colors">&#8593; Import</button>
+            <button id="btnExport" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition-colors">&#8595; Export</button>
+            <button id="btnAdd" class="px-4 py-2 bg-teal-600 hover:bg-teal-500 rounded-lg font-medium transition-colors">+ Add Plot</button>
+        </div>
+    </header>
+
+    <div class="mb-4 flex gap-2 flex-wrap">
+        <button data-filter="all"      class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">All</button>
+        <button data-filter="Planned"  class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">Planned</button>
+        <button data-filter="Active"   class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">Active</button>
+        <button data-filter="Dormant"  class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">Dormant</button>
+        <button data-filter="Resolved" class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">Resolved</button>
+    </div>
+
+    <div class="overflow-x-auto rounded-lg border border-gray-700">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-800 text-gray-400 uppercase text-xs">
+                <tr>
+                    <th class="px-4 py-3 text-left">Title</th>
+                    <th class="px-4 py-3 text-left">Status</th>
+                    <th class="px-4 py-3 text-left">Description</th>
+                    <th class="px-4 py-3 text-left">Related Characters</th>
+                    <th class="px-4 py-3 text-center w-24">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody" class="divide-y divide-gray-700">
+                <tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">Loading…</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 hidden p-4">
+    <div class="bg-gray-800 rounded-xl p-6 w-full max-w-lg shadow-2xl">
+        <h2 id="modalTitle" class="text-xl font-bold text-teal-400 mb-4">Add Plot</h2>
+        <form id="form" class="space-y-3">
+            <div>
+                <label class="block text-sm text-gray-300 mb-1">Title <span class="text-red-400">*</span></label>
+                <input id="fTitle" type="text" required class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-teal-500">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-300 mb-1">Status</label>
+                <select id="fStatus" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-teal-500">
+                    <option>Planned</option>
+                    <option>Active</option>
+                    <option>Dormant</option>
+                    <option>Resolved</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-300 mb-1">Description</label>
+                <textarea id="fDescription" rows="4" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 resize-none focus:outline-none focus:border-teal-500"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-300 mb-1">Related Characters</label>
+                <textarea id="fCharacters" rows="2" placeholder="One per line, or comma-separated" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 resize-none focus:outline-none focus:border-teal-500"></textarea>
+            </div>
+            <div class="flex gap-3 pt-2 justify-end">
+                <button type="button" id="btnCancel" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg transition-colors">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-500 rounded-lg font-medium transition-colors">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    if (!firebase.apps.length) {
+        firebase.initializeApp({
+            apiKey: "AIzaSyCv4W78w1_m-T2zWIJlExgDxvKsiiWdkpg",
+            authDomain: "thebigusefultool.firebaseapp.com",
+            projectId: "thebigusefultool",
+            storageBucket: "thebigusefultool.firebasestorage.app",
+            messagingSenderId: "992556432736",
+            appId: "1:992556432736:web:d672c06e0debd248f67205"
+        });
+    }
+    const db  = firebase.firestore();
+    const col = db.collection('plots');
+
+    let allDocs   = [];
+    let editingId = null;
+    let curFilter = 'all';
+
+    const STATUS_COLORS = {
+        Planned:  'bg-blue-900/60 text-blue-400',
+        Active:   'bg-green-900/60 text-green-400',
+        Dormant:  'bg-yellow-900/60 text-yellow-400',
+        Resolved: 'bg-gray-700 text-gray-400'
+    };
+
+    function esc(s) {
+        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function render() {
+        const rows  = curFilter === 'all' ? allDocs : allDocs.filter(d => d.status === curFilter);
+        const tbody = document.getElementById('tableBody');
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">No plots found.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = rows.map(p => `
+            <tr class="hover:bg-gray-800/40 transition-colors">
+                <td class="px-4 py-3 font-medium">${esc(p.title)}</td>
+                <td class="px-4 py-3">
+                    <span class="px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[p.status] || STATUS_COLORS.Resolved}">
+                        ${esc(p.status || 'Planned')}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-gray-400 max-w-xs truncate" title="${esc(p.description)}">${esc(p.description || '')}</td>
+                <td class="px-4 py-3 text-gray-300 text-xs">${esc(p.characters || '')}</td>
+                <td class="px-4 py-3 text-center whitespace-nowrap">
+                    <button onclick="_edit('${p.id}')" class="text-teal-400 hover:text-teal-300 text-xs mr-3">Edit</button>
+                    <button onclick="_del('${p.id}')"  class="text-red-400  hover:text-red-300  text-xs">Delete</button>
+                </td>
+            </tr>`).join('');
+    }
+
+    col.orderBy('title').onSnapshot(snap => {
+        allDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        render();
+    });
+
+    const modal      = document.getElementById('modal');
+    const form       = document.getElementById('form');
+    const modalTitle = document.getElementById('modalTitle');
+
+    function openModal(title) { modalTitle.textContent = title; modal.classList.remove('hidden'); }
+    function closeModal()     { modal.classList.add('hidden'); form.reset(); editingId = null; }
+
+    document.getElementById('btnAdd').onclick    = () => { editingId = null; openModal('Add Plot'); };
+    document.getElementById('btnCancel').onclick = closeModal;
+    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const data = {
+            title:       document.getElementById('fTitle').value.trim(),
+            status:      document.getElementById('fStatus').value,
+            description: document.getElementById('fDescription').value.trim(),
+            characters:  document.getElementById('fCharacters').value.trim()
+        };
+        if (editingId) {
+            await col.doc(editingId).update(data);
+        } else {
+            data.createdAt = Date.now();
+            await col.add(data);
+        }
+        closeModal();
+    });
+
+    window._edit = id => {
+        const p = allDocs.find(d => d.id === id);
+        if (!p) return;
+        editingId = id;
+        document.getElementById('fTitle').value       = p.title       || '';
+        document.getElementById('fStatus').value      = p.status      || 'Planned';
+        document.getElementById('fDescription').value = p.description || '';
+        document.getElementById('fCharacters').value  = p.characters  || '';
+        openModal('Edit Plot');
+    };
+
+    window._del = async id => {
+        if (!confirm('Delete this plot?')) return;
+        await col.doc(id).delete();
+    };
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('bg-teal-700','text-white','border-teal-500'));
+            btn.classList.add('bg-teal-700','text-white','border-teal-500');
+            curFilter = btn.dataset.filter;
+            render();
+        });
+    });
+    document.querySelector('[data-filter="all"]').classList.add('bg-teal-700','text-white','border-teal-500');
+
+    // --- Import / Export -------------------------------------------------------
+    const EXPORT_HDRS = ['Title','Status','Description','Related Characters'];
+
+    document.getElementById('btnExport').onclick = () => {
+        const rows = allDocs.map(p => [p.title||'', p.status||'Planned', p.description||'', p.characters||'']);
+        const ws = XLSX.utils.aoa_to_sheet([EXPORT_HDRS, ...rows]);
+        ws['!cols'] = EXPORT_HDRS.map((h, i) => ({ wch: Math.max(h.length, ...rows.map(r => String(r[i]||'').length), 4) + 2 }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Plots');
+        XLSX.writeFile(wb, 'plots.xlsx');
+    };
+
+    const fileInput = document.getElementById('fileInput');
+    document.getElementById('btnImport').onclick = () => fileInput.click();
+    fileInput.addEventListener('change', async e => {
+        const file = e.target.files[0]; if (!file) return; fileInput.value = '';
+        const reader = new FileReader();
+        reader.onload = async evt => {
+            const wb   = XLSX.read(evt.target.result, { type: 'array' });
+            const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+            if (!rows.length) { alert('No data rows found.'); return; }
+            let added = 0, skipped = 0;
+            for (const row of rows) {
+                const title = String(row['Title'] || row['title'] || '').trim();
+                if (!title) { skipped++; continue; }
+                await col.add({ title, status: String(row['Status']||'Planned').trim(), description: String(row['Description']||'').trim(), characters: String(row['Related Characters']||'').trim(), createdAt: Date.now() });
+                added++;
+            }
+            alert(`Import complete: ${added} added, ${skipped} skipped (missing Title).`);
+        };
+        reader.readAsArrayBuffer(file);
+    });
+</script>
+</body>
+</html>

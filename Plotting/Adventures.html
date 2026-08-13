@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adventures</title>
+    <link rel="stylesheet" href="theme.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body class="bg-gray-900 min-h-screen p-4 md:p-8 text-gray-100">
+<div class="max-w-6xl mx-auto">
+
+    <header class="mb-6 flex items-center justify-between flex-wrap gap-3">
+        <h1 class="text-3xl font-bold text-teal-400">Adventures</h1>
+        <div class="flex gap-2 flex-wrap">
+            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="hidden">
+            <button id="btnImport" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition-colors">&#8593; Import</button>
+            <button id="btnExport" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition-colors">&#8595; Export</button>
+            <button id="btnAdd" class="px-4 py-2 bg-teal-600 hover:bg-teal-500 rounded-lg font-medium transition-colors">+ Add Adventure</button>
+        </div>
+    </header>
+
+    <div class="mb-4 flex gap-2 flex-wrap items-center">
+        <button data-filter="all"      class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">All</button>
+        <button data-filter="Planned"  class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">Planned</button>
+        <button data-filter="Run"      class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">Run</button>
+        <button data-filter="Complete" class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">Complete</button>
+        <span class="ml-auto text-sm text-gray-400">Filter by event:</span>
+        <select id="eventFilter" class="px-3 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 focus:outline-none focus:border-teal-500">
+            <option value="">All events</option>
+        </select>
+    </div>
+
+    <div class="overflow-x-auto rounded-lg border border-gray-700">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-800 text-gray-400 uppercase text-xs">
+                <tr>
+                    <th class="px-4 py-3 text-left">Title</th>
+                    <th class="px-4 py-3 text-left">Event</th>
+                    <th class="px-4 py-3 text-left">Type</th>
+                    <th class="px-4 py-3 text-left">Status</th>
+                    <th class="px-4 py-3 text-left">Notes</th>
+                    <th class="px-4 py-3 text-center w-24">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody" class="divide-y divide-gray-700">
+                <tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">Loading…</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 hidden p-4">
+    <div class="bg-gray-800 rounded-xl p-6 w-full max-w-lg shadow-2xl">
+        <h2 id="modalTitle" class="text-xl font-bold text-teal-400 mb-4">Add Adventure</h2>
+        <form id="form" class="space-y-3">
+            <div>
+                <label class="block text-sm text-gray-300 mb-1">Title <span class="text-red-400">*</span></label>
+                <input id="fTitle" type="text" required class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-teal-500">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm text-gray-300 mb-1">Event</label>
+                    <select id="fEvent" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-teal-500">
+                        <option value="">— None —</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-300 mb-1">Type</label>
+                    <select id="fType" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-teal-500">
+                        <option>Combat</option>
+                        <option>Social</option>
+                        <option>Exploration</option>
+                        <option>Mixed</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-300 mb-1">Status</label>
+                <select id="fStatus" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-teal-500">
+                    <option>Planned</option>
+                    <option>Run</option>
+                    <option>Complete</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-300 mb-1">Notes</label>
+                <textarea id="fNotes" rows="3" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 resize-none focus:outline-none focus:border-teal-500"></textarea>
+            </div>
+            <div class="flex gap-3 pt-2 justify-end">
+                <button type="button" id="btnCancel" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg transition-colors">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-500 rounded-lg font-medium transition-colors">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    if (!firebase.apps.length) {
+        firebase.initializeApp({
+            apiKey: "AIzaSyCv4W78w1_m-T2zWIJlExgDxvKsiiWdkpg",
+            authDomain: "thebigusefultool.firebaseapp.com",
+            projectId: "thebigusefultool",
+            storageBucket: "thebigusefultool.firebasestorage.app",
+            messagingSenderId: "992556432736",
+            appId: "1:992556432736:web:d672c06e0debd248f67205"
+        });
+    }
+    const db       = firebase.firestore();
+    const advCol   = db.collection('adventures');
+    const evtCol   = db.collection('plotting_events');
+
+    let allDocs    = [];
+    let allEvents  = [];
+    let editingId  = null;
+    let curFilter  = 'all';
+    let curEventId = '';
+
+    const STATUS_COLORS = {
+        Planned:  'bg-blue-900/60 text-blue-400',
+        Run:      'bg-yellow-900/60 text-yellow-400',
+        Complete: 'bg-green-900/60 text-green-400'
+    };
+    const TYPE_COLORS = {
+        Combat:      'bg-red-900/50 text-red-300',
+        Social:      'bg-purple-900/50 text-purple-300',
+        Exploration: 'bg-emerald-900/50 text-emerald-300',
+        Mixed:       'bg-indigo-900/50 text-indigo-300'
+    };
+
+    function esc(s) {
+        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function eventName(id) {
+        const ev = allEvents.find(e => e.id === id);
+        return ev ? ev.name : (id ? id : '—');
+    }
+
+    function render() {
+        let rows = allDocs;
+        if (curFilter !== 'all') rows = rows.filter(d => d.status === curFilter);
+        if (curEventId)          rows = rows.filter(d => d.eventId === curEventId);
+
+        const tbody = document.getElementById('tableBody');
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">No adventures found.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = rows.map(a => `
+            <tr class="hover:bg-gray-800/40 transition-colors">
+                <td class="px-4 py-3 font-medium">${esc(a.title)}</td>
+                <td class="px-4 py-3 text-gray-300 text-sm">${esc(eventName(a.eventId))}</td>
+                <td class="px-4 py-3">
+                    <span class="px-2 py-0.5 rounded text-xs font-medium ${TYPE_COLORS[a.type] || 'bg-gray-700 text-gray-400'}">
+                        ${esc(a.type || 'Mixed')}
+                    </span>
+                </td>
+                <td class="px-4 py-3">
+                    <span class="px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[a.status] || 'bg-gray-700 text-gray-400'}">
+                        ${esc(a.status || 'Planned')}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-gray-400 max-w-xs truncate" title="${esc(a.notes)}">${esc(a.notes || '')}</td>
+                <td class="px-4 py-3 text-center whitespace-nowrap">
+                    <button onclick="_edit('${a.id}')" class="text-teal-400 hover:text-teal-300 text-xs mr-3">Edit</button>
+                    <button onclick="_del('${a.id}')"  class="text-red-400  hover:text-red-300  text-xs">Delete</button>
+                </td>
+            </tr>`).join('');
+    }
+
+    function populateEventSelects() {
+        const opts = '<option value="">— None —</option>' +
+            allEvents.map(e => `<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('');
+        document.getElementById('fEvent').innerHTML   = opts;
+        const filterOpts = '<option value="">All events</option>' +
+            allEvents.map(e => `<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('');
+        document.getElementById('eventFilter').innerHTML = filterOpts;
+        if (curEventId) document.getElementById('eventFilter').value = curEventId;
+    }
+
+    evtCol.orderBy('date', 'desc').onSnapshot(snap => {
+        allEvents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        populateEventSelects();
+        render();
+    });
+
+    advCol.orderBy('title').onSnapshot(snap => {
+        allDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        render();
+    });
+
+    document.getElementById('eventFilter').addEventListener('change', e => {
+        curEventId = e.target.value;
+        render();
+    });
+
+    const modal      = document.getElementById('modal');
+    const form       = document.getElementById('form');
+    const modalTitle = document.getElementById('modalTitle');
+
+    function openModal(title) { modalTitle.textContent = title; modal.classList.remove('hidden'); }
+    function closeModal()     { modal.classList.add('hidden'); form.reset(); editingId = null; }
+
+    document.getElementById('btnAdd').onclick    = () => { editingId = null; openModal('Add Adventure'); };
+    document.getElementById('btnCancel').onclick = closeModal;
+    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const data = {
+            title:   document.getElementById('fTitle').value.trim(),
+            eventId: document.getElementById('fEvent').value,
+            type:    document.getElementById('fType').value,
+            status:  document.getElementById('fStatus').value,
+            notes:   document.getElementById('fNotes').value.trim()
+        };
+        if (editingId) {
+            await advCol.doc(editingId).update(data);
+        } else {
+            data.createdAt = Date.now();
+            await advCol.add(data);
+        }
+        closeModal();
+    });
+
+    window._edit = id => {
+        const a = allDocs.find(d => d.id === id);
+        if (!a) return;
+        editingId = id;
+        document.getElementById('fTitle').value  = a.title   || '';
+        document.getElementById('fEvent').value  = a.eventId || '';
+        document.getElementById('fType').value   = a.type    || 'Mixed';
+        document.getElementById('fStatus').value = a.status  || 'Planned';
+        document.getElementById('fNotes').value  = a.notes   || '';
+        openModal('Edit Adventure');
+    };
+
+    window._del = async id => {
+        if (!confirm('Delete this adventure?')) return;
+        await advCol.doc(id).delete();
+    };
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('bg-teal-700','text-white','border-teal-500'));
+            btn.classList.add('bg-teal-700','text-white','border-teal-500');
+            curFilter = btn.dataset.filter;
+            render();
+        });
+    });
+    document.querySelector('[data-filter="all"]').classList.add('bg-teal-700','text-white','border-teal-500');
+
+    // --- Import / Export -------------------------------------------------------
+    const EXPORT_HDRS = ['Title','Event','Type','Status','Notes'];
+
+    document.getElementById('btnExport').onclick = () => {
+        const rows = allDocs.map(a => [a.title||'', eventName(a.eventId), a.type||'Mixed', a.status||'Planned', a.notes||'']);
+        const ws = XLSX.utils.aoa_to_sheet([EXPORT_HDRS, ...rows]);
+        ws['!cols'] = EXPORT_HDRS.map((h, i) => ({ wch: Math.max(h.length, ...rows.map(r => String(r[i]||'').length), 4) + 2 }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Adventures');
+        XLSX.writeFile(wb, 'adventures.xlsx');
+    };
+
+    const fileInput = document.getElementById('fileInput');
+    document.getElementById('btnImport').onclick = () => fileInput.click();
+    fileInput.addEventListener('change', async e => {
+        const file = e.target.files[0]; if (!file) return; fileInput.value = '';
+        const reader = new FileReader();
+        reader.onload = async evt => {
+            const wb   = XLSX.read(evt.target.result, { type: 'array' });
+            const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+            if (!rows.length) { alert('No data rows found.'); return; }
+            let added = 0, skipped = 0;
+            for (const row of rows) {
+                const title = String(row['Title'] || row['title'] || '').trim();
+                if (!title) { skipped++; continue; }
+                // Resolve event name to ID (case-insensitive)
+                const evtName = String(row['Event'] || '').trim();
+                const evtMatch = allEvents.find(ev => ev.name.toLowerCase() === evtName.toLowerCase());
+                await advCol.add({ title, eventId: evtMatch ? evtMatch.id : '', type: String(row['Type']||'Mixed').trim(), status: String(row['Status']||'Planned').trim(), notes: String(row['Notes']||'').trim(), createdAt: Date.now() });
+                added++;
+            }
+            alert(`Import complete: ${added} added, ${skipped} skipped (missing Title).`);
+        };
+        reader.readAsArrayBuffer(file);
+    });
+</script>
+</body>
+</html>
