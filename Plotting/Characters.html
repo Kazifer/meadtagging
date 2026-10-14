@@ -11,6 +11,22 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body class="bg-gray-900 min-h-screen p-4 md:p-8 text-gray-100">
+<nav class="app-nav">
+    <div class="app-nav-head">
+        <span class="app-nav-title">Plotting</span>
+        <button id="menuToggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="appMenu" aria-label="Toggle menu">
+            <span class="menu-toggle-bar"></span>
+            <span class="menu-toggle-bar"></span>
+            <span class="menu-toggle-bar"></span>
+        </button>
+    </div>
+    <ul id="appMenu" class="menu app-menu">
+        <li><a href="Characters.html">Characters</a></li>
+        <li><a href="Events.html">Events</a></li>
+        <li><a href="Plots.html">Plots</a></li>
+        <li><a href="Adventures.html">Adventures</a></li>
+    </ul>
+</nav>
 <div class="max-w-6xl mx-auto">
 
     <header class="mb-6 flex items-center justify-between flex-wrap gap-3">
@@ -23,31 +39,43 @@
         </div>
     </header>
 
-    <div class="mb-4 flex gap-2 flex-wrap">
+    <div class="mb-4 flex gap-2 flex-wrap items-center">
         <button data-filter="all"      class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">All</button>
         <button data-filter="Active"   class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">Active</button>
         <button data-filter="Retired"  class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">Retired</button>
         <button data-filter="Deceased" class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">Deceased</button>
         <button data-filter="Archived" class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">Archived</button>
+        <span class="text-sm text-gray-500">|</span>
+        <input type="text" id="searchInput" placeholder="Search all columns…" class="px-3 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 focus:outline-none focus:border-teal-500 w-56">
     </div>
 
     <div class="overflow-x-auto rounded-lg border border-gray-700">
         <table class="w-full text-sm">
             <thead class="bg-gray-800 text-gray-400 uppercase text-xs">
                 <tr>
-                    <th class="px-4 py-3 text-left">Name</th>
-                    <th class="px-4 py-3 text-left">Type</th>
-                    <th class="px-4 py-3 text-left">Player</th>
-                    <th class="px-4 py-3 text-left">Faction</th>
-                    <th class="px-4 py-3 text-left">Status</th>
+                    <th class="px-4 py-3 text-left cursor-pointer select-none hover:text-gray-200" data-sort="name" data-label="Name" onclick="setSort('name')">Name</th>
+                    <th class="px-4 py-3 text-left cursor-pointer select-none hover:text-gray-200" data-sort="player" data-label="Player" onclick="setSort('player')">Player</th>
+                    <th class="px-4 py-3 text-left cursor-pointer select-none hover:text-gray-200" data-sort="faction" data-label="Faction" onclick="setSort('faction')">Faction</th>
+                    <th class="px-4 py-3 text-left cursor-pointer select-none hover:text-gray-200" data-sort="class" data-label="Class" onclick="setSort('class')">Class</th>
+                    <th class="px-4 py-3 text-right cursor-pointer select-none hover:text-gray-200" data-sort="buildTotal" data-label="Build Total" onclick="setSort('buildTotal')">Build Total</th>
+                    <th class="px-4 py-3 text-center w-20 cursor-pointer select-none hover:text-gray-200" data-sort="approved" data-label="Approved" onclick="setSort('approved')">Approved</th>
+                    <th class="px-4 py-3 text-left cursor-pointer select-none hover:text-gray-200" data-sort="status" data-label="Status" onclick="setSort('status')">Status</th>
                     <th class="px-4 py-3 text-left">Notes</th>
+                    <th class="px-4 py-3 text-center w-16">History</th>
                     <th class="px-4 py-3 text-center w-24">Actions</th>
                 </tr>
             </thead>
             <tbody id="tableBody" class="divide-y divide-gray-700">
-                <tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">Loading…</td></tr>
+                <tr><td colspan="10" class="px-4 py-8 text-center text-gray-500">Loading…</td></tr>
             </tbody>
         </table>
+    <!-- Debug output panel -->
+    <div class="mt-6">
+        <div class="flex items-center justify-between mb-1">
+            <span class="text-xs text-gray-500 font-mono uppercase tracking-wide">Debug Output</span>
+            <button id="btnClearDebug" class="text-xs text-gray-600 hover:text-gray-400 transition-colors">Clear</button>
+        </div>
+        <div id="debugOutput" class="bg-gray-950 border border-gray-700 rounded-lg p-3 font-mono text-xs text-gray-400 min-h-10 max-h-48 overflow-y-auto whitespace-pre-wrap"></div>
     </div>
 </div>
 
@@ -60,18 +88,9 @@
                 <label class="block text-sm text-gray-300 mb-1">Name <span class="text-red-400">*</span></label>
                 <input id="fName" type="text" required class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-teal-500">
             </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-sm text-gray-300 mb-1">Type</label>
-                    <select id="fType" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-teal-500">
-                        <option>NPC</option>
-                        <option>PC</option>
-                    </select>
-                </div>
-                <div id="playerWrap">
-                    <label class="block text-sm text-gray-300 mb-1">Player</label>
-                    <input id="fPlayer" type="text" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-teal-500">
-                </div>
+            <div>
+                <label class="block text-sm text-gray-300 mb-1">Player</label>
+                <input id="fPlayer" type="text" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-teal-500">
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
@@ -88,9 +107,29 @@
                     </select>
                 </div>
             </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm text-gray-300 mb-1">Class</label>
+                    <input id="fClass" type="text" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-teal-500">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-300 mb-1">Build Total</label>
+                    <input id="fBuildTotal" type="number" min="0" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-teal-500">
+                </div>
+            </div>
+            <div>
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input id="fApproved" type="checkbox" class="w-4 h-4 accent-teal-500">
+                    <span class="text-sm text-gray-300">Approved</span>
+                </label>
+            </div>
             <div>
                 <label class="block text-sm text-gray-300 mb-1">Notes</label>
                 <textarea id="fNotes" rows="3" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 resize-none focus:outline-none focus:border-teal-500"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-300 mb-1">History and Updates</label>
+                <textarea id="fHistory" rows="6" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 resize-y focus:outline-none focus:border-teal-500" placeholder="Character history, updates, session notes…"></textarea>
             </div>
             <div class="flex gap-3 pt-2 justify-end">
                 <button type="button" id="btnCancel" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg transition-colors">Cancel</button>
@@ -117,6 +156,9 @@
     let allDocs    = [];
     let editingId  = null;
     let curFilter  = 'all';
+    let sortCol    = 'name';
+    let sortDir    = 'asc';
+    let searchText = '';
 
     const STATUS_COLORS = {
         Active:   'bg-green-900/60 text-green-400',
@@ -129,30 +171,50 @@
         return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    function setSort(col) { if (sortCol === col) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; } else { sortCol = col; sortDir = 'asc'; } render(); }
+
     function render() {
-        const rows = curFilter === 'all' ? allDocs : allDocs.filter(d => d.status === curFilter);
+        let rows = curFilter === 'all' ? [...allDocs] : allDocs.filter(d => d.status === curFilter);
+        if (searchText) {
+            const q = searchText.toLowerCase();
+            rows = rows.filter(c => [c.name, c.player, c.faction, c.class, c.buildTotal, c.approved ? 'yes' : 'no', c.status, c.notes, c.history].some(v => String(v || '').toLowerCase().includes(q)));
+        }
+        rows.sort((a, b) => {
+            if (sortCol === 'buildTotal') { return sortDir === 'asc' ? (Number(a.buildTotal)||0) - (Number(b.buildTotal)||0) : (Number(b.buildTotal)||0) - (Number(a.buildTotal)||0); }
+            if (sortCol === 'approved') { const av = a.approved ? 1 : 0, bv = b.approved ? 1 : 0; return sortDir === 'asc' ? av - bv : bv - av; }
+            const av = String(a[sortCol] ?? '').toLowerCase(), bv = String(b[sortCol] ?? '').toLowerCase();
+            return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+        });
+        document.querySelectorAll('thead th[data-sort]').forEach(th => { th.textContent = th.dataset.label + (sortCol === th.dataset.sort ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''); });
         const tbody = document.getElementById('tableBody');
         if (!rows.length) {
-            tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">No characters found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="px-4 py-8 text-center text-gray-500">No characters found.</td></tr>';
             return;
         }
-        tbody.innerHTML = rows.map(c => `
+        tbody.innerHTML = rows.map(c => {
+            const approvedBadge = c.approved
+                ? '<span class="inline-flex items-center justify-center w-5 h-5 rounded bg-teal-600 text-white text-xs" title="Approved">&#10003;</span>'
+                : '<span class="inline-flex items-center justify-center w-5 h-5 rounded border border-gray-600" title="Not approved"></span>';
+            return `
             <tr class="hover:bg-gray-800/40 transition-colors">
                 <td class="px-4 py-3 font-medium">${esc(c.name)}</td>
-                <td class="px-4 py-3 text-gray-300">${esc(c.type || 'NPC')}</td>
                 <td class="px-4 py-3 text-gray-300">${esc(c.player || '—')}</td>
                 <td class="px-4 py-3 text-gray-300">${esc(c.faction || '—')}</td>
+                <td class="px-4 py-3 text-gray-300">${esc(c.class || '—')}</td>
+                <td class="px-4 py-3 text-gray-300 text-right font-mono">${c.buildTotal != null && c.buildTotal !== '' ? esc(c.buildTotal) : '—'}</td>
+                <td class="px-4 py-3 text-center">${approvedBadge}</td>
                 <td class="px-4 py-3">
                     <span class="px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[c.status] || STATUS_COLORS.Archived}">
                         ${esc(c.status || 'Active')}
                     </span>
                 </td>
                 <td class="px-4 py-3 text-gray-400 max-w-xs truncate" title="${esc(c.notes)}">${esc(c.notes || '')}</td>
+                <td class="px-4 py-3 text-center" title="${c.history ? esc(c.history.substring(0,120)) + '…' : 'No history'}">${c.history ? '<span class="text-teal-400 text-base" title="Has history">•</span>' : '<span class="text-gray-700">—</span>'}</td>
                 <td class="px-4 py-3 text-center whitespace-nowrap">
                     <button onclick="_edit('${c.id}')" class="text-teal-400 hover:text-teal-300 text-xs mr-3">Edit</button>
                     <button onclick="_del('${c.id}')"  class="text-red-400  hover:text-red-300  text-xs">Delete</button>
                 </td>
-            </tr>`).join('');
+            </tr>`;}).join('');
     }
 
     col.orderBy('name').onSnapshot(snap => {
@@ -164,28 +226,26 @@
     const modal       = document.getElementById('modal');
     const form        = document.getElementById('form');
     const modalTitle  = document.getElementById('modalTitle');
-    const playerWrap  = document.getElementById('playerWrap');
 
     function openModal(title) { modalTitle.textContent = title; modal.classList.remove('hidden'); }
     function closeModal()     { modal.classList.add('hidden'); form.reset(); editingId = null; }
 
     document.getElementById('btnAdd').onclick    = () => { editingId = null; openModal('Add Character'); };
     document.getElementById('btnCancel').onclick = closeModal;
-    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
-
-    document.getElementById('fType').addEventListener('change', e => {
-        playerWrap.style.opacity = e.target.value === 'PC' ? '1' : '0.4';
-    });
 
     form.addEventListener('submit', async e => {
         e.preventDefault();
+        const bt = document.getElementById('fBuildTotal').value;
         const data = {
-            name:    document.getElementById('fName').value.trim(),
-            type:    document.getElementById('fType').value,
-            player:  document.getElementById('fPlayer').value.trim(),
-            faction: document.getElementById('fFaction').value.trim(),
-            status:  document.getElementById('fStatus').value,
-            notes:   document.getElementById('fNotes').value.trim()
+            name:       document.getElementById('fName').value.trim(),
+            player:     document.getElementById('fPlayer').value.trim(),
+            faction:    document.getElementById('fFaction').value.trim(),
+            class:      document.getElementById('fClass').value.trim(),
+            buildTotal: bt !== '' ? Number(bt) : null,
+            approved:   document.getElementById('fApproved').checked,
+            status:     document.getElementById('fStatus').value,
+            notes:      document.getElementById('fNotes').value.trim(),
+            history:    document.getElementById('fHistory').value.trim()
         };
         if (editingId) {
             await col.doc(editingId).update(data);
@@ -200,13 +260,15 @@
         const c = allDocs.find(d => d.id === id);
         if (!c) return;
         editingId = id;
-        document.getElementById('fName').value    = c.name    || '';
-        document.getElementById('fType').value    = c.type    || 'NPC';
-        document.getElementById('fPlayer').value  = c.player  || '';
-        document.getElementById('fFaction').value = c.faction || '';
-        document.getElementById('fStatus').value  = c.status  || 'Active';
-        document.getElementById('fNotes').value   = c.notes   || '';
-        playerWrap.style.opacity = c.type === 'PC' ? '1' : '0.4';
+        document.getElementById('fName').value       = c.name       || '';
+        document.getElementById('fPlayer').value     = c.player     || '';
+        document.getElementById('fFaction').value    = c.faction    || '';
+        document.getElementById('fClass').value      = c.class      || '';
+        document.getElementById('fBuildTotal').value = c.buildTotal != null ? c.buildTotal : '';
+        document.getElementById('fApproved').checked = !!c.approved;
+        document.getElementById('fStatus').value     = c.status     || 'Active';
+        document.getElementById('fNotes').value      = c.notes      || '';
+        document.getElementById('fHistory').value    = c.history    || '';
         openModal('Edit Character');
     };
 
@@ -225,39 +287,60 @@
         });
     });
     document.querySelector('[data-filter="all"]').classList.add('bg-teal-700','text-white','border-teal-500');
+    document.getElementById('searchInput').addEventListener('input', e => { searchText = e.target.value.trim(); render(); });
+
+    function _dbg(msg) {
+        const el = document.getElementById('debugOutput');
+        el.textContent += '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n';
+        el.scrollTop = el.scrollHeight;
+        console.log('[debug]', msg);
+    }
+    document.getElementById('btnClearDebug').onclick = () => { document.getElementById('debugOutput').textContent = ''; };
 
     // --- Import / Export -------------------------------------------------------
-    const EXPORT_HDRS = ['Name','Type','Player','Faction','Status','Notes'];
+    const EXPORT_HDRS = ['Name','Player','Faction','Class','Build Total','Approved','Status','Notes','History and Updates'];
 
     document.getElementById('btnExport').onclick = () => {
-        const rows = allDocs.map(c => [c.name||'', c.type||'NPC', c.player||'', c.faction||'', c.status||'Active', c.notes||'']);
+        const rows = allDocs.map(c => [c.name||'', c.player||'', c.faction||'', c.class||'', c.buildTotal??'', c.approved?'Yes':'No', c.status||'Active', c.notes||'', c.history||'']);
         const ws = XLSX.utils.aoa_to_sheet([EXPORT_HDRS, ...rows]);
         ws['!cols'] = EXPORT_HDRS.map((h, i) => ({ wch: Math.max(h.length, ...rows.map(r => String(r[i]||'').length), 4) + 2 }));
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Characters');
         XLSX.writeFile(wb, 'characters.xlsx');
+        _dbg('Export: ' + rows.length + ' characters written to characters.xlsx');
     };
 
     const fileInput = document.getElementById('fileInput');
     document.getElementById('btnImport').onclick = () => fileInput.click();
     fileInput.addEventListener('change', async e => {
         const file = e.target.files[0]; if (!file) return; fileInput.value = '';
+        _dbg('Reading file: ' + file.name);
         const reader = new FileReader();
+        reader.onerror = () => _dbg('Error: FileReader could not read the file.');
         reader.onload = async evt => {
-            const wb   = XLSX.read(evt.target.result, { type: 'array' });
-            const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
-            if (!rows.length) { alert('No data rows found.'); return; }
-            let added = 0, skipped = 0;
-            for (const row of rows) {
-                const name = String(row['Name'] || row['name'] || '').trim();
-                if (!name) { skipped++; continue; }
-                await col.add({ name, type: String(row['Type']||'NPC').trim(), player: String(row['Player']||'').trim(), faction: String(row['Faction']||'').trim(), status: String(row['Status']||'Active').trim(), notes: String(row['Notes']||'').trim(), createdAt: Date.now() });
-                added++;
+            try {
+                const wb   = XLSX.read(evt.target.result, { type: 'array' });
+                const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+                _dbg('Parsed ' + rows.length + ' row(s) from sheet "' + wb.SheetNames[0] + '".');
+                if (!rows.length) return;
+                let added = 0, skipped = 0, errors = 0;
+                for (const row of rows) {
+                    const name = String(row['Name'] || row['name'] || '').trim();
+                    if (!name) { skipped++; continue; }
+                    try {
+                        const bt = String(row['Build Total']||'').trim();
+                        await col.add({ name, player: String(row['Player']||'').trim(), faction: String(row['Faction']||'').trim(), class: String(row['Class']||'').trim(), buildTotal: bt !== '' ? Number(bt) : null, approved: String(row['Approved']||'').trim().toLowerCase() === 'yes', status: String(row['Status']||'Active').trim(), notes: String(row['Notes']||'').trim(), history: String(row['History and Updates']||'').trim(), createdAt: Date.now() });
+                        added++;
+                    } catch (rowErr) { errors++; _dbg('Row error ("' + name + '"): ' + rowErr.message); }
+                }
+                _dbg('Import complete: ' + added + ' added, ' + skipped + ' skipped, ' + errors + ' error(s).');
+            } catch (err) {
+                _dbg('Import failed: ' + err.message);
             }
-            alert(`Import complete: ${added} added, ${skipped} skipped (missing Name).`);
         };
         reader.readAsArrayBuffer(file);
     });
 </script>
+<script defer src="nav-loader.js"></script>
 </body>
 </html>

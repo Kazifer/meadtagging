@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <script src="db-storage.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adventure Listing</title>
     <link rel="stylesheet" href="theme.css">
@@ -773,9 +772,10 @@
             const eventTitle = [eventCode, eventName].filter(Boolean).join(' - ') || 'Untitled Event';
             const adventureNo = normalizeTemplateText(row?.no) || String(index + 1);
             const adventureTitle = normalizeTemplateText(row?.title);
-            const combinedTitle = adventureTitle ? `A${adventureNo} - ${adventureTitle}` : `A${adventureNo}`;
-            const headerTitle = adventureTitle || `Adventure ${adventureNo}`;
-            const sceneTitle = adventureTitle || `Adventure ${adventureNo}`;
+            const adventureCode = `${eventCode}-${adventureNo}`;
+            const combinedTitle = adventureTitle ? `${adventureCode} - ${adventureTitle}` : adventureCode;
+            const headerTitle = adventureTitle || `Adventure ${adventureCode}`;
+            const sceneTitle = adventureTitle || `Adventure ${adventureCode}`;
 
             return {
                 title: combinedTitle,
@@ -791,7 +791,7 @@
                 eventCode,
                 eventTitle,
                 eventFilePrefix: eventTitle,
-                adventureCode: `A${adventureNo}`
+                adventureCode
             };
         }
 
@@ -1460,14 +1460,28 @@
                 const tr = document.createElement('tr');
                 tr.classList.add(getDifficultyClass(row.difficulty));
 
-                const editTd = document.createElement('td');
-                editTd.className = 'edit-cell';
+                const actionsTd = document.createElement('td');
+                actionsTd.className = 'edit-cell';
+
                 const editBtn = document.createElement('button');
                 editBtn.type = 'button';
                 editBtn.className = 'btn btn-small';
                 editBtn.textContent = 'Edit';
                 editBtn.addEventListener('click', () => openDetailsDialog(index));
-                editTd.appendChild(editBtn);
+                actionsTd.appendChild(editBtn);
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'btn btn-small';
+                deleteBtn.style.marginLeft = '6px';
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.addEventListener('click', () => {
+                    if (!confirm('Delete this adventure?')) return;
+                    rows.splice(index, 1);
+                    saveRows();
+                    renderRows();
+                });
+                actionsTd.appendChild(deleteBtn);
 
                 const templateBtn = document.createElement('button');
                 templateBtn.type = 'button';
@@ -1477,8 +1491,8 @@
                 templateBtn.addEventListener('click', () => {
                     generateAdventureTemplate(index);
                 });
-                editTd.appendChild(templateBtn);
-                tr.appendChild(editTd);
+                actionsTd.appendChild(templateBtn);
+                tr.appendChild(actionsTd);
 
                 tr.appendChild(makeInputCell('text', row.no, (e) => {
                     rows[index].no = e.target.value;

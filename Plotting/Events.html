@@ -11,6 +11,22 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body class="bg-gray-900 min-h-screen p-4 md:p-8 text-gray-100">
+<nav class="app-nav">
+    <div class="app-nav-head">
+        <span class="app-nav-title">Plotting</span>
+        <button id="menuToggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="appMenu" aria-label="Toggle menu">
+            <span class="menu-toggle-bar"></span>
+            <span class="menu-toggle-bar"></span>
+            <span class="menu-toggle-bar"></span>
+        </button>
+    </div>
+    <ul id="appMenu" class="menu app-menu">
+        <li><a href="Characters.html">Characters</a></li>
+        <li><a href="Events.html">Events</a></li>
+        <li><a href="Plots.html">Plots</a></li>
+        <li><a href="Adventures.html">Adventures</a></li>
+    </ul>
+</nav>
 <div class="max-w-5xl mx-auto">
 
     <header class="mb-6 flex items-center justify-between flex-wrap gap-3">
@@ -23,14 +39,18 @@
         </div>
     </header>
 
+    <div class="mb-4">
+        <input type="text" id="searchInput" placeholder="Search all columns…" class="px-3 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 focus:outline-none focus:border-teal-500 w-56">
+    </div>
     <div class="overflow-x-auto rounded-lg border border-gray-700">
         <table class="w-full text-sm">
             <thead class="bg-gray-800 text-gray-400 uppercase text-xs">
                 <tr>
-                    <th class="px-4 py-3 text-left">Name</th>
-                    <th class="px-4 py-3 text-left">Date</th>
-                    <th class="px-4 py-3 text-left">Location</th>
-                    <th class="px-4 py-3 text-left">Description</th>
+                    <th class="px-4 py-3 text-left cursor-pointer select-none hover:text-gray-200" data-sort="name" data-label="Name" onclick="setSort('name')">Name</th>
+                    <th class="px-4 py-3 text-left cursor-pointer select-none hover:text-gray-200" data-sort="code" data-label="Event Code" onclick="setSort('code')">Event Code</th>
+                    <th class="px-4 py-3 text-left cursor-pointer select-none hover:text-gray-200" data-sort="date" data-label="Date" onclick="setSort('date')">Date</th>
+                    <th class="px-4 py-3 text-left cursor-pointer select-none hover:text-gray-200" data-sort="location" data-label="Location" onclick="setSort('location')">Location</th>
+                    <th class="px-4 py-3 text-left cursor-pointer select-none hover:text-gray-200" data-sort="description" data-label="Description" onclick="setSort('description')">Description</th>
                     <th class="px-4 py-3 text-center w-24">Actions</th>
                 </tr>
             </thead>
@@ -38,6 +58,13 @@
                 <tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">Loading…</td></tr>
             </tbody>
         </table>
+    <!-- Debug output panel -->
+    <div class="mt-6">
+        <div class="flex items-center justify-between mb-1">
+            <span class="text-xs text-gray-500 font-mono uppercase tracking-wide">Debug Output</span>
+            <button id="btnClearDebug" class="text-xs text-gray-600 hover:text-gray-400 transition-colors">Clear</button>
+        </div>
+        <div id="debugOutput" class="bg-gray-950 border border-gray-700 rounded-lg p-3 font-mono text-xs text-gray-400 min-h-10 max-h-48 overflow-y-auto whitespace-pre-wrap"></div>
     </div>
 </div>
 
@@ -49,6 +76,10 @@
             <div>
                 <label class="block text-sm text-gray-300 mb-1">Name <span class="text-red-400">*</span></label>
                 <input id="fName" type="text" required class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-teal-500">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-300 mb-1">Event Code</label>
+                <input id="fCode" type="text" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-teal-500">
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
@@ -86,8 +117,11 @@
     const db  = firebase.firestore();
     const col = db.collection('plotting_events');
 
-    let allDocs   = [];
-    let editingId = null;
+    let allDocs    = [];
+    let editingId  = null;
+    let sortCol    = 'date';
+    let sortDir    = 'desc';
+    let searchText = '';
 
     function esc(s) {
         return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -99,15 +133,28 @@
         catch(_) { return d; }
     }
 
+    function setSort(col) { if (sortCol === col) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; } else { sortCol = col; sortDir = 'asc'; } render(); }
+
     function render() {
+        let rows = [...allDocs];
+        if (searchText) {
+            const q = searchText.toLowerCase();
+            rows = rows.filter(ev => [ev.name, ev.code, ev.date, ev.location, ev.description].some(v => String(v || '').toLowerCase().includes(q)));
+        }
+        rows.sort((a, b) => {
+            const av = String(a[sortCol] ?? '').toLowerCase(), bv = String(b[sortCol] ?? '').toLowerCase();
+            return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+        });
+        document.querySelectorAll('thead th[data-sort]').forEach(th => { th.textContent = th.dataset.label + (sortCol === th.dataset.sort ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''); });
         const tbody = document.getElementById('tableBody');
-        if (!allDocs.length) {
-            tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">No events yet.</td></tr>';
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">No events yet.</td></tr>';
             return;
         }
-        tbody.innerHTML = allDocs.map(ev => `
+        tbody.innerHTML = rows.map(ev => `
             <tr class="hover:bg-gray-800/40 transition-colors">
                 <td class="px-4 py-3 font-medium">${esc(ev.name)}</td>
+                <td class="px-4 py-3 text-gray-300 whitespace-nowrap">${esc(ev.code || '—')}</td>
                 <td class="px-4 py-3 text-gray-300 whitespace-nowrap">${fmtDate(ev.date)}</td>
                 <td class="px-4 py-3 text-gray-300">${esc(ev.location || '—')}</td>
                 <td class="px-4 py-3 text-gray-400 max-w-xs truncate" title="${esc(ev.description)}">${esc(ev.description || '')}</td>
@@ -122,6 +169,7 @@
         allDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         render();
     });
+    document.getElementById('searchInput').addEventListener('input', e => { searchText = e.target.value.trim(); render(); });
 
     const modal      = document.getElementById('modal');
     const form       = document.getElementById('form');
@@ -132,12 +180,12 @@
 
     document.getElementById('btnAdd').onclick    = () => { editingId = null; openModal('Add Event'); };
     document.getElementById('btnCancel').onclick = closeModal;
-    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
     form.addEventListener('submit', async e => {
         e.preventDefault();
         const data = {
             name:        document.getElementById('fName').value.trim(),
+            code:        document.getElementById('fCode').value.trim(),
             date:        document.getElementById('fDate').value,
             location:    document.getElementById('fLocation').value.trim(),
             description: document.getElementById('fDescription').value.trim()
@@ -156,6 +204,7 @@
         if (!ev) return;
         editingId = id;
         document.getElementById('fName').value        = ev.name        || '';
+        document.getElementById('fCode').value        = ev.code        || '';
         document.getElementById('fDate').value        = ev.date        || '';
         document.getElementById('fLocation').value    = ev.location    || '';
         document.getElementById('fDescription').value = ev.description || '';
@@ -167,41 +216,67 @@
         await col.doc(id).delete();
     };
 
+    function _dbg(msg) {
+        const el = document.getElementById('debugOutput');
+        el.textContent += '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n';
+        el.scrollTop = el.scrollHeight;
+        console.log('[debug]', msg);
+    }
+    document.getElementById('btnClearDebug').onclick = () => { document.getElementById('debugOutput').textContent = ''; };
+
     // --- Import / Export -------------------------------------------------------
-    const EXPORT_HDRS = ['Name','Date','Location','Description'];
+    const EXPORT_HDRS = ['Name','Event Code','Date','Location','Description'];
 
     document.getElementById('btnExport').onclick = () => {
-        const rows = allDocs.map(ev => [ev.name||'', ev.date||'', ev.location||'', ev.description||'']);
+        const rows = allDocs.map(ev => [ev.name||'', ev.code||'', ev.date||'', ev.location||'', ev.description||'']);
         const ws = XLSX.utils.aoa_to_sheet([EXPORT_HDRS, ...rows]);
         ws['!cols'] = EXPORT_HDRS.map((h, i) => ({ wch: Math.max(h.length, ...rows.map(r => String(r[i]||'').length), 4) + 2 }));
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Events');
         XLSX.writeFile(wb, 'events.xlsx');
+        _dbg('Export: ' + rows.length + ' events written to events.xlsx');
     };
 
     const fileInput = document.getElementById('fileInput');
     document.getElementById('btnImport').onclick = () => fileInput.click();
     fileInput.addEventListener('change', async e => {
         const file = e.target.files[0]; if (!file) return; fileInput.value = '';
+        _dbg('Reading file: ' + file.name);
         const reader = new FileReader();
+        reader.onerror = () => _dbg('Error: FileReader could not read the file.');
         reader.onload = async evt => {
-            const wb   = XLSX.read(evt.target.result, { type: 'array' });
-            const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
-            if (!rows.length) { alert('No data rows found.'); return; }
-            let added = 0, skipped = 0;
-            for (const row of rows) {
-                const name = String(row['Name'] || row['name'] || '').trim();
-                if (!name) { skipped++; continue; }
-                // Normalise Excel date serial numbers to ISO string
-                let date = String(row['Date'] || '').trim();
-                if (/^\d+$/.test(date)) { date = new Date(Math.round((Number(date) - 25569) * 86400000)).toISOString().slice(0, 10); }
-                await col.add({ name, date, location: String(row['Location']||'').trim(), description: String(row['Description']||'').trim(), createdAt: Date.now() });
-                added++;
+            try {
+                const wb   = XLSX.read(evt.target.result, { type: 'array' });
+                const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+                _dbg('Parsed ' + rows.length + ' row(s) from sheet "' + wb.SheetNames[0] + '".');
+                if (!rows.length) return;
+                let added = 0, skipped = 0, errors = 0;
+                for (const row of rows) {
+                    const name = String(row['Name'] || row['name'] || '').trim();
+                    if (!name) { skipped++; continue; }
+                    // Normalise Excel date serial numbers to ISO string
+                    let date = String(row['Date'] || '').trim();
+                    if (/^\d+$/.test(date)) { date = new Date(Math.round((Number(date) - 25569) * 86400000)).toISOString().slice(0, 10); }
+                    try {
+                        await col.add({
+                            name: String(row['Name'] || row['name'] || '').trim(),
+                            code: String(row['Event Code'] || row['eventCode'] || row['Code'] || '').trim(),
+                            date,
+                            location: String(row['Location']||'').trim(),
+                            description: String(row['Description']||'').trim(),
+                            createdAt: Date.now()
+                        });
+                        added++;
+                    } catch (rowErr) { errors++; _dbg('Row error ("' + name + '"): ' + rowErr.message); }
+                }
+                _dbg('Import complete: ' + added + ' added, ' + skipped + ' skipped, ' + errors + ' error(s).');
+            } catch (err) {
+                _dbg('Import failed: ' + err.message);
             }
-            alert(`Import complete: ${added} added, ${skipped} skipped (missing Name).`);
         };
         reader.readAsArrayBuffer(file);
     });
 </script>
+<script defer src="nav-loader.js"></script>
 </body>
 </html>

@@ -9,9 +9,40 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        .col-resize-handle {
+            position: absolute;
+            top: 0;
+            right: -3px;
+            width: 6px;
+            height: 100%;
+            cursor: col-resize;
+            z-index: 10;
+        }
+        .col-resize-handle:hover,
+        .col-resize-handle.is-resizing {
+            background: rgba(45, 212, 191, 0.5);
+        }
+    </style>
 </head>
 <body class="bg-gray-900 min-h-screen p-4 md:p-8 text-gray-100">
-<div class="max-w-6xl mx-auto">
+<nav class="app-nav">
+    <div class="app-nav-head">
+        <span class="app-nav-title">Plotting</span>
+        <button id="menuToggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="appMenu" aria-label="Toggle menu">
+            <span class="menu-toggle-bar"></span>
+            <span class="menu-toggle-bar"></span>
+            <span class="menu-toggle-bar"></span>
+        </button>
+    </div>
+    <ul id="appMenu" class="menu app-menu">
+        <li><a href="Characters.html">Characters</a></li>
+        <li><a href="Events.html">Events</a></li>
+        <li><a href="Plots.html">Plots</a></li>
+        <li><a href="Adventures.html">Adventures</a></li>
+    </ul>
+</nav>
+<div class="w-full max-w-none mx-auto">
 
     <header class="mb-6 flex items-center justify-between flex-wrap gap-3">
         <h1 class="text-3xl font-bold text-teal-400">Adventures</h1>
@@ -19,77 +50,119 @@
             <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="hidden">
             <button id="btnImport" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition-colors">&#8593; Import</button>
             <button id="btnExport" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition-colors">&#8595; Export</button>
-            <button id="btnAdd" class="px-4 py-2 bg-teal-600 hover:bg-teal-500 rounded-lg font-medium transition-colors">+ Add Adventure</button>
+            <button id="btnDeleteAll" class="px-3 py-2 bg-red-800 hover:bg-red-700 rounded-lg text-sm transition-colors">&#128465; Delete All</button>
+            <button id="btnAdd"    class="px-4 py-2 bg-teal-600 hover:bg-teal-500 rounded-lg font-medium transition-colors">+ Add Adventure</button>
         </div>
     </header>
 
-    <div class="mb-4 flex gap-2 flex-wrap items-center">
-        <button data-filter="all"      class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">All</button>
-        <button data-filter="Planned"  class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">Planned</button>
-        <button data-filter="Run"      class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">Run</button>
-        <button data-filter="Complete" class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">Complete</button>
-        <span class="ml-auto text-sm text-gray-400">Filter by event:</span>
-        <select id="eventFilter" class="px-3 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 focus:outline-none focus:border-teal-500">
-            <option value="">All events</option>
-        </select>
+    <div id="importStatusBanner" class="hidden mb-4 px-4 py-3 rounded-lg text-sm"></div>
+
+    <div class="mb-4 flex gap-3 flex-wrap items-center">
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" id="followUpFilter" class="w-4 h-4 accent-teal-500">
+            <span class="text-sm text-gray-300">Follow-up only</span>
+        </label>
+        <span class="text-sm text-gray-500">|</span>
+        <input type="text" id="searchInput" placeholder="Search all columns…" class="px-3 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 focus:outline-none focus:border-teal-500 w-56">
     </div>
 
-    <div class="overflow-x-auto rounded-lg border border-gray-700">
-        <table class="w-full text-sm">
+    <div class="w-full overflow-hidden rounded-lg border border-gray-700">
+        <div class="overflow-x-auto">
+        <table id="adventuresTable" class="w-full table-fixed text-xs md:text-sm">
+            <colgroup>
+                <col style="width:64px">
+                <col style="width:96px">
+                <col style="width:128px">
+                <col style="width:160px">
+                <col style="width:96px">
+                <col style="width:160px">
+                <col style="width:96px">
+                <col style="width:160px">
+                <col style="width:128px">
+                <col style="width:110px">
+            </colgroup>
             <thead class="bg-gray-800 text-gray-400 uppercase text-xs">
                 <tr>
-                    <th class="px-4 py-3 text-left">Title</th>
-                    <th class="px-4 py-3 text-left">Event</th>
-                    <th class="px-4 py-3 text-left">Type</th>
-                    <th class="px-4 py-3 text-left">Status</th>
-                    <th class="px-4 py-3 text-left">Notes</th>
-                    <th class="px-4 py-3 text-center w-24">Actions</th>
+                    <th class="relative px-3 py-3 text-left cursor-pointer select-none hover:text-gray-200" data-sort="number" data-label="#" onclick="setSort('number')"><span class="th-label">#</span></th>
+                    <th class="relative px-3 py-3 text-left cursor-pointer select-none hover:text-gray-200" data-sort="code" data-label="Adventure Code" onclick="setSort('code')"><span class="th-label">Adventure Code</span></th>
+                    <th class="relative px-3 py-3 text-left cursor-pointer select-none hover:text-gray-200" data-sort="title" data-label="Title" onclick="setSort('title')"><span class="th-label">Title</span></th>
+                    <th class="relative px-3 py-3 text-left cursor-pointer select-none hover:text-gray-200" data-sort="summary" data-label="Adventure Summary" onclick="setSort('summary')"><span class="th-label">Adventure Summary</span></th>
+                    <th class="relative px-3 py-3 text-left cursor-pointer select-none hover:text-gray-200" data-sort="event" data-label="Event" onclick="setSort('event')"><span class="th-label">Event</span></th>
+                    <th class="relative px-3 py-3 text-left cursor-pointer select-none hover:text-gray-200" data-sort="results" data-label="Results" onclick="setSort('results')"><span class="th-label">Results</span></th>
+                    <th class="relative px-4 py-3 text-center cursor-pointer select-none hover:text-gray-200" data-sort="followUp" data-label="Follow Up" onclick="setSort('followUp')"><span class="th-label">Follow Up</span></th>
+                    <th class="relative px-3 py-3 text-left cursor-pointer select-none hover:text-gray-200" data-sort="plotNotes" data-label="Plot Notes" onclick="setSort('plotNotes')"><span class="th-label">Plot Notes</span></th>
+                    <th class="relative px-3 py-3 text-left">Characters</th>
+                    <th class="relative px-4 py-3 text-center whitespace-nowrap">Actions</th>
                 </tr>
             </thead>
             <tbody id="tableBody" class="divide-y divide-gray-700">
-                <tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">Loading…</td></tr>
+                <tr><td colspan="10" class="px-4 py-8 text-center text-gray-500">Loading&hellip;</td></tr>
             </tbody>
         </table>
+        </div>
     </div>
+</div>
+
+<!-- Debug output panel -->
+<div class="mt-6 px-4 md:px-8 pb-8 max-w-7xl mx-auto">
+    <div class="flex items-center justify-between mb-1">
+        <span class="text-xs text-gray-500 font-mono uppercase tracking-wide">Debug Output</span>
+        <button id="btnClearDebug" class="text-xs text-gray-600 hover:text-gray-400 transition-colors">Clear</button>
+    </div>
+    <div id="debugOutput" class="bg-gray-950 border border-gray-700 rounded-lg p-3 font-mono text-xs text-gray-400 min-h-10 max-h-48 overflow-y-auto whitespace-pre-wrap"></div>
 </div>
 
 <!-- Modal -->
 <div id="modal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 hidden p-4">
-    <div class="bg-gray-800 rounded-xl p-6 w-full max-w-lg shadow-2xl">
+    <div class="bg-gray-800 rounded-xl p-6 w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-y-auto">
         <h2 id="modalTitle" class="text-xl font-bold text-teal-400 mb-4">Add Adventure</h2>
         <form id="form" class="space-y-3">
+            <div class="grid grid-cols-3 gap-3">
+                <div class="col-span-1">
+                    <label class="block text-sm text-gray-300 mb-1">Event</label>
+                    <input id="fEvent" type="text" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-teal-500">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-300 mb-1">Event Code</label>
+                    <input id="fEventCode" type="text" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-teal-500">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-300 mb-1">Number</label>
+                    <input id="fNumber" type="text" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-teal-500">
+                </div>
+            </div>
             <div>
                 <label class="block text-sm text-gray-300 mb-1">Title <span class="text-red-400">*</span></label>
                 <input id="fTitle" type="text" required class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-teal-500">
             </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-sm text-gray-300 mb-1">Event</label>
-                    <select id="fEvent" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-teal-500">
-                        <option value="">— None —</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-300 mb-1">Type</label>
-                    <select id="fType" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-teal-500">
-                        <option>Combat</option>
-                        <option>Social</option>
-                        <option>Exploration</option>
-                        <option>Mixed</option>
-                    </select>
-                </div>
+            <div>
+                <label class="block text-sm text-gray-300 mb-1">Adventure Code</label>
+                <input id="fCode" type="text" readonly class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-teal-300 focus:outline-none">
             </div>
             <div>
-                <label class="block text-sm text-gray-300 mb-1">Status</label>
-                <select id="fStatus" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-teal-500">
-                    <option>Planned</option>
-                    <option>Run</option>
-                    <option>Complete</option>
-                </select>
+                <label class="block text-sm text-gray-300 mb-1">Adventure Summary</label>
+                <textarea id="fSummary" rows="5" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 resize-y focus:outline-none focus:border-teal-500"></textarea>
             </div>
             <div>
-                <label class="block text-sm text-gray-300 mb-1">Notes</label>
-                <textarea id="fNotes" rows="3" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 resize-none focus:outline-none focus:border-teal-500"></textarea>
+                <label class="block text-sm text-gray-300 mb-1">Results</label>
+                <textarea id="fResults" rows="5" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 resize-y focus:outline-none focus:border-teal-500"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-300 mb-1">Plot Notes</label>
+                <textarea id="fPlotNotes" rows="5" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 resize-y focus:outline-none focus:border-teal-500"></textarea>
+            </div>
+            <div>
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input id="fFollowUp" type="checkbox" class="w-4 h-4 accent-teal-500">
+                    <span class="text-sm text-gray-300">Requires Follow Up</span>
+                </label>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-300 mb-1">Characters</label>
+                <input type="text" id="charSearch" placeholder="Search characters…" class="w-full mb-1 px-2 py-1 bg-gray-600 border border-gray-500 rounded text-sm text-gray-100 focus:outline-none focus:border-teal-500">
+                <div id="fCharacters" class="max-h-36 overflow-y-auto bg-gray-700 border border-gray-600 rounded-lg p-2 space-y-1 text-sm">
+                    <span class="text-gray-500 text-xs">Loading characters…</span>
+                </div>
             </div>
             <div class="flex gap-3 pt-2 justify-end">
                 <button type="button" id="btnCancel" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg transition-colors">Cancel</button>
@@ -110,186 +183,529 @@
             appId: "1:992556432736:web:d672c06e0debd248f67205"
         });
     }
-    const db       = firebase.firestore();
-    const advCol   = db.collection('adventures');
-    const evtCol   = db.collection('plotting_events');
+    const db      = firebase.firestore();
+    const advCol  = db.collection("adventures");
+    const charCol = db.collection("characters");
+    const IMPORT_CACHE_KEY = 'plotting.adventures.importCache.v1';
 
-    let allDocs    = [];
-    let allEvents  = [];
-    let editingId  = null;
-    let curFilter  = 'all';
-    let curEventId = '';
+    let allDocs      = [];
+    let allChars     = [];
+    let editingId    = null;
+    let sortCol      = "event";
+    let sortDir      = "asc";
+    let searchText   = "";
+    let followUpOnly = false;
 
-    const STATUS_COLORS = {
-        Planned:  'bg-blue-900/60 text-blue-400',
-        Run:      'bg-yellow-900/60 text-yellow-400',
-        Complete: 'bg-green-900/60 text-green-400'
-    };
-    const TYPE_COLORS = {
-        Combat:      'bg-red-900/50 text-red-300',
-        Social:      'bg-purple-900/50 text-purple-300',
-        Exploration: 'bg-emerald-900/50 text-emerald-300',
-        Mixed:       'bg-indigo-900/50 text-indigo-300'
-    };
-
-    function esc(s) {
-        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    function loadImportCache() {
+        try {
+            const value = JSON.parse(localStorage.getItem(IMPORT_CACHE_KEY) || '[]');
+            return Array.isArray(value) ? value : [];
+        } catch (err) {
+            _dbg('Import cache read failed', err);
+            return [];
+        }
     }
 
-    function eventName(id) {
-        const ev = allEvents.find(e => e.id === id);
-        return ev ? ev.name : (id ? id : '—');
+    function saveImportCache(records) {
+        try {
+            localStorage.setItem(IMPORT_CACHE_KEY, JSON.stringify(records));
+            _dbg('Import cache saved', { count: records.length });
+        } catch (err) {
+            _dbg('Import cache write failed', err);
+        }
+    }
+
+    function mergeImportCache(records) {
+        const cached = loadImportCache();
+        const existingKeys = new Set(records.map(record => record.clientImportId || record.id));
+        const missing = cached.filter(record => !existingKeys.has(record.clientImportId || record.id));
+        if (missing.length) _dbg('Restoring cached imported adventures', { count: missing.length });
+        return [...records, ...missing];
+    }
+
+    function esc(s) {
+        return String(s == null ? "" : s)
+            .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    function debugValue(value) {
+        if (value instanceof Error) return { name: value.name, message: value.message, stack: value.stack };
+        if (value === undefined) return '[undefined]';
+        if (typeof value === 'string') return value;
+        try { return JSON.stringify(value, null, 2); } catch (err) { return String(value); }
+    }
+
+    function showImportBanner(message, isError) {
+        const el = document.getElementById('importStatusBanner');
+        if (!el) return;
+        el.textContent = message;
+        el.className = 'mb-4 px-4 py-3 rounded-lg text-sm ' + (isError ? 'bg-red-900/60 text-red-200 border border-red-700' : 'bg-teal-900/60 text-teal-200 border border-teal-700');
+    }
+
+    function _dbg(message, details) {
+        const el = document.getElementById("debugOutput");
+        const timestamp = new Date().toISOString();
+        const suffix = details === undefined ? "" : "\n" + debugValue(details);
+        const line = "[" + timestamp + "] " + message + suffix;
+        if (el) {
+            el.textContent += line + "\n";
+            el.scrollTop = el.scrollHeight;
+        }
+        console.debug("[Adventures] " + message, details === undefined ? "" : details);
+    }
+
+    function setSort(col) { if (sortCol === col) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; } else { sortCol = col; sortDir = 'asc'; } render(); }
+
+    function computeAdventureCode(eventCode, number) {
+        const parts = [eventCode, number].filter(Boolean).map(String).map(v => v.trim());
+        if (!parts.length) return '';
+        if (parts.length === 1) return parts[0];
+        return parts.join('-');
+    }
+
+    function cleanEventCode(value) {
+        return String(value || '').trim().replace(/^A\s*/i, '').replace(/\s+/g, '');
+    }
+
+    function parseAdventureCode(code) {
+        if (!code) return { eventCode: '', number: '' };
+        const cleaned = String(code).trim().replace(/^A\s*/i, '');
+        const match = cleaned.match(/^(.+?)-\s*(\d+)$/);
+        if (match) {
+            return { eventCode: match[1].trim(), number: match[2].trim() };
+        }
+        const fallback = cleaned.split(/\s*-\s*/).filter(Boolean);
+        if (fallback.length >= 2) {
+            return { eventCode: fallback.slice(0, -1).join('-').trim(), number: fallback[fallback.length - 1].trim() };
+        }
+        return { eventCode: '', number: cleaned.trim() };
+    }
+
+    function syncAdventureCodeFields() {
+        const eventCode = document.getElementById('fEventCode').value.trim();
+        const number = document.getElementById('fNumber').value.trim();
+        const computed = computeAdventureCode(eventCode, number);
+        document.getElementById('fCode').value = computed;
+    }
+
+    function normalizeAdventureRecord(record) {
+        const storedCode = record.code || record.adventureCode || '';
+        const parsed = parseAdventureCode(storedCode);
+        const eventCode = cleanEventCode(parsed.eventCode || record.eventCode);
+        const number = String(parsed.number || record.number || '').trim();
+        const normalizedCode = computeAdventureCode(eventCode, number);
+        return {
+            ...record,
+            eventCode,
+            number,
+            code: normalizedCode
+        };
     }
 
     function render() {
-        let rows = allDocs;
-        if (curFilter !== 'all') rows = rows.filter(d => d.status === curFilter);
-        if (curEventId)          rows = rows.filter(d => d.eventId === curEventId);
-
-        const tbody = document.getElementById('tableBody');
+        let rows = [...allDocs];
+        _dbg('Render started', { totalDocs: allDocs.length, characters: allChars.length, sortCol, sortDir, searchText, followUpOnly });
+        if (followUpOnly) rows = rows.filter(d => d.followUp);
+        if (searchText) {
+            const q = searchText.toLowerCase();
+            rows = rows.filter(d => {
+                const charNames = (d.characters || []).map(cid => { const ch = allChars.find(c => c.id === cid); return ch ? ch.name : cid; }).join(' ');
+                return [d.code, d.eventCode, d.number, d.title, d.summary, d.event, d.results, d.plotNotes, charNames].some(v => String(v || '').toLowerCase().includes(q));
+            });
+        }
+        rows.sort((a, b) => {
+            if (sortCol === 'followUp') { const av = a.followUp ? 1 : 0, bv = b.followUp ? 1 : 0; return sortDir === 'asc' ? av - bv : bv - av; }
+            const av = String(a[sortCol] ?? '').toLowerCase(), bv = String(b[sortCol] ?? '').toLowerCase();
+            const cmp = av.localeCompare(bv, undefined, { numeric: sortCol === 'number' });
+            return sortDir === 'asc' ? cmp : -cmp;
+        });
+        document.querySelectorAll('thead th[data-sort]').forEach(th => {
+            const label = th.querySelector('.th-label');
+            const text = th.dataset.label + (sortCol === th.dataset.sort ? (sortDir === 'asc' ? ' ↑' : ' ↓') : '');
+            if (label) label.textContent = text; else th.textContent = text;
+        });
+        const tbody = document.getElementById("tableBody");
         if (!rows.length) {
-            tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">No adventures found.</td></tr>';
+            tbody.innerHTML = "<tr><td colspan=\"10\" class=\"px-4 py-8 text-center text-gray-500\">No adventures found.</td></tr>";
+            _dbg('Render completed with no matching rows');
             return;
         }
-        tbody.innerHTML = rows.map(a => `
-            <tr class="hover:bg-gray-800/40 transition-colors">
-                <td class="px-4 py-3 font-medium">${esc(a.title)}</td>
-                <td class="px-4 py-3 text-gray-300 text-sm">${esc(eventName(a.eventId))}</td>
-                <td class="px-4 py-3">
-                    <span class="px-2 py-0.5 rounded text-xs font-medium ${TYPE_COLORS[a.type] || 'bg-gray-700 text-gray-400'}">
-                        ${esc(a.type || 'Mixed')}
-                    </span>
-                </td>
-                <td class="px-4 py-3">
-                    <span class="px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[a.status] || 'bg-gray-700 text-gray-400'}">
-                        ${esc(a.status || 'Planned')}
-                    </span>
-                </td>
-                <td class="px-4 py-3 text-gray-400 max-w-xs truncate" title="${esc(a.notes)}">${esc(a.notes || '')}</td>
-                <td class="px-4 py-3 text-center whitespace-nowrap">
-                    <button onclick="_edit('${a.id}')" class="text-teal-400 hover:text-teal-300 text-xs mr-3">Edit</button>
-                    <button onclick="_del('${a.id}')"  class="text-red-400  hover:text-red-300  text-xs">Delete</button>
-                </td>
-            </tr>`).join('');
+        tbody.innerHTML = rows.map(a => {
+            const tick = a.followUp
+                ? "<span class=\"inline-flex items-center justify-center w-5 h-5 rounded bg-teal-600 text-white text-xs\" title=\"Follow up needed\">\u2713</span>"
+                : "<span class=\"inline-flex items-center justify-center w-5 h-5 rounded border border-gray-600\" title=\"No follow up\"></span>";
+            const charBadges = (a.characters || []).map(cid => {
+                const ch = allChars.find(c => c.id === cid);
+                return "<a href=\"Characters.html\" class=\"inline-block px-1.5 py-0.5 rounded bg-indigo-900/60 text-indigo-300 text-xs mr-1 mb-0.5 hover:bg-indigo-800 transition-colors\">" + esc(ch ? ch.name : cid) + "</a>";
+            }).join("");
+            return "<tr class=\"hover:bg-gray-800/40 transition-colors\">" +
+                "<td class=\"px-3 py-3 text-gray-400 font-mono\">"   + esc(a.number ?? "") + "</td>" +
+                "<td class=\"px-4 py-3 text-teal-300 whitespace-nowrap\">" + esc(computeAdventureCode(a.eventCode, a.number)) + "</td>" +
+                "<td class=\"px-4 py-3 font-medium\">"               + esc(a.title) + "</td>" +
+                "<td class=\"px-4 py-3 text-gray-400 max-w-xs truncate\" title=\"" + esc(a.summary) + "\">" + esc(a.summary || "") + "</td>" +
+                "<td class=\"px-4 py-3 text-gray-300 text-sm whitespace-nowrap\">" + esc(a.event || "") + "</td>" +
+                "<td class=\"px-4 py-3 text-gray-400 max-w-xs truncate\" title=\"" + esc(a.results)   + "\">" + esc(a.results   || "") + "</td>" +
+                "<td class=\"px-4 py-3 text-center\">" + tick + "</td>" +
+                "<td class=\"px-4 py-3 text-gray-400 max-w-xs truncate\" title=\"" + esc(a.plotNotes) + "\">" + esc(a.plotNotes || "") + "</td>" +
+                "<td class=\"px-4 py-3\">" + (charBadges || "<span class=\"text-gray-600 text-xs\">\u2014</span>") + "</td>" +
+                "<td class=\"px-4 py-3 text-center whitespace-nowrap\">" +
+                    "<button onclick=\"_edit('" + a.id + "')\" class=\"text-teal-400 hover:text-teal-300 text-xs mr-3\">Edit</button>" +
+                    "<button onclick=\"_del('"  + a.id + "')\" class=\"text-red-400  hover:text-red-300  text-xs\">Delete</button>" +
+                "</td></tr>";
+        }).join("");
+        _dbg('Render completed', { displayedRows: rows.length, firstRow: rows[0] ? { id: rows[0].id, code: rows[0].code, eventCode: rows[0].eventCode, number: rows[0].number } : null });
     }
 
-    function populateEventSelects() {
-        const opts = '<option value="">— None —</option>' +
-            allEvents.map(e => `<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('');
-        document.getElementById('fEvent').innerHTML   = opts;
-        const filterOpts = '<option value="">All events</option>' +
-            allEvents.map(e => `<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('');
-        document.getElementById('eventFilter').innerHTML = filterOpts;
-        if (curEventId) document.getElementById('eventFilter').value = curEventId;
-    }
+    // Docs we've already attempted to auto-correct, so a snapshot storm (e.g. a large import)
+    // doesn't re-issue an update for every doc on every single snapshot event (which exhausts quota).
+    const codeFixAttempted = new Set();
 
-    evtCol.orderBy('date', 'desc').onSnapshot(snap => {
-        allEvents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        populateEventSelects();
+    advCol.onSnapshot(snap => {
+        _dbg('Adventure snapshot received', { documentCount: snap.size, documentIds: snap.docs.map(d => d.id) });
+        const normalized = snap.docs.map(d => {
+            const data = { id: d.id, ...d.data() };
+            const fixed = normalizeAdventureRecord(data);
+            const needsFix = fixed.code !== (data.code || '') || fixed.eventCode !== (data.eventCode || '') || fixed.number !== (data.number || '');
+            if (needsFix && !codeFixAttempted.has(d.id)) {
+                codeFixAttempted.add(d.id);
+                _dbg('Updating normalized adventure in Firestore', { id: d.id, code: fixed.code, eventCode: fixed.eventCode, number: fixed.number });
+                advCol.doc(d.id).update({
+                    eventCode: fixed.eventCode,
+                    number: fixed.number,
+                    code: fixed.code
+                }).catch(err => _dbg('Code fix failed for ' + d.id, err));
+            }
+            return fixed;
+        });
+        allDocs = mergeImportCache(normalized);
         render();
-    });
+        _dbg('Adventure snapshot rendered', { normalizedCount: normalized.length });
+    }, err => _dbg('Firestore error', err));
 
-    advCol.orderBy('title').onSnapshot(snap => {
-        allDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    charCol.orderBy('name').onSnapshot(snap => {
+        allChars = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        _dbg('Character snapshot received', { characterCount: allChars.length });
         render();
+    }, err => _dbg('Firestore (chars) error', err));
+
+    document.getElementById("followUpFilter").addEventListener("change", e => {
+        followUpOnly = e.target.checked; render();
     });
-
-    document.getElementById('eventFilter').addEventListener('change', e => {
-        curEventId = e.target.value;
-        render();
+    document.getElementById("searchInput").addEventListener("input", e => {
+        searchText = e.target.value.trim(); render();
     });
+    document.getElementById('fEventCode').addEventListener('input', syncAdventureCodeFields);
+    document.getElementById('fNumber').addEventListener('input', syncAdventureCodeFields);
 
-    const modal      = document.getElementById('modal');
-    const form       = document.getElementById('form');
-    const modalTitle = document.getElementById('modalTitle');
+    const modal      = document.getElementById("modal");
+    const form       = document.getElementById("form");
+    const modalTitle = document.getElementById("modalTitle");
 
-    function openModal(title) { modalTitle.textContent = title; modal.classList.remove('hidden'); }
-    function closeModal()     { modal.classList.add('hidden'); form.reset(); editingId = null; }
-
-    document.getElementById('btnAdd').onclick    = () => { editingId = null; openModal('Add Adventure'); };
-    document.getElementById('btnCancel').onclick = closeModal;
-    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
-
-    form.addEventListener('submit', async e => {
-        e.preventDefault();
-        const data = {
-            title:   document.getElementById('fTitle').value.trim(),
-            eventId: document.getElementById('fEvent').value,
-            type:    document.getElementById('fType').value,
-            status:  document.getElementById('fStatus').value,
-            notes:   document.getElementById('fNotes').value.trim()
-        };
-        if (editingId) {
-            await advCol.doc(editingId).update(data);
-        } else {
-            data.createdAt = Date.now();
-            await advCol.add(data);
+    function renderCharPicker(selected) {
+        const searchEl = document.getElementById('charSearch');
+        if (searchEl) searchEl.value = '';
+        const wrap = document.getElementById("fCharacters");
+        if (!allChars.length) {
+            wrap.innerHTML = '<span class="text-gray-500 text-xs">No characters found.</span>';
+            return;
         }
-        closeModal();
+        wrap.innerHTML = allChars.map(c =>
+            '<label class="flex items-center gap-2 cursor-pointer hover:bg-gray-600/30 px-1 py-0.5 rounded">' +
+            '<input type="checkbox" class="accent-teal-500" value="' + esc(c.id) + '"' + (selected.includes(c.id) ? ' checked' : '') + '>' +
+            '<span class="text-gray-200">' + esc(c.name) + '</span>' +
+            (c.type ? '<span class="text-gray-500 text-xs">(' + esc(c.type) + ')</span>' : '') +
+            '</label>'
+        ).join('');
+    }
+
+    function openModal(t, selectedCharIds) { modalTitle.textContent = t; renderCharPicker(selectedCharIds || []); modal.classList.remove("hidden"); }
+    function closeModal()  { modal.classList.add("hidden"); form.reset(); editingId = null; }
+
+    document.getElementById("btnAdd").onclick    = () => { editingId = null; openModal("Add Adventure"); };
+    document.getElementById("btnCancel").onclick = closeModal;
+    document.getElementById('charSearch').addEventListener('input', e => {
+        const q = e.target.value.toLowerCase();
+        document.querySelectorAll('#fCharacters label').forEach(label => {
+            label.style.display = (label.querySelector('span.text-gray-200')?.textContent?.toLowerCase() || '').includes(q) ? '' : 'none';
+        });
+    });
+
+    form.addEventListener("submit", async e => {
+        e.preventDefault();
+        const eventCode = cleanEventCode(document.getElementById("fEventCode").value);
+        const number = document.getElementById("fNumber").value.trim();
+        const code = computeAdventureCode(eventCode, number);
+        const data = {
+            event:      document.getElementById("fEvent").value.trim(),
+            eventCode,
+            number,
+            code,
+            title:      document.getElementById("fTitle").value.trim(),
+            summary:    document.getElementById("fSummary").value.trim(),
+            results:    document.getElementById("fResults").value.trim(),
+            plotNotes:  document.getElementById("fPlotNotes").value.trim(),
+            followUp:   document.getElementById("fFollowUp").checked,
+            characters: Array.from(document.querySelectorAll("#fCharacters input[type=checkbox]:checked")).map(cb => cb.value)
+        };
+        _dbg(editingId ? 'Saving adventure update' : 'Creating adventure', { editingId, data });
+        try {
+            if (editingId) {
+                await advCol.doc(editingId).update(data);
+            } else {
+                data.createdAt = Date.now();
+                await advCol.add(data);
+            }
+            _dbg('Adventure save completed', { editingId, code });
+            closeModal();
+        } catch (err) {
+            _dbg('Adventure save failed', err);
+        }
     });
 
     window._edit = id => {
         const a = allDocs.find(d => d.id === id);
-        if (!a) return;
+        if (!a) { _dbg('Edit requested for missing adventure', { id }); return; }
+        _dbg('Opening adventure for edit', { id, code: a.code, eventCode: a.eventCode, number: a.number });
         editingId = id;
-        document.getElementById('fTitle').value  = a.title   || '';
-        document.getElementById('fEvent').value  = a.eventId || '';
-        document.getElementById('fType').value   = a.type    || 'Mixed';
-        document.getElementById('fStatus').value = a.status  || 'Planned';
-        document.getElementById('fNotes').value  = a.notes   || '';
-        openModal('Edit Adventure');
+        const parsed = parseAdventureCode(a.code || a.adventureCode || '');
+        document.getElementById("fEvent").value     = a.event     || "";
+        document.getElementById("fEventCode").value = a.eventCode || parsed.eventCode || "";
+        document.getElementById("fNumber").value    = a.number    || parsed.number || "";
+        document.getElementById("fTitle").value     = a.title     || "";
+        document.getElementById("fSummary").value   = a.summary   || "";
+        document.getElementById("fResults").value   = a.results   || "";
+        document.getElementById("fPlotNotes").value = a.plotNotes || "";
+        document.getElementById("fFollowUp").checked = !!a.followUp;
+        syncAdventureCodeFields();
+        openModal("Edit Adventure", a.characters || []);
     };
 
     window._del = async id => {
-        if (!confirm('Delete this adventure?')) return;
-        await advCol.doc(id).delete();
+        _dbg('Delete requested', { id });
+        if (!confirm("Delete this adventure?")) { _dbg('Delete cancelled', { id }); return; }
+        try {
+            await advCol.doc(id).delete();
+            _dbg('Adventure delete completed', { id });
+        } catch (err) {
+            _dbg('Adventure delete failed', err);
+        }
     };
 
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('bg-teal-700','text-white','border-teal-500'));
-            btn.classList.add('bg-teal-700','text-white','border-teal-500');
-            curFilter = btn.dataset.filter;
-            render();
-        });
-    });
-    document.querySelector('[data-filter="all"]').classList.add('bg-teal-700','text-white','border-teal-500');
+    document.getElementById("btnDeleteAll").onclick = async () => {
+        _dbg('Delete all requested', { adventureCount: allDocs.length });
+        if (!confirm("Are you reeeeeeally sure? This will permanently delete ALL " + allDocs.length + " adventures.")) return;
+        try {
+            const batch = db.batch();
+            allDocs.forEach(a => batch.delete(advCol.doc(a.id)));
+            await batch.commit();
+            _dbg("Deleted all adventures", { count: allDocs.length });
+        } catch (err) {
+            _dbg('Delete all failed', err);
+        }
+    };
+
+    document.getElementById("btnClearDebug").onclick = () => { document.getElementById("debugOutput").textContent = ""; };
 
     // --- Import / Export -------------------------------------------------------
-    const EXPORT_HDRS = ['Title','Event','Type','Status','Notes'];
+    const EXPORT_HDRS = ["Event","Event Code","Number","Adventure Code","Title","Adventure Summary","Results","Follow Up","Plot Notes","Characters"];
 
-    document.getElementById('btnExport').onclick = () => {
-        const rows = allDocs.map(a => [a.title||'', eventName(a.eventId), a.type||'Mixed', a.status||'Planned', a.notes||'']);
+    document.getElementById("btnExport").onclick = () => {
+        _dbg('Export started', { adventureCount: allDocs.length });
+        const rows = allDocs.map(a => [
+            a.event || "", a.eventCode || "", a.number || "", a.code || computeAdventureCode(a.eventCode, a.number), a.title || "",
+            a.summary || "", a.results || "", a.followUp ? "Yes" : "No", a.plotNotes || "",
+            (a.characters || []).map(cid => { const character = allChars.find(c => c.id === cid); return character ? character.name : cid; }).join("|")
+        ]);
         const ws = XLSX.utils.aoa_to_sheet([EXPORT_HDRS, ...rows]);
-        ws['!cols'] = EXPORT_HDRS.map((h, i) => ({ wch: Math.max(h.length, ...rows.map(r => String(r[i]||'').length), 4) + 2 }));
+        ws["!cols"] = EXPORT_HDRS.map((h, i) => ({ wch: Math.max(h.length, ...rows.map(r => String(r[i]||"").length), 4) + 2 }));
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Adventures');
-        XLSX.writeFile(wb, 'adventures.xlsx');
+        XLSX.utils.book_append_sheet(wb, ws, "Adventures");
+        XLSX.writeFile(wb, "adventures.xlsx");
+        _dbg("Export completed", { count: rows.length, fileName: 'adventures.xlsx' });
     };
 
-    const fileInput = document.getElementById('fileInput');
-    document.getElementById('btnImport').onclick = () => fileInput.click();
-    fileInput.addEventListener('change', async e => {
-        const file = e.target.files[0]; if (!file) return; fileInput.value = '';
+    const fileInput = document.getElementById("fileInput");
+    document.getElementById("btnImport").onclick = () => fileInput.click();
+    fileInput.addEventListener("change", async e => {
+        const file = e.target.files[0]; if (!file) return; fileInput.value = "";
+        _dbg("Import started", { fileName: file.name, fileSize: file.size, fileType: file.type });
         const reader = new FileReader();
+        reader.onerror = () => {
+            _dbg("FileReader failed", reader.error || new Error('FileReader could not read the file'));
+            showImportBanner('Could not read the selected file: ' + (reader.error && reader.error.message || reader.error || 'unknown error'), true);
+        };
         reader.onload = async evt => {
-            const wb   = XLSX.read(evt.target.result, { type: 'array' });
-            const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
-            if (!rows.length) { alert('No data rows found.'); return; }
-            let added = 0, skipped = 0;
-            for (const row of rows) {
-                const title = String(row['Title'] || row['title'] || '').trim();
-                if (!title) { skipped++; continue; }
-                // Resolve event name to ID (case-insensitive)
-                const evtName = String(row['Event'] || '').trim();
-                const evtMatch = allEvents.find(ev => ev.name.toLowerCase() === evtName.toLowerCase());
-                await advCol.add({ title, eventId: evtMatch ? evtMatch.id : '', type: String(row['Type']||'Mixed').trim(), status: String(row['Status']||'Planned').trim(), notes: String(row['Notes']||'').trim(), createdAt: Date.now() });
-                added++;
+            try {
+                const wb   = XLSX.read(evt.target.result, { type: "array" });
+                const normalizeHeader = value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+                const sheetCandidates = wb.SheetNames.map(sheetName => {
+                    const values = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: "", blankrows: false });
+                    const headerIndex = values.findIndex(row => row.some(cell => {
+                        const header = normalizeHeader(cell);
+                        return ['title', 'adventuretitle', 'adventure', 'adventurename'].includes(header);
+                    }));
+                    return { sheetName, values, headerIndex };
+                }).filter(candidate => candidate.headerIndex >= 0);
+                sheetCandidates.sort((a, b) => b.values.length - a.values.length);
+                const selectedSheet = sheetCandidates[0];
+                if (!selectedSheet) {
+                    _dbg("Import stopped: no adventure header row found", { sheetNames: wb.SheetNames });
+                    showImportBanner('Import stopped: no sheet had a recognizable Title/Adventure header row (checked sheets: ' + wb.SheetNames.join(', ') + ').', true);
+                    return;
+                }
+                const sheetRows = selectedSheet.values;
+                const headerIndex = selectedSheet.headerIndex;
+                const headers = sheetRows[headerIndex].map((header, index) => normalizeHeader(header) || `column${index}`);
+                const rows = sheetRows.slice(headerIndex + 1).map(values => headers.reduce((row, header, index) => {
+                    row[header] = values[index] ?? '';
+                    return row;
+                }, {})).filter(row => Object.values(row).some(value => String(value).trim() !== ''));
+                const read = (row, ...names) => {
+                    for (const name of names) {
+                        const value = row[normalizeHeader(name)];
+                        if (value !== undefined && String(value).trim() !== '') return String(value).trim();
+                    }
+                    return '';
+                };
+                _dbg("Import workbook parsed", { sheetNames: wb.SheetNames, selectedSheet: selectedSheet.sheetName, headerRow: headerIndex + 1, rowCount: rows.length, headers });
+                if (!rows.length) { showImportBanner('Import stopped: the sheet had a header row but no data rows underneath it.', true); return; }
+                const importRecords = [];
+                let skipped = 0, errors = 0;
+                for (const row of rows) {
+                    const importedCode = read(row, 'Adventure Code', 'Code');
+                    const parsedCode = parseAdventureCode(importedCode);
+                    const title = read(row, 'Title', 'Adventure Title', 'Adventure Name', 'Adventure') || importedCode || (read(row, 'Number', 'Adventure Number') ? 'Adventure ' + read(row, 'Number', 'Adventure Number') : '');
+                    if (!title) { skipped++; _dbg('Import row skipped because it has no adventure data', { row }); continue; }
+                    const fu = read(row, 'Follow Up').toLowerCase();
+                    try {
+                        const eventCode = cleanEventCode(read(row, 'Event Code', 'eventCode') || parsedCode.eventCode);
+                        const number = read(row, 'Number', 'Adventure Number') || parsedCode.number;
+                        const generatedCode = computeAdventureCode(eventCode, number);
+                        importRecords.push({
+                            clientImportId: 'import-' + Date.now() + '-' + importRecords.length,
+                            event:     read(row, 'Event'),
+                            eventCode,
+                            number,
+                            code:      generatedCode,
+                            title,
+                            summary:   read(row, 'Adventure Summary', 'Summary'),
+                            results:   read(row, 'Results'),
+                            followUp:  fu === "yes" || fu === "true" || fu === "1",
+                            plotNotes: read(row, 'Plot Notes'),
+                            createdAt: Date.now()
+                        });
+                    } catch (rowErr) { errors++; _dbg("Import row failed", { title, error: rowErr }); }
+                }
+                _dbg("Import records prepared", { parsedRows: rows.length, prepared: importRecords.length, skipped, errors });
+                if (importRecords.length) {
+                    const cachedRecords = loadImportCache();
+                    saveImportCache([...cachedRecords, ...importRecords]);
+                    allDocs = mergeImportCache(allDocs);
+                    render();
+                    // Write in batches (max 400/commit) instead of one add() per row: keeps this
+                    // within Firestore's per-batch/per-second write limits and avoids quota exhaustion.
+                    const savedIds = [];
+                    const BATCH_SIZE = 400;
+                    for (let i = 0; i < importRecords.length; i += BATCH_SIZE) {
+                        const chunk = importRecords.slice(i, i + BATCH_SIZE);
+                        const batch = db.batch();
+                        const refs = chunk.map(record => {
+                            const ref = advCol.doc();
+                            batch.set(ref, record);
+                            return ref;
+                        });
+                        try {
+                            await batch.commit();
+                            refs.forEach((ref, idx) => {
+                                savedIds.push(ref.id);
+                                _dbg('Import record saved', { id: ref.id, clientImportId: chunk[idx].clientImportId, code: chunk[idx].code, title: chunk[idx].title });
+                            });
+                        } catch (saveErr) {
+                            errors += chunk.length;
+                            _dbg('Import batch save failed', { chunkSize: chunk.length, error: saveErr });
+                        }
+                    }
+                    try {
+                        const persisted = await advCol.get();
+                        _dbg("Import persistence check", {
+                            attempted: importRecords.length,
+                            saved: savedIds.length,
+                            readableAdventureCount: persisted.size,
+                            savedIds
+                        });
+                        _dbg("Import completed", { added: savedIds.length, skipped, errors });
+                        if (savedIds.length < importRecords.length) {
+                            showImportBanner('Only ' + savedIds.length + ' of ' + importRecords.length + ' imported rows were saved to the cloud database (the rest failed, likely due to a Firestore quota or connection error — see Debug Output below). They are showing now from a local cache but will disappear if not saved before you clear this browser\'s storage.', true);
+                        } else {
+                            showImportBanner('Imported and saved ' + savedIds.length + ' adventure(s) to the cloud database.', false);
+                        }
+                    } catch (verifyErr) {
+                        _dbg("Import verification failed", verifyErr);
+                        showImportBanner('Import saved locally, but verifying the cloud save failed: ' + (verifyErr && verifyErr.message || verifyErr), true);
+                    }
+                } else {
+                    _dbg("Import completed with no records to write", { parsedRows: rows.length, skipped, errors });
+                    showImportBanner('Import found ' + rows.length + ' row(s) but none had a title/adventure code, so nothing was imported.', true);
+                }
+            } catch (err) {
+                _dbg("Import failed", err);
+                showImportBanner('Import failed: ' + (err && err.message || err), true);
             }
-            alert(`Import complete: ${added} added, ${skipped} skipped (missing Title).`);
         };
         reader.readAsArrayBuffer(file);
     });
+
+    // --- Resizable columns -------------------------------------------------
+    (function initColumnResize() {
+        const COLUMN_WIDTHS_KEY = 'plotting.adventures.columnWidths.v1';
+        const MIN_WIDTH = 50;
+        const table = document.getElementById('adventuresTable');
+        const cols = Array.from(table.querySelectorAll('colgroup col'));
+        const ths = Array.from(table.querySelectorAll('thead th'));
+
+        function loadWidths() {
+            try { return JSON.parse(localStorage.getItem(COLUMN_WIDTHS_KEY) || '{}'); }
+            catch (err) { return {}; }
+        }
+        function saveWidths(widths) {
+            try { localStorage.setItem(COLUMN_WIDTHS_KEY, JSON.stringify(widths)); }
+            catch (err) { _dbg('Column width save failed', err); }
+        }
+
+        const savedWidths = loadWidths();
+        cols.forEach((col, i) => {
+            if (savedWidths[i]) col.style.width = savedWidths[i] + 'px';
+        });
+
+        ths.forEach((th, i) => {
+            const handle = document.createElement('span');
+            handle.className = 'col-resize-handle';
+            handle.addEventListener('click', e => e.stopPropagation());
+            handle.addEventListener('mousedown', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                const startX = e.clientX;
+                const startWidth = cols[i].getBoundingClientRect().width;
+                handle.classList.add('is-resizing');
+                const onMove = moveEvt => {
+                    const newWidth = Math.max(MIN_WIDTH, Math.round(startWidth + (moveEvt.clientX - startX)));
+                    cols[i].style.width = newWidth + 'px';
+                };
+                const onUp = () => {
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                    handle.classList.remove('is-resizing');
+                    const widths = loadWidths();
+                    widths[i] = Math.round(cols[i].getBoundingClientRect().width);
+                    saveWidths(widths);
+                };
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+            });
+            th.appendChild(handle);
+        });
+    })();
 </script>
+<script defer src="nav-loader.js"></script>
 </body>
 </html>

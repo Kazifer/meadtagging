@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <script src="db-storage.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Event Item Tag Generator</title>
     <link rel="stylesheet" href="theme.css">
@@ -444,6 +443,7 @@
                     </label>
                     <input type="file" id="jsonUpload" class="hidden-input" accept=".json,application/json">
                         <button id="exportBtn" class="compact-btn btn-amber">Generate & Export HTML</button>
+                        <button id="exportIdentifiedBtn" class="compact-btn btn-amber">Export identified list</button>
                     <button id="clearBtn" class="compact-btn btn-red">Clear All Items</button>
                     </div>
                 </div>
@@ -527,6 +527,7 @@
         const csvUpload = document.getElementById('csvUpload');
         const jsonUpload = document.getElementById('jsonUpload');
         const exportBtn = document.getElementById('exportBtn');
+        const exportIdentifiedBtn = document.getElementById('exportIdentifiedBtn');
         const clearBtn = document.getElementById('clearBtn');
         const saveJsonBtn = document.getElementById('saveJsonBtn');
         const bindJsonBtn = document.getElementById('bindJsonBtn');
@@ -1143,6 +1144,7 @@
             const logoSrc = await resolveLogoSource();
             
             const itemTags = adventureItems.map(item => `
+
                 <div class="item-tag">
                     <img class="tag-logo" src="${logoSrc}" alt="Logo">
                     <div class="tag-header">${item.name}</div>
@@ -1353,6 +1355,57 @@
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = 'event-item-tags.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+
+        const generateIdentifiedListHTML = () => {
+            const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            const num = (re, s) => { const m = String(s || '').match(re); return m ? Number(m[1]) : Infinity; };
+            const rows = adventureItems.map(item => {
+                const enchant = (item.enchantment || '').trim();
+                const unidentified = /identify before use/i.test(item.description || '');
+                return {
+                    event: num(/E\s*(\d+)/i, item.code),
+                    adventure: num(/A\s*(\d+)/i, item.code),
+                    code: item.code,
+                    name: item.name,
+                    detail: unidentified && enchant ? enchant : [item.description, enchant].filter(Boolean).join(' - '),
+                    value: item.itemValue,
+                    expiry: item.expiry
+                };
+            }).sort((a, b) => a.event - b.event || a.adventure - b.adventure || String(a.name).localeCompare(String(b.name)));
+
+            const title = esc(document.getElementById('adventureTitle').value || 'Event Items');
+            const body = rows.map(r => `<tr><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.detail)}</td><td>${esc(r.value)}</td><td>${esc(r.expiry)}</td></tr>`).join('');
+            return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>${title} - Identified List</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;padding:16px;color:#000;background:#fff}
+h1{font-size:18pt;margin:0 0 12px}
+table{width:100%;border-collapse:collapse;font-size:10pt}
+th,td{border:1px solid #888;padding:4px 6px;text-align:left;vertical-align:top}
+th{background:#eee}
+thead{display:table-header-group}
+tr{page-break-inside:avoid}
+@page{margin:12mm}
+</style></head><body>
+<h1>${title} - Identified List</h1>
+<table><thead><tr><th>Code</th><th>Item</th><th>Description / Enchantment</th><th>Value</th><th>Expiry</th></tr></thead><tbody>${body}</tbody></table>
+</body></html>`;
+        };
+
+        exportIdentifiedBtn.addEventListener('click', async () => {
+            if (adventureItems.length === 0) {
+                showNotification('Cannot export an empty list.');
+                return;
+            }
+            const htmlContent = generateIdentifiedListHTML();
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'event-item-tags-identified.html';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);

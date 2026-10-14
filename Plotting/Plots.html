@@ -11,6 +11,22 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body class="bg-gray-900 min-h-screen p-4 md:p-8 text-gray-100">
+<nav class="app-nav">
+    <div class="app-nav-head">
+        <span class="app-nav-title">Plotting</span>
+        <button id="menuToggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="appMenu" aria-label="Toggle menu">
+            <span class="menu-toggle-bar"></span>
+            <span class="menu-toggle-bar"></span>
+            <span class="menu-toggle-bar"></span>
+        </button>
+    </div>
+    <ul id="appMenu" class="menu app-menu">
+        <li><a href="Characters.html">Characters</a></li>
+        <li><a href="Events.html">Events</a></li>
+        <li><a href="Plots.html">Plots</a></li>
+        <li><a href="Adventures.html">Adventures</a></li>
+    </ul>
+</nav>
 <div class="max-w-6xl mx-auto">
 
     <header class="mb-6 flex items-center justify-between flex-wrap gap-3">
@@ -23,21 +39,23 @@
         </div>
     </header>
 
-    <div class="mb-4 flex gap-2 flex-wrap">
+    <div class="mb-4 flex gap-2 flex-wrap items-center">
         <button data-filter="all"      class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">All</button>
         <button data-filter="Planned"  class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">Planned</button>
         <button data-filter="Active"   class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">Active</button>
         <button data-filter="Dormant"  class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">Dormant</button>
         <button data-filter="Resolved" class="filter-btn px-3 py-1 rounded text-sm border border-gray-600 hover:border-teal-500 transition-colors">Resolved</button>
+        <span class="text-sm text-gray-500">|</span>
+        <input type="text" id="searchInput" placeholder="Search all columns…" class="px-3 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 focus:outline-none focus:border-teal-500 w-56">
     </div>
 
     <div class="overflow-x-auto rounded-lg border border-gray-700">
         <table class="w-full text-sm">
             <thead class="bg-gray-800 text-gray-400 uppercase text-xs">
                 <tr>
-                    <th class="px-4 py-3 text-left">Title</th>
-                    <th class="px-4 py-3 text-left">Status</th>
-                    <th class="px-4 py-3 text-left">Description</th>
+                    <th class="px-4 py-3 text-left cursor-pointer select-none hover:text-gray-200" data-sort="title" data-label="Title" onclick="setSort('title')">Title</th>
+                    <th class="px-4 py-3 text-left cursor-pointer select-none hover:text-gray-200" data-sort="status" data-label="Status" onclick="setSort('status')">Status</th>
+                    <th class="px-4 py-3 text-left cursor-pointer select-none hover:text-gray-200" data-sort="description" data-label="Description" onclick="setSort('description')">Description</th>
                     <th class="px-4 py-3 text-left">Related Characters</th>
                     <th class="px-4 py-3 text-center w-24">Actions</th>
                 </tr>
@@ -46,6 +64,13 @@
                 <tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">Loading…</td></tr>
             </tbody>
         </table>
+    <!-- Debug output panel -->
+    <div class="mt-6">
+        <div class="flex items-center justify-between mb-1">
+            <span class="text-xs text-gray-500 font-mono uppercase tracking-wide">Debug Output</span>
+            <button id="btnClearDebug" class="text-xs text-gray-600 hover:text-gray-400 transition-colors">Clear</button>
+        </div>
+        <div id="debugOutput" class="bg-gray-950 border border-gray-700 rounded-lg p-3 font-mono text-xs text-gray-400 min-h-10 max-h-48 overflow-y-auto whitespace-pre-wrap"></div>
     </div>
 </div>
 
@@ -97,9 +122,12 @@
     const db  = firebase.firestore();
     const col = db.collection('plots');
 
-    let allDocs   = [];
-    let editingId = null;
-    let curFilter = 'all';
+    let allDocs    = [];
+    let editingId  = null;
+    let curFilter  = 'all';
+    let sortCol    = 'title';
+    let sortDir    = 'asc';
+    let searchText = '';
 
     const STATUS_COLORS = {
         Planned:  'bg-blue-900/60 text-blue-400',
@@ -112,8 +140,19 @@
         return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    function setSort(col) { if (sortCol === col) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; } else { sortCol = col; sortDir = 'asc'; } render(); }
+
     function render() {
-        const rows  = curFilter === 'all' ? allDocs : allDocs.filter(d => d.status === curFilter);
+        let rows = curFilter === 'all' ? [...allDocs] : allDocs.filter(d => d.status === curFilter);
+        if (searchText) {
+            const q = searchText.toLowerCase();
+            rows = rows.filter(p => [p.title, p.status, p.description, p.characters].some(v => String(v || '').toLowerCase().includes(q)));
+        }
+        rows.sort((a, b) => {
+            const av = String(a[sortCol] ?? '').toLowerCase(), bv = String(b[sortCol] ?? '').toLowerCase();
+            return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+        });
+        document.querySelectorAll('thead th[data-sort]').forEach(th => { th.textContent = th.dataset.label + (sortCol === th.dataset.sort ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''); });
         const tbody = document.getElementById('tableBody');
         if (!rows.length) {
             tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">No plots found.</td></tr>';
@@ -150,7 +189,6 @@
 
     document.getElementById('btnAdd').onclick    = () => { editingId = null; openModal('Add Plot'); };
     document.getElementById('btnCancel').onclick = closeModal;
-    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
     form.addEventListener('submit', async e => {
         e.preventDefault();
@@ -194,6 +232,15 @@
         });
     });
     document.querySelector('[data-filter="all"]').classList.add('bg-teal-700','text-white','border-teal-500');
+    document.getElementById('searchInput').addEventListener('input', e => { searchText = e.target.value.trim(); render(); });
+
+    function _dbg(msg) {
+        const el = document.getElementById('debugOutput');
+        el.textContent += '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n';
+        el.scrollTop = el.scrollHeight;
+        console.log('[debug]', msg);
+    }
+    document.getElementById('btnClearDebug').onclick = () => { document.getElementById('debugOutput').textContent = ''; };
 
     // --- Import / Export -------------------------------------------------------
     const EXPORT_HDRS = ['Title','Status','Description','Related Characters'];
@@ -205,28 +252,39 @@
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Plots');
         XLSX.writeFile(wb, 'plots.xlsx');
+        _dbg('Export: ' + rows.length + ' plots written to plots.xlsx');
     };
 
     const fileInput = document.getElementById('fileInput');
     document.getElementById('btnImport').onclick = () => fileInput.click();
     fileInput.addEventListener('change', async e => {
         const file = e.target.files[0]; if (!file) return; fileInput.value = '';
+        _dbg('Reading file: ' + file.name);
         const reader = new FileReader();
+        reader.onerror = () => _dbg('Error: FileReader could not read the file.');
         reader.onload = async evt => {
-            const wb   = XLSX.read(evt.target.result, { type: 'array' });
-            const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
-            if (!rows.length) { alert('No data rows found.'); return; }
-            let added = 0, skipped = 0;
-            for (const row of rows) {
-                const title = String(row['Title'] || row['title'] || '').trim();
-                if (!title) { skipped++; continue; }
-                await col.add({ title, status: String(row['Status']||'Planned').trim(), description: String(row['Description']||'').trim(), characters: String(row['Related Characters']||'').trim(), createdAt: Date.now() });
-                added++;
+            try {
+                const wb   = XLSX.read(evt.target.result, { type: 'array' });
+                const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+                _dbg('Parsed ' + rows.length + ' row(s) from sheet "' + wb.SheetNames[0] + '".');
+                if (!rows.length) return;
+                let added = 0, skipped = 0, errors = 0;
+                for (const row of rows) {
+                    const title = String(row['Title'] || row['title'] || '').trim();
+                    if (!title) { skipped++; continue; }
+                    try {
+                        await col.add({ title, status: String(row['Status']||'Planned').trim(), description: String(row['Description']||'').trim(), characters: String(row['Related Characters']||'').trim(), createdAt: Date.now() });
+                        added++;
+                    } catch (rowErr) { errors++; _dbg('Row error ("' + title + '"): ' + rowErr.message); }
+                }
+                _dbg('Import complete: ' + added + ' added, ' + skipped + ' skipped, ' + errors + ' error(s).');
+            } catch (err) {
+                _dbg('Import failed: ' + err.message);
             }
-            alert(`Import complete: ${added} added, ${skipped} skipped (missing Title).`);
         };
         reader.readAsArrayBuffer(file);
     });
 </script>
+<script defer src="nav-loader.js"></script>
 </body>
 </html>
