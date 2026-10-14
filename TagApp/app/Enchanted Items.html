@@ -341,6 +341,7 @@
                         <th>Total Levels</th>
                         <th>Target Type</th>
                         <th>Adventure</th>
+                        <th>Event-Adventure</th>
                         <th>Description</th>
                         <th>Notes</th>
                         <th>Expiry Date</th>
@@ -526,6 +527,7 @@
                     ItemName: row.itemName || '',
                     Identified: row.identified ? 'Yes' : 'No',
                     Adventure: row.adventure || '',
+                    EventAdventure: buildEventAdventureNo(row.adventure),
                     PrimaryEnchantmentId: row.enchantmentId || '',
                     PrimaryEnchantmentName: row.enchantmentName || '',
                     PrimaryLevel: row.level ?? '',
@@ -621,7 +623,10 @@
 
             const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
             const vars = eventVarsApi?.get?.() || {};
-            const title = `${vars.eventName || 'Event'} - Enchanted Items`;
+            const eventNo = String(vars.eventNumber || '').trim();
+            const baseName = vars.eventName || 'Event';
+            const hasEventNo = eventNo && new RegExp(`\\bE\\s*${eventNo}\\b`, 'i').test(baseName);
+            const title = `${eventNo && !hasEventNo ? `E${eventNo} - ` : ''}${baseName} - Enchanted Items`;
 
             const enchantmentCell = (prefix, r) => {
                 const name = r[`${prefix}EnchantmentName`];
@@ -637,6 +642,7 @@
 <td>${esc(r.ItemName)}</td>
 <td>${esc(r.Identified)}</td>
 <td>${esc(r.Adventure)}</td>
+<td>${esc(r.EventAdventure)}</td>
 <td>${enchantmentCell('Primary', r)}${enchantmentCell('Second', r)}${enchantmentCell('Third', r)}</td>
 <td>${esc(r.ItemNotes)}</td>
 <td>${esc(r.Expiry)}</td>
@@ -657,13 +663,13 @@ tr{page-break-inside:avoid}
 @page{margin:12mm}
 </style></head><body>
 <h1>${esc(title)}</h1>
-<table><thead><tr><th>Item</th><th>Identified</th><th>Adventure</th><th>Enchantments</th><th>Notes</th><th>Expiry</th></tr></thead><tbody>${body}</tbody></table>
+<table><thead><tr><th>Item</th><th>Identified</th><th>Adventure</th><th>Event-Adventure</th><th>Enchantments</th><th>Notes</th><th>Expiry</th></tr></thead><tbody>${body}</tbody></table>
 </body></html>`;
 
             const blob = new Blob([html], { type: 'text/html' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `${safeFilePart(vars.eventName)}_Enchanted_Items.html`;
+            a.download = `${eventNo ? `E${eventNo}_` : ''}${safeFilePart(vars.eventName)}_Enchanted_Items.html`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -1099,7 +1105,7 @@ tr{page-break-inside:avoid}
             if (!builderRows.length) {
                 const tr = document.createElement('tr');
                 const td = document.createElement('td');
-                td.colSpan = 11;
+                td.colSpan = 12;
                 td.textContent = 'No enchantment entries added yet.';
                 tr.appendChild(td);
                 entriesBodyEl.appendChild(tr);
@@ -1117,6 +1123,7 @@ tr{page-break-inside:avoid}
                     String(summary.totalLevels || 0),
                     summary.targetTypes,
                     row.adventure || '-',
+                    buildEventAdventureNo(row.adventure) || '-',
                     summary.descriptions,
                     row.notes || '-',
                     row.expiry || '-'
@@ -1192,6 +1199,14 @@ tr{page-break-inside:avoid}
                 enchantment: String(entry?.enchantment || '').trim(),
                 expiry: String(entry?.expiry || '').trim() || getDefaultExpiryDate()
             };
+        }
+
+        function buildEventAdventureNo(value) {
+            const source = String(value || '').trim();
+            const adv = source.match(/A\s*(\d+)/i);
+            const ev = source.match(/E\s*(\d+)\s*-?\s*A/i);
+            const eventNumber = ev ? ev[1] : String(eventVarsApi?.get?.()?.eventNumber || '').trim();
+            return eventNumber && adv ? `E${eventNumber}-A${adv[1]}` : '';
         }
 
         function buildEventAdventureCode(value) {

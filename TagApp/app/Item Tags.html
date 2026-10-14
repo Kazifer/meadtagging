@@ -443,7 +443,7 @@
                     </label>
                     <input type="file" id="jsonUpload" class="hidden-input" accept=".json,application/json">
                         <button id="exportBtn" class="compact-btn btn-amber">Generate & Export HTML</button>
-                        <button id="exportIdentifiedBtn" class="compact-btn btn-amber">Export identified list</button>
+                        <button id="exportIdentifiedBtn" class="compact-btn btn-amber">Export Printable list</button>
                     <button id="clearBtn" class="compact-btn btn-red">Clear All Items</button>
                     </div>
                 </div>
@@ -1363,13 +1363,14 @@
         const generateIdentifiedListHTML = () => {
             const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
             const num = (re, s) => { const m = String(s || '').match(re); return m ? Number(m[1]) : Infinity; };
+            const fmtCode = (c) => { const s = String(c || ''); const a = s.match(/A\s*(\d+)/i); const e = s.match(/E\s*(\d+)\s*-?\s*A/i); const n = e ? e[1] : String(window.EventVariables?.get?.()?.eventNumber || '').trim(); return n && a ? `E${n}-A${a[1]}` : s; };
             const rows = adventureItems.map(item => {
                 const enchant = (item.enchantment || '').trim();
                 const unidentified = /identify before use/i.test(item.description || '');
                 return {
                     event: num(/E\s*(\d+)/i, item.code),
                     adventure: num(/A\s*(\d+)/i, item.code),
-                    code: item.code,
+                    code: fmtCode(item.code),
                     name: item.name,
                     detail: unidentified && enchant ? enchant : [item.description, enchant].filter(Boolean).join(' - '),
                     value: item.itemValue,
@@ -1377,10 +1378,12 @@
                 };
             }).sort((a, b) => a.event - b.event || a.adventure - b.adventure || String(a.name).localeCompare(String(b.name)));
 
-            const title = esc(document.getElementById('adventureTitle').value || 'Event Items');
+            const eventNo = String(window.EventVariables?.get?.()?.eventNumber || '').trim();
+            const baseTitle = document.getElementById('adventureTitle').value || 'Event Items';
+            const title = esc(eventNo && !new RegExp(`\\bE\\s*${eventNo}\\b`, 'i').test(baseTitle) ? `E${eventNo} - ${baseTitle}` : baseTitle);
             const body = rows.map(r => `<tr><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.detail)}</td><td>${esc(r.value)}</td><td>${esc(r.expiry)}</td></tr>`).join('');
             return `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><title>${title} - Identified List</title>
+<html lang="en"><head><meta charset="UTF-8"><title>${title} - Item List</title>
 <style>
 body{font-family:Arial,sans-serif;margin:0;padding:16px;color:#000;background:#fff}
 h1{font-size:18pt;margin:0 0 12px}
@@ -1391,7 +1394,7 @@ thead{display:table-header-group}
 tr{page-break-inside:avoid}
 @page{margin:12mm}
 </style></head><body>
-<h1>${title} - Identified List</h1>
+<h1>${title} - Item List</h1>
 <table><thead><tr><th>Code</th><th>Item</th><th>Description / Enchantment</th><th>Value</th><th>Expiry</th></tr></thead><tbody>${body}</tbody></table>
 </body></html>`;
         };
@@ -1405,7 +1408,8 @@ tr{page-break-inside:avoid}
             const blob = new Blob([htmlContent], { type: 'text/html' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = 'event-item-tags-identified.html';
+            const eventNo = String(window.EventVariables?.get?.()?.eventNumber || '').trim();
+            a.download = `${eventNo ? `E${eventNo}_` : ''}event-item-list.html`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);

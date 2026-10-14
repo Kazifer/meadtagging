@@ -61,11 +61,20 @@
                         <td><button id="exportFeedbackSheetBtn" class="btn btn-secondary" type="button">Export (.xlsx)</button></td>
                         <td>-</td>
                     </tr>
+                    <tr>
+                        <td>Item List (printable)</td>
+                        <td><button id="exportItemListPrintBtn" class="btn btn-secondary" type="button">Export (.html)</button></td>
+                        <td>-</td>
+                    </tr>
+                    <tr>
+                        <td>Enchanted Items (printable)</td>
+                        <td><button id="exportEnchantedPrintBtn" class="btn btn-secondary" type="button">Export (.html)</button></td>
+                        <td>-</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
-        <div class="io-table-wrap">
-            <table class="io-table" aria-label="Import and export options">
+        <div class="io-table-wrap">            <table class="io-table" aria-label="Import and export options">
                 <thead>
                     <tr>
                         <th>Adventures</th>
@@ -961,6 +970,89 @@
             }
         }
 
+function downloadPrintableHtml(title, headers, rowsHtml, fileSuffix) {
+            const esc = escHtml;
+            const vars = eventVarsApi?.get?.() || {};
+            const eventNo = String(vars.eventNumber || '').trim();
+            const baseName = vars.eventName || 'Event';
+            const hasEventNo = eventNo && new RegExp(`\\bE\\s*${eventNo}\\b`, 'i').test(baseName);
+            const pageTitle = `${eventNo && !hasEventNo ? `E${eventNo} - ` : ''}${baseName} - ${title}`;
+            const html = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>${esc(pageTitle)}</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;padding:16px;color:#000;background:#fff}
+h1{font-size:18pt;margin:0 0 12px}
+table{width:100%;border-collapse:collapse;font-size:10pt}
+th,td{border:1px solid #888;padding:4px 6px;text-align:left;vertical-align:top}
+th{background:#eee}
+thead{display:table-header-group}
+tr{page-break-inside:avoid}
+.ench+.ench{margin-top:6px;padding-top:6px;border-top:1px dashed #aaa}
+.meta{font-size:9pt;color:#444}
+@page{margin:12mm}
+</style></head><body>
+<h1>${esc(pageTitle)}</h1>
+<table><thead><tr>${headers.map((h) => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rowsHtml}</tbody></table>
+</body></html>`;
+            const fileName = `${eventNo ? `E${eventNo}_` : ''}${safeFilePart(vars.eventName)}_${fileSuffix}.html`;
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showExportDebug([`Export: ${title}`, `Rows exported: ${rowsHtml.split('<tr>').length - 1}`, `File: ${fileName}`]);
+            showStatus(`Exported ${fileName}`);
+        }
+
+        function buildEventAdventureNo(value) { const source = String(value || '').trim(); const adv = source.match(/A\s*(\d+)/i); const ev = source.match(/E\s*(\d+)\s*-?\s*A/i); const n = ev ? ev[1] : String(eventVarsApi?.get?.()?.eventNumber || '').trim(); return n && adv ? `E${n}-A${adv[1]}` : ''; }
+
+        function escHtml(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+        function readStoredJson(key, fallback) {
+            try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (error) { return fallback; }
+        }
+
+        function exportItemTagsPrintable() {
+            const payload = readStoredJson('itemTags.items.v2', { items: [] });
+            const items = Array.isArray(payload) ? payload : (Array.isArray(payload?.items) ? payload.items : []);
+            if (!items.length) { showExportDebug(['Export: Item List', 'Rows exported: 0']); showStatus('No item tags to export.'); return; }
+            const num = (re, s) => { const m = String(s || '').match(re); return m ? Number(m[1]) : Infinity; };
+            const rows = items.map((item) => {
+                const enchant = String(item.enchantment || '').trim();
+                const unidentified = /identify before use/i.test(item.description || '');
+                return {
+                    event: num(/E\s*(\d+)/i, item.code),
+                    adventure: num(/A\s*(\d+)/i, item.code),
+                    code: buildEventAdventureNo(item.code) || item.code, name: item.name,
+                    detail: unidentified && enchant ? enchant : [item.description, enchant].filter(Boolean).join(' - '),
+                    value: item.itemValue, expiry: item.expiry
+                };
+            }).sort((a, b) => a.event - b.event || a.adventure - b.adventure || String(a.name).localeCompare(String(b.name)));
+            const body = rows.map((r) => `<tr><td>${escHtml(r.code)}</td><td>${escHtml(r.name)}</td><td>${escHtml(r.detail)}</td><td>${escHtml(r.value)}</td><td>${escHtml(r.expiry)}</td></tr>`).join('');
+            downloadPrintableHtml('Item List', ['Code', 'Item', 'Description / Enchantment', 'Value', 'Expiry'], body, 'Item_List');
+        }
+
+        function exportEnchantedItemsPrintable() {
+            const rows = readStoredJson('enchantedItems.builder.v1', []);
+            if (!Array.isArray(rows) || !rows.length) { showExportDebug(['Export: Enchanted Items', 'Rows exported: 0']); showStatus('No enchanted items to export.'); return; }
+            const cell = (e) => {
+                if (!e?.enchantmentName) return '';
+                const level = e.level !== null && e.level !== undefined && e.level !== '' ? ` (Level ${escHtml(e.level)})` : '';
+                const target = e.targetType ? `<div class="meta">Target: ${escHtml(e.targetType)}</div>` : '';
+                const desc = e.description ? `<div>${escHtml(e.description)}</div>` : '';
+                const notes = e.notes ? `<div class="meta">Notes: ${escHtml(e.notes)}</div>` : '';
+                return `<div class="ench"><strong>${escHtml(e.enchantmentName)}</strong>${level}${target}${desc}${notes}</div>`;
+            };
+            const body = rows.map((r) => {
+                const extra = Array.isArray(r.additionalEnchantments) ? r.additionalEnchantments : [];
+                return `<tr><td>${escHtml(r.itemName)}</td><td>${r.identified ? 'Yes' : 'No'}</td><td>${escHtml(r.adventure)}</td><td>${escHtml(buildEventAdventureNo(r.adventure))}</td><td>${cell(r)}${extra.map(cell).join('')}</td><td>${escHtml(r.notes)}</td><td>${escHtml(r.expiry)}</td></tr>`;
+            }).join('');
+            downloadPrintableHtml('Enchanted Items', ['Item', 'Identified', 'Adventure', 'Event-Adventure', 'Enchantments', 'Notes', 'Expiry'], body, 'Enchanted_Items');
+        }
+
+        document.getElementById('exportItemListPrintBtn').addEventListener('click', exportItemTagsPrintable);
+        document.getElementById('exportEnchantedPrintBtn').addEventListener('click', exportEnchantedItemsPrintable);
         exportEventVarsBtn.addEventListener('click', exportEventVariables);
         exportLootCalcBtn.addEventListener('click', exportLootCalculation);
         exportAdventureListingBtn.addEventListener('click', exportAdventureListing);
