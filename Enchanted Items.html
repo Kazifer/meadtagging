@@ -323,6 +323,7 @@
             <div class="actions">
                 <button id="saveBuilderBtn" class="btn btn-secondary" type="button">Save Builder Items</button>
                 <button id="exportEnchantedItemsBtn" class="btn btn-secondary" type="button">Export Enchanted Items (.xlsx)</button>
+                <button id="exportEnchantedItemsPrintBtn" class="btn btn-secondary" type="button">Export Printable List (.html)</button>
                 <button id="importEnchantedItemsBtn" class="btn btn-secondary" type="button">Import Enchanted Items (.xlsx)</button>
                 <button id="pushToItemTagsBtn" class="btn btn-success" type="button">Save All and Add to Item Tags</button>
                 <button id="clearBuilderBtn" class="btn btn-danger" type="button">Clear Builder List</button>
@@ -609,6 +610,64 @@
             const fileName = `${safeFilePart(vars.eventName)}_Enchanted_Items.xlsx`;
             xlsx.writeFile(workbook, fileName);
             showStatus(`Exported ${fileName}`);
+        }
+
+        function exportEnchantedItemsPrintable() {
+            const rows = buildEnchantedItemsExportRows();
+            if (!rows.length) {
+                showStatus('No enchanted items to export.');
+                return;
+            }
+
+            const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            const vars = eventVarsApi?.get?.() || {};
+            const title = `${vars.eventName || 'Event'} - Enchanted Items`;
+
+            const enchantmentCell = (prefix, r) => {
+                const name = r[`${prefix}EnchantmentName`];
+                if (!name) return '';
+                const level = r[`${prefix}Level`] !== '' ? ` (Level ${esc(r[`${prefix}Level`])})` : '';
+                const target = r[`${prefix}TargetType`] ? `<div class="meta">Target: ${esc(r[`${prefix}TargetType`])}</div>` : '';
+                const desc = r[`${prefix}Description`] ? `<div>${esc(r[`${prefix}Description`])}</div>` : '';
+                const notes = r[`${prefix}Notes`] ? `<div class="meta">Notes: ${esc(r[`${prefix}Notes`])}</div>` : '';
+                return `<div class="ench"><strong>${esc(name)}</strong>${level}${target}${desc}${notes}</div>`;
+            };
+
+            const body = rows.map((r) => `<tr>
+<td>${esc(r.ItemName)}</td>
+<td>${esc(r.Identified)}</td>
+<td>${esc(r.Adventure)}</td>
+<td>${enchantmentCell('Primary', r)}${enchantmentCell('Second', r)}${enchantmentCell('Third', r)}</td>
+<td>${esc(r.ItemNotes)}</td>
+<td>${esc(r.Expiry)}</td>
+</tr>`).join('');
+
+            const html = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>${esc(title)}</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;padding:16px;color:#000;background:#fff}
+h1{font-size:18pt;margin:0 0 12px}
+table{width:100%;border-collapse:collapse;font-size:10pt}
+th,td{border:1px solid #888;padding:4px 6px;text-align:left;vertical-align:top}
+th{background:#eee}
+thead{display:table-header-group}
+tr{page-break-inside:avoid}
+.ench+.ench{margin-top:6px;padding-top:6px;border-top:1px dashed #aaa}
+.meta{font-size:9pt;color:#444}
+@page{margin:12mm}
+</style></head><body>
+<h1>${esc(title)}</h1>
+<table><thead><tr><th>Item</th><th>Identified</th><th>Adventure</th><th>Enchantments</th><th>Notes</th><th>Expiry</th></tr></thead><tbody>${body}</tbody></table>
+</body></html>`;
+
+            const blob = new Blob([html], { type: 'text/html' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${safeFilePart(vars.eventName)}_Enchanted_Items.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showStatus(`Exported ${a.download}`);
         }
 
         async function importEnchantedItems() {
@@ -1317,6 +1376,7 @@
         });
 
         exportEnchantedItemsBtnEl.addEventListener('click', exportEnchantedItems);
+        document.getElementById('exportEnchantedItemsPrintBtn').addEventListener('click', exportEnchantedItemsPrintable);
         importEnchantedItemsBtnEl.addEventListener('click', importEnchantedItems);
 
         document.getElementById('pushToItemTagsBtn').addEventListener('click', () => {
